@@ -1,6 +1,7 @@
 # OpenRHI
 
 - Preserve third-party copyrights, license terms, and the provenance recorded in THIRD_PARTY_NOTICES.md. Keep the GitHub upstream fork relationship and configured upstream remote. Published API, integration documentation, tags, and branches use OpenRHI identity.
+- Preserve shared upstream ancestry on main so ahead/behind counts track actual pending updates. Record upstream commits as incorporated after reviewing and integrating their changes, including intentional platform exclusions; keep the recorded upstream base current in THIRD_PARTY_NOTICES.md. Refresh with `git fetch upstream`; `git rev-list --left-right --count upstream/main...main` reports upstream-only commits followed by OpenRHI-only commits.
 - Public identity is OpenRHI: `OpenRHI.h`, namespace `openrhi`, C exports `openrhi*`, C types `OpenRhi*`, macros/options `OPENRHI_*`, target/library `OpenRHI`, SDK `_OpenRHI_SDK`.
 - Spell the brand `OpenRHI` inside function names; extension descriptions use their declared `*Interface` names. Keep debugger visualizers bound to validation members rather than obsolete device-layout offsets. Source/export audits cover build helpers, shaders, tests, CI, debugger support, and packaging; third-party notices preserve upstream attribution.
 - Windows 11 x64/ARM64 uses D3D12 with feature level 12_2, SM 6.6, and Enhanced Barriers. Pin stable Agility SDK 1.619.6.
