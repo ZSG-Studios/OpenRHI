@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct CommandBufferVal final : public ObjectVal {
     CommandBufferVal(DeviceVal& device, CommandBuffer* commandBuffer, QueueType queueType, bool isWrapped)
@@ -39,7 +39,7 @@ struct CommandBufferVal final : public ObjectVal {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result Begin(const DescriptorPool* descriptorPool);
@@ -113,4 +113,4 @@ private:
     bool m_IsRenderPass = false;
 };
 
-} // namespace nri
+} // namespace openrhi

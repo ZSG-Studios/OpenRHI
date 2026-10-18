@@ -146,7 +146,7 @@ struct alignas(void*) PipelineDescComponent {
     DescComponent desc = {};
 };
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 typedef PipelineDescComponent<D3D12_RASTERIZER_DESC1, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER1> PipelineRasterizer;
 typedef PipelineDescComponent<D3D12_DEPTH_STENCIL_DESC2, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL2> PipelineDepthStencil;
 #else
@@ -203,7 +203,7 @@ static inline D3D12_SHADER_VISIBILITY GetShaderVisibility(StageBits shaderStages
     return D3D12_SHADER_VISIBILITY_ALL;
 }
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 static inline void FillRasterizerState(D3D12_RASTERIZER_DESC1& rasterizerDesc, const GraphicsPipelineDesc& graphicsPipelineDesc) {
 #else
 static inline void FillRasterizerState(D3D12_RASTERIZER_DESC& rasterizerDesc, const GraphicsPipelineDesc& graphicsPipelineDesc) {
@@ -219,7 +219,7 @@ static inline void FillRasterizerState(D3D12_RASTERIZER_DESC& rasterizerDesc, co
     rasterizerDesc.AntialiasedLineEnable = (BOOL)r.lineSmoothing;
     rasterizerDesc.ConservativeRaster = r.conservativeRaster ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     rasterizerDesc.DepthBias = r.depthBias.constant;
 #else
     rasterizerDesc.DepthBias = (int32_t)r.depthBias.constant;
@@ -231,7 +231,7 @@ static inline void FillRasterizerState(D3D12_RASTERIZER_DESC& rasterizerDesc, co
     }
 }
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 static inline void FillDepthStencilState(D3D12_DEPTH_STENCIL_DESC2& depthStencilDesc, const OutputMergerDesc& om) {
 #else
 static inline void FillDepthStencilState(D3D12_DEPTH_STENCIL_DESC1& depthStencilDesc, const OutputMergerDesc& om) {
@@ -250,7 +250,7 @@ static inline void FillDepthStencilState(D3D12_DEPTH_STENCIL_DESC1& depthStencil
     depthStencilDesc.BackFace.StencilFunc = GetCompareOp(om.stencil.back.compareOp);
     depthStencilDesc.DepthBoundsTestEnable = om.depth.boundsTest ? 1 : 0;
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     depthStencilDesc.FrontFace.StencilReadMask = om.stencil.front.compareMask;
     depthStencilDesc.FrontFace.StencilWriteMask = om.stencil.front.writeMask;
     depthStencilDesc.BackFace.StencilReadMask = om.stencil.back.compareMask;
@@ -379,7 +379,7 @@ Result PipelineD3D12::CreateFromStream(const GraphicsPipelineDesc& graphicsPipel
 
     // Vertex input
     uint32_t attributeNum = graphicsPipelineDesc.vertexInput ? graphicsPipelineDesc.vertexInput->attributeNum : 0;
-    Scratch<D3D12_INPUT_ELEMENT_DESC> scratch1 = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_INPUT_ELEMENT_DESC, attributeNum);
+    Scratch<D3D12_INPUT_ELEMENT_DESC> scratch1 = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_INPUT_ELEMENT_DESC, attributeNum);
     if (graphicsPipelineDesc.vertexInput) {
         stateStream.inputLayout.desc.pInputElementDescs = scratch1;
         FillInputLayout(stateStream.inputLayout.desc, graphicsPipelineDesc);
@@ -395,7 +395,7 @@ Result PipelineD3D12::CreateFromStream(const GraphicsPipelineDesc& graphicsPipel
 
     // Rasterizer
     FillRasterizerState(stateStream.rasterizer.desc, graphicsPipelineDesc);
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     if (IsDepthBiasEnabled(graphicsPipelineDesc.rasterization.depthBias))
         stateStream.flags = D3D12_PIPELINE_STATE_FLAG_DYNAMIC_DEPTH_BIAS;
 #endif
@@ -419,7 +419,7 @@ Result PipelineD3D12::CreateFromStream(const GraphicsPipelineDesc& graphicsPipel
         viewMask >>= 1;
     }
 
-    Scratch<D3D12_VIEW_INSTANCE_LOCATION> scratch2 = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_VIEW_INSTANCE_LOCATION, viewNum);
+    Scratch<D3D12_VIEW_INSTANCE_LOCATION> scratch2 = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_VIEW_INSTANCE_LOCATION, viewNum);
     D3D12_VIEW_INSTANCE_LOCATION* pViewInstanceLocations = scratch2;
     if (viewNum) {
         for (uint32_t i = 0; i < viewNum; i++) {
@@ -450,11 +450,11 @@ Result PipelineD3D12::CreateFromStream(const GraphicsPipelineDesc& graphicsPipel
     }
 
     if (graphicsPipelineDesc.flags & GraphicsPipelineBits::FAIL_ON_CACHE_MISS) {
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12PipelineLibrary::LoadPipeline");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12PipelineLibrary::LoadPipeline");
     }
 
     hr = m_Device->CreatePipelineState(&pipelineStateStreamDesc, IID_PPV_ARGS(&m_PipelineState));
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device2::CreatePipelineState");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device2::CreatePipelineState");
 
     if (lib) {
         ExclusiveScope lock(cache->GetStoreLock());
@@ -492,17 +492,17 @@ Result PipelineD3D12::Create(const ComputePipelineDesc& computePipelineDesc) {
     }
 
     if (computePipelineDesc.flags & ComputePipelineBits::FAIL_ON_CACHE_MISS) {
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12PipelineLibrary::LoadComputePipeline");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12PipelineLibrary::LoadComputePipeline");
     }
 
     hr = m_Device->CreateComputePipelineState(&computePipleineStateDesc, IID_PPV_ARGS(&m_PipelineState));
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateComputePipelineState");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateComputePipelineState");
 
     if (lib) {
         ExclusiveScope lock(cache->GetStoreLock());
 
         hr = lib->StorePipeline(cacheName, m_PipelineState);
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12PipelineLibrary::StorePipeline");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12PipelineLibrary::StorePipeline");
     }
 
     return Result::SUCCESS;
@@ -521,7 +521,7 @@ Result PipelineD3D12::Create(const RayTracingPipelineDesc& rayTracingPipelineDes
         + shaderNum             // DXIL libraries
         + rayTracingPipelineDesc.shaderGroupNum
         + (rootSignature ? 1 : 0);
-    Scratch<D3D12_STATE_SUBOBJECT> stateSubobjects = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_STATE_SUBOBJECT, stateObjectNum);
+    Scratch<D3D12_STATE_SUBOBJECT> stateSubobjects = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_STATE_SUBOBJECT, stateObjectNum);
 
     D3D12_RAYTRACING_PIPELINE_CONFIG1 rayTracingPipelineConfig = {};
     {
@@ -532,7 +532,7 @@ Result PipelineD3D12::Create(const RayTracingPipelineDesc& rayTracingPipelineDes
             rayTracingPipelineConfig.Flags |= D3D12_RAYTRACING_PIPELINE_FLAG_SKIP_TRIANGLES;
         if (rayTracingPipelineDesc.flags & RayTracingPipelineBits::SKIP_AABBS)
             rayTracingPipelineConfig.Flags |= D3D12_RAYTRACING_PIPELINE_FLAG_SKIP_PROCEDURAL_PRIMITIVES;
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         if (rayTracingPipelineDesc.flags & RayTracingPipelineBits::ALLOW_MICROMAPS)
             rayTracingPipelineConfig.Flags |= D3D12_RAYTRACING_PIPELINE_FLAG_ALLOW_OPACITY_MICROMAPS;
 #endif
@@ -570,7 +570,7 @@ Result PipelineD3D12::Create(const RayTracingPipelineDesc& rayTracingPipelineDes
         stateSubobjectNum++;
     }
 
-    Scratch<D3D12_DXIL_LIBRARY_DESC> libraryDescs = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_DXIL_LIBRARY_DESC, rayTracingPipelineDesc.shaderLibrary->shaderNum);
+    Scratch<D3D12_DXIL_LIBRARY_DESC> libraryDescs = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_DXIL_LIBRARY_DESC, rayTracingPipelineDesc.shaderLibrary->shaderNum);
     for (uint32_t i = 0; i < rayTracingPipelineDesc.shaderLibrary->shaderNum; i++) {
         libraryDescs[i].DXILLibrary.pShaderBytecode = rayTracingPipelineDesc.shaderLibrary->shaders[i].bytecode;
         libraryDescs[i].DXILLibrary.BytecodeLength = (size_t)rayTracingPipelineDesc.shaderLibrary->shaders[i].size;
@@ -588,8 +588,8 @@ Result PipelineD3D12::Create(const RayTracingPipelineDesc& rayTracingPipelineDes
         entryPointNameTotalLength += entryPointName ? strlen(entryPointName) + 1 : 0;
     }
 
-    Scratch<const wchar_t*> wEntryPointNames = NRI_ALLOCATE_SCRATCH(m_Device, const wchar_t*, rayTracingPipelineDesc.shaderLibrary->shaderNum);
-    Scratch<wchar_t> wEntryPointNameData = NRI_ALLOCATE_SCRATCH(m_Device, wchar_t, entryPointNameTotalLength);
+    Scratch<const wchar_t*> wEntryPointNames = OPENRHI_ALLOCATE_SCRATCH(m_Device, const wchar_t*, rayTracingPipelineDesc.shaderLibrary->shaderNum);
+    Scratch<wchar_t> wEntryPointNameData = OPENRHI_ALLOCATE_SCRATCH(m_Device, wchar_t, entryPointNameTotalLength);
     wchar_t* wEntryPointName = wEntryPointNameData;
     for (uint32_t i = 0; i < rayTracingPipelineDesc.shaderLibrary->shaderNum; i++) {
         const ShaderDesc& shader = rayTracingPipelineDesc.shaderLibrary->shaders[i];
@@ -602,7 +602,7 @@ Result PipelineD3D12::Create(const RayTracingPipelineDesc& rayTracingPipelineDes
     }
 
     uint32_t hitGroupNum = 0;
-    Scratch<D3D12_HIT_GROUP_DESC> hitGroups = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_HIT_GROUP_DESC, rayTracingPipelineDesc.shaderGroupNum);
+    Scratch<D3D12_HIT_GROUP_DESC> hitGroups = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_HIT_GROUP_DESC, rayTracingPipelineDesc.shaderGroupNum);
     memset(&hitGroups[0], 0, rayTracingPipelineDesc.shaderGroupNum * sizeof(D3D12_HIT_GROUP_DESC)); // some fields can stay untouched
     m_ShaderGroupNames.reserve(rayTracingPipelineDesc.shaderGroupNum);
     for (uint32_t i = 0; i < rayTracingPipelineDesc.shaderGroupNum; i++) {
@@ -633,7 +633,7 @@ Result PipelineD3D12::Create(const RayTracingPipelineDesc& rayTracingPipelineDes
                         hitGroups[hitGroupNum].AnyHitShaderImport = entryPointName;
                         break;
                     default:
-                        NRI_CHECK(false, "Unexpected 'shader.stage'");
+                        OPENRHI_CHECK(false, "Unexpected 'shader.stage'");
                         break;
                 }
 
@@ -659,7 +659,7 @@ Result PipelineD3D12::Create(const RayTracingPipelineDesc& rayTracingPipelineDes
     stateObjectDesc.pSubobjects = stateSubobjectNum ? &stateSubobjects[0] : nullptr;
 
     HRESULT hr = m_Device->CreateStateObject(&stateObjectDesc, IID_PPV_ARGS(&m_StateObject));
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device5::CreateStateObject");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device5::CreateStateObject");
 
     m_StateObject->QueryInterface(&m_StateObjectProperties);
 
@@ -676,7 +676,7 @@ void PipelineD3D12::Bind(ID3D12GraphicsCommandList* graphicsCommandList) const {
         graphicsCommandList->IASetPrimitiveTopology(m_PrimitiveTopology);
 }
 
-NRI_INLINE Result PipelineD3D12::WriteShaderGroupIdentifiers(uint32_t baseShaderGroupIndex, uint32_t shaderGroupNum, uint32_t dstStride, void* dst) const {
+OPENRHI_INLINE Result PipelineD3D12::WriteShaderGroupIdentifiers(uint32_t baseShaderGroupIndex, uint32_t shaderGroupNum, uint32_t dstStride, void* dst) const {
     uint8_t* ptr = (uint8_t*)dst;
     size_t identifierSize = (size_t)m_Device.GetDesc().shaderStage.rayTracing.shaderGroupIdentifierSize;
     uint32_t shaderGroupIndex = baseShaderGroupIndex;

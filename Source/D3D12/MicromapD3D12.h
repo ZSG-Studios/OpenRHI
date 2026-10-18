@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct MicromapD3D12 final : public DebugNameBase {
     inline MicromapD3D12(DeviceD3D12& device)
@@ -37,10 +37,10 @@ struct MicromapD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     inline uint64_t GetBuildScratchBufferSize() const {
@@ -62,4 +62,4 @@ private:
     MicromapBits m_Flags = MicromapBits::NONE;
 };
 
-} // namespace nri
+} // namespace openrhi

@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-namespace nri {
+namespace openrhi {
 
 static_assert(video::av1::REFERENCE_NAME_NUM == VK_MAX_VIDEO_AV1_REFERENCES_PER_FRAME_KHR);
 static_assert(video::av1::REFERENCE_NAME_NUM == STD_VIDEO_AV1_PRIMARY_REF_NONE);
@@ -948,4 +948,4 @@ static inline StdVideoH265LevelIdc GetVideoH265LevelIdc(uint32_t width, uint32_t
     return STD_VIDEO_H265_LEVEL_IDC_4_1;
 }
 
-} // namespace nri
+} // namespace openrhi

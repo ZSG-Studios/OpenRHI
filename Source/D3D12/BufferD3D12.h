@@ -2,13 +2,13 @@
 
 #pragma once
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 typedef ID3D12Resource2 ID3D12ResourceBest;
 #else
 typedef ID3D12Resource ID3D12ResourceBest;
 #endif
 
-namespace nri {
+namespace openrhi {
 
 struct BufferD3D12 final : public DebugNameBase {
     inline BufferD3D12(DeviceD3D12& device)
@@ -43,12 +43,12 @@ struct BufferD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(m_Buffer, name);
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(m_Buffer, name);
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     void* Map(uint64_t offset);
@@ -74,4 +74,4 @@ inline D3D12_GPU_VIRTUAL_ADDRESS GetBufferAddress(const Buffer* buffer, uint64_t
     return ((BufferD3D12*)buffer)->GetDeviceAddress() + offset;
 }
 
-} // namespace nri
+} // namespace openrhi

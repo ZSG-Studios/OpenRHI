@@ -19,7 +19,7 @@ Result DescriptorHeapD3D12::CreateHeap(DescriptorHeapType type, uint32_t descrip
     desc.NodeMask = NODE_MASK;
 
     HRESULT hr = m_Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_Heaps[type]));
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateDescriptorHeap");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateDescriptorHeap");
 
     m_HeapHandles[m_HeapNum++] = m_Heaps[type];
     m_BaseHandles[type] = m_Heaps[type]->GetCPUDescriptorHandleForHeapStart().ptr;
@@ -32,7 +32,7 @@ Result DescriptorHeapD3D12::WriteResourceDescriptors(const WriteResourceDescript
     if (!writeDescNum)
         return Result::SUCCESS;
 
-    Scratch<D3D12_CPU_DESCRIPTOR_HANDLE> handles = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_CPU_DESCRIPTOR_HANDLE, size_t(writeDescNum) * 2);
+    Scratch<D3D12_CPU_DESCRIPTOR_HANDLE> handles = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_CPU_DESCRIPTOR_HANDLE, size_t(writeDescNum) * 2);
     D3D12_CPU_DESCRIPTOR_HANDLE* dstHandles = handles;
     D3D12_CPU_DESCRIPTOR_HANDLE* srcHandles = handles + writeDescNum;
 
@@ -51,7 +51,7 @@ Result DescriptorHeapD3D12::WriteSamplerDescriptors(const WriteSamplerDescriptor
     if (!writeDescNum)
         return Result::SUCCESS;
 
-    Scratch<D3D12_CPU_DESCRIPTOR_HANDLE> handles = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_CPU_DESCRIPTOR_HANDLE, size_t(writeDescNum) * 2);
+    Scratch<D3D12_CPU_DESCRIPTOR_HANDLE> handles = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_CPU_DESCRIPTOR_HANDLE, size_t(writeDescNum) * 2);
     D3D12_CPU_DESCRIPTOR_HANDLE* dstHandles = handles;
     D3D12_CPU_DESCRIPTOR_HANDLE* srcHandles = handles + writeDescNum;
 
@@ -66,11 +66,11 @@ Result DescriptorHeapD3D12::WriteSamplerDescriptors(const WriteSamplerDescriptor
     return Result::SUCCESS;
 }
 
-NRI_INLINE void DescriptorHeapD3D12::Bind(ID3D12GraphicsCommandList* commandList) const {
+OPENRHI_INLINE void DescriptorHeapD3D12::Bind(ID3D12GraphicsCommandList* commandList) const {
     commandList->SetDescriptorHeaps(m_HeapNum, m_HeapHandles.data());
 }
 
-NRI_INLINE void DescriptorHeapD3D12::SetDebugName(const char* name) {
+OPENRHI_INLINE void DescriptorHeapD3D12::SetDebugName(const char* name) {
     for (ID3D12DescriptorHeap* heap : m_HeapHandles)
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(heap, name);
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(heap, name);
 }

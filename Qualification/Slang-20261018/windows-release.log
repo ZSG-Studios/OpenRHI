@@ -1,0 +1,25 @@
+Test project C:/Users/Rose-X/Documents/Codex/2026-10-18/fo/work/build-openrhi
+      Start  1: OpenRHI.NONE
+ 1/10 Test  #1: OpenRHI.NONE .....................   Passed    0.09 sec
+      Start  2: OpenRHI.D3D12
+ 2/10 Test  #2: OpenRHI.D3D12 ....................   Passed   13.58 sec
+      Start  3: OpenRHI.SourceBoundary
+ 3/10 Test  #3: OpenRHI.SourceBoundary ...........   Passed    1.10 sec
+      Start  4: OpenRHI.DevicePolicy
+ 4/10 Test  #4: OpenRHI.DevicePolicy .............   Passed    0.08 sec
+      Start  5: OpenRHI.D3D12.Resources
+ 5/10 Test  #5: OpenRHI.D3D12.Resources ..........   Passed    7.24 sec
+      Start  6: OpenRHI.D3D12.Mesh
+ 6/10 Test  #6: OpenRHI.D3D12.Mesh ...............   Passed    0.35 sec
+      Start  7: OpenRHI.AdapterSelection
+ 7/10 Test  #7: OpenRHI.AdapterSelection .........   Passed   24.00 sec
+      Start  8: OpenRHI.WindowsBinaryBoundary
+ 8/10 Test  #8: OpenRHI.WindowsBinaryBoundary ....   Passed    0.49 sec
+      Start  9: OpenRHI.PromotionGate
+ 9/10 Test  #9: OpenRHI.PromotionGate ............   Passed    0.16 sec
+      Start 10: OpenRHI.SlangContract
+10/10 Test #10: OpenRHI.SlangContract ............   Passed    0.15 sec
+
+100% tests passed out of 10
+
+Total Test time (real) =  47.36 sec

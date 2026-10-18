@@ -4,11 +4,11 @@
 
 #include "SharedExternal.h"
 
-#define NRI_OBJECT_SIGNATURE 0x1234567887654321ull // TODO: 32-bit platform support? not needed, I believe
+#define OPENRHI_OBJECT_SIGNATURE 0x1234567887654321ull // TODO: 32-bit platform support? not needed, I believe
 
-#define NRI_GET_IMPL(className, object) (object ? ((className##Val*)object)->GetImpl() : nullptr)
+#define OPENRHI_GET_IMPL(className, object) (object ? ((className##Val*)object)->GetImpl() : nullptr)
 
-namespace nri {
+namespace openrhi {
 
 struct AccelerationStructureVal;
 struct BufferVal;
@@ -36,11 +36,11 @@ QueryType GetQueryTypeVK(uint32_t queryTypeVK);
 const char* GetDescriptorTypeName(DescriptorType descriptorType);
 void ConvertBottomLevelGeometries(const BottomLevelGeometryDesc* geometries, uint32_t geometryNum, BottomLevelGeometryDesc*& outGeometries, BottomLevelTrianglesMicromapDesc*& outMicromaps);
 
-} // namespace nri
+} // namespace openrhi
 
 #include "DeviceVal.h"
 
-namespace nri {
+namespace openrhi {
 
 struct ObjectVal : public DebugNameBaseVal {
     inline ObjectVal(DeviceVal& device, Object* object = nullptr)
@@ -91,10 +91,6 @@ struct ObjectVal : public DebugNameBaseVal {
         return m_Device.GetSwapChainInterfaceImpl();
     }
 
-    inline const WrapperD3D11Interface& GetWrapperD3D11InterfaceImpl() const {
-        return m_Device.GetWrapperD3D11InterfaceImpl();
-    }
-
     inline const WrapperD3D12Interface& GetWrapperD3D12InterfaceImpl() const {
         return m_Device.GetWrapperD3D12InterfaceImpl();
     }
@@ -121,7 +117,7 @@ struct ObjectVal : public DebugNameBaseVal {
 
 protected:
 #ifndef NDEBUG
-    uint64_t m_Signature = NRI_OBJECT_SIGNATURE; // .natvis
+    uint64_t m_Signature = OPENRHI_OBJECT_SIGNATURE; // .natvis
 #endif
     char* m_Name = nullptr; // .natvis
     Object* m_Impl = nullptr;
@@ -133,4 +129,4 @@ inline DeviceVal& GetDeviceVal(T& object) {
     return ((ObjectVal&)object).GetDevice();
 }
 
-} // namespace nri
+} // namespace openrhi

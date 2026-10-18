@@ -3,9 +3,6 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
-#ifdef __APPLE__
-#    include <vulkan/vulkan_beta.h>
-#endif
 #undef CreateSemaphore
 
 #include "DispatchTable.h"
@@ -40,7 +37,7 @@ typedef uint16_t MemoryTypeIndex;
     if (IsExtensionSupported(ext, supportedExts) && (condition)) \
     desiredDeviceExts.push_back(ext)
 
-namespace nri {
+namespace openrhi {
 
 struct AccelerationStructureVK;
 struct BufferVK;
@@ -194,6 +191,6 @@ struct VideoResourceProfileListVK {
     }
 };
 
-} // namespace nri
+} // namespace openrhi
 
 #include "DeviceVK.h"

@@ -4,7 +4,7 @@
 
 #include "DescriptorSetD3D12.h"
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorPoolD3D12 final : public DebugNameBase {
     inline DescriptorPoolD3D12(DeviceD3D12& device)
@@ -30,10 +30,10 @@ struct DescriptorPoolD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result AllocateDescriptorSets(const PipelineLayout& pipelineLayout, uint32_t setIndex, DescriptorSet** descriptorSets, uint32_t instanceNum, uint32_t variableDescriptorNum);
@@ -49,4 +49,4 @@ private:
     Lock m_Lock;
 };
 
-} // namespace nri
+} // namespace openrhi

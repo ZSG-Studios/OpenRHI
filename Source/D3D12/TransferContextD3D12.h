@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct TransferContextD3D12 {
     inline TransferContextD3D12(DeviceD3D12& device)
@@ -63,4 +63,4 @@ private:
     bool m_IsReusable = true;
 };
 
-} // namespace nri
+} // namespace openrhi

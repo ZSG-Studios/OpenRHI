@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct PipelineVal final : public ObjectVal {
     PipelineVal(DeviceVal& device, Pipeline* pipeline);
@@ -19,7 +19,7 @@ struct PipelineVal final : public ObjectVal {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result WriteShaderGroupIdentifiers(uint32_t baseShaderGroupIndex, uint32_t shaderGroupNum, uint32_t dstStride, void* dst);
@@ -28,4 +28,4 @@ private:
     const PipelineLayout* m_PipelineLayout = nullptr;
 };
 
-} // namespace nri
+} // namespace openrhi

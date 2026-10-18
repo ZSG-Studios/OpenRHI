@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct VideoSessionVK;
 
@@ -33,12 +33,12 @@ struct VideoSessionParametersVK final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
         m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_VIDEO_SESSION_PARAMETERS_KHR, (uint64_t)m_Handle, name);
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result Create(const VideoSessionParametersDesc& videoSessionParametersDesc);
@@ -58,4 +58,4 @@ private:
     StdVideoEncodeAV1OperatingPointInfo m_AV1OperatingPoint = {};
 };
 
-} // namespace nri
+} // namespace openrhi

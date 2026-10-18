@@ -133,8 +133,8 @@ uint64_t QueueMetal::SignalIdle(uint64_t& commitNum) {
     return m_IdleValue;
 }
 
-NRI_INLINE Result QueueMetal::Submit(const QueueSubmitDesc& queueSubmitDesc) {
-    Scratch<const MTL4::CommandBuffer*> commandBuffers = NRI_ALLOCATE_SCRATCH(m_Device, const MTL4::CommandBuffer*, queueSubmitDesc.commandBufferNum);
+OPENRHI_INLINE Result QueueMetal::Submit(const QueueSubmitDesc& queueSubmitDesc) {
+    Scratch<const MTL4::CommandBuffer*> commandBuffers = OPENRHI_ALLOCATE_SCRATCH(m_Device, const MTL4::CommandBuffer*, queueSubmitDesc.commandBufferNum);
 
     for (uint32_t i = 0; i < queueSubmitDesc.commandBufferNum; i++)
         commandBuffers[i] = ((CommandBufferMetal*)queueSubmitDesc.commandBuffers[i])->GetNativeObject();
@@ -181,7 +181,7 @@ void QueueMetal::SignalDrawable(CA::MetalDrawable* drawable, FenceMetal& release
     m_Queue->signalDrawable(drawable);
 }
 
-NRI_INLINE void QueueMetal::GetCalibratedTimestamps(uint64_t& timestampGPU, uint64_t& timestampCPU) {
+OPENRHI_INLINE void QueueMetal::GetCalibratedTimestamps(uint64_t& timestampGPU, uint64_t& timestampCPU) {
     // "sampleTimestamps" returns nanoseconds for both. GPU: converted to counter heap timestamp ticks ("timestampFrequencyHz").
     // CPU: nanoseconds in the "CLOCK_UPTIME_RAW" domain ("mach_absolute_time" converted to nanoseconds)
     MTL::Timestamp cpu = 0;
@@ -194,11 +194,11 @@ NRI_INLINE void QueueMetal::GetCalibratedTimestamps(uint64_t& timestampGPU, uint
 }
 
 Result QueueMetal::WaitForSignal(uint64_t value, uint64_t commitNum) {
-    const bool isCompleted = m_IdleEvent->waitUntilSignaledValue(value, NRI_TIMEOUT_FENCE);
+    const bool isCompleted = m_IdleEvent->waitUntilSignaledValue(value, OPENRHI_TIMEOUT_FENCE);
 
     // Commit errors are reported by feedback handlers, which are called asynchronously after completion
     if (isCompleted) {
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(NRI_TIMEOUT_FENCE);
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(OPENRHI_TIMEOUT_FENCE);
 
         while (m_FeedbackNum.load(std::memory_order_acquire) < commitNum && std::chrono::steady_clock::now() < deadline)
             std::this_thread::sleep_for(std::chrono::microseconds(10));
@@ -214,7 +214,7 @@ Result QueueMetal::WaitForSignal(uint64_t value, uint64_t commitNum) {
     return isCompleted ? Result::SUCCESS : Result::FAILURE;
 }
 
-NRI_INLINE Result QueueMetal::WaitIdle() {
+OPENRHI_INLINE Result QueueMetal::WaitIdle() {
     uint64_t value = 0;
     uint64_t commitNum = 0;
 
@@ -228,7 +228,7 @@ NRI_INLINE Result QueueMetal::WaitIdle() {
 
 Result QueueMetal::BeginTransfer(uint64_t stagingSize, MTL4::ComputeCommandEncoder*& encoder) {
     // The previous transfer may have timed out
-    if (m_IdleEvent->signaledValue() < m_TransferValue && !m_IdleEvent->waitUntilSignaledValue(m_TransferValue, NRI_TIMEOUT_FENCE))
+    if (m_IdleEvent->signaledValue() < m_TransferValue && !m_IdleEvent->waitUntilSignaledValue(m_TransferValue, OPENRHI_TIMEOUT_FENCE))
         return Result::FAILURE;
 
     if (!m_TransferAllocator)
@@ -295,11 +295,11 @@ void QueueMetal::TrimTransfer() {
     }
 }
 
-NRI_INLINE Result QueueMetal::UploadHostMemoryToTexture(const UploadHostMemoryToTextureDesc* copyDescs, uint32_t copyDescNum) {
+OPENRHI_INLINE Result QueueMetal::UploadHostMemoryToTexture(const UploadHostMemoryToTextureDesc* copyDescs, uint32_t copyDescNum) {
     if (!copyDescNum)
         return Result::SUCCESS;
 
-    Scratch<HostTextureCopyLayoutMetal> layouts = NRI_ALLOCATE_SCRATCH(m_Device, HostTextureCopyLayoutMetal, copyDescNum);
+    Scratch<HostTextureCopyLayoutMetal> layouts = OPENRHI_ALLOCATE_SCRATCH(m_Device, HostTextureCopyLayoutMetal, copyDescNum);
     uint64_t stagingSize = 0;
 
     for (uint32_t i = 0; i < copyDescNum; i++)
@@ -340,11 +340,11 @@ NRI_INLINE Result QueueMetal::UploadHostMemoryToTexture(const UploadHostMemoryTo
     return result;
 }
 
-NRI_INLINE Result QueueMetal::ReadbackTextureToHostMemory(const ReadbackTextureToHostMemoryDesc* copyDescs, uint32_t copyDescNum) {
+OPENRHI_INLINE Result QueueMetal::ReadbackTextureToHostMemory(const ReadbackTextureToHostMemoryDesc* copyDescs, uint32_t copyDescNum) {
     if (!copyDescNum)
         return Result::SUCCESS;
 
-    Scratch<HostTextureCopyLayoutMetal> layouts = NRI_ALLOCATE_SCRATCH(m_Device, HostTextureCopyLayoutMetal, copyDescNum);
+    Scratch<HostTextureCopyLayoutMetal> layouts = OPENRHI_ALLOCATE_SCRATCH(m_Device, HostTextureCopyLayoutMetal, copyDescNum);
     uint64_t stagingSize = 0;
 
     for (uint32_t i = 0; i < copyDescNum; i++)
@@ -392,7 +392,7 @@ NRI_INLINE Result QueueMetal::ReadbackTextureToHostMemory(const ReadbackTextureT
     return result;
 }
 
-NRI_INLINE void QueueMetal::SetDebugName(const char* name) {
+OPENRHI_INLINE void QueueMetal::SetDebugName(const char* name) {
     // "MTL4CommandQueue::label" is read-only, it can only be set via "MTL4CommandQueueDescriptor" at creation
     MaybeUnused(name);
 }

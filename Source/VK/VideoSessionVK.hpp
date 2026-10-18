@@ -155,17 +155,17 @@ static Result IsVideoFormatSupported(DeviceVK& device, const VideoSessionDesc& v
     const auto& vk = device.GetDispatchTable();
     uint32_t formatNum = 0;
     VkResult vkResult = vk.GetPhysicalDeviceVideoFormatPropertiesKHR(device, &formatInfo, &formatNum, nullptr);
-    NRI_RETURN_ON_BAD_VKRESULT(&device, vkResult, "vkGetPhysicalDeviceVideoFormatPropertiesKHR");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&device, vkResult, "vkGetPhysicalDeviceVideoFormatPropertiesKHR");
 
     if (!formatNum)
         return Result::SUCCESS;
 
-    Scratch<VkVideoFormatPropertiesKHR> formats = NRI_ALLOCATE_SCRATCH(device, VkVideoFormatPropertiesKHR, formatNum);
+    Scratch<VkVideoFormatPropertiesKHR> formats = OPENRHI_ALLOCATE_SCRATCH(device, VkVideoFormatPropertiesKHR, formatNum);
     for (uint32_t i = 0; i < formatNum; i++)
         formats[i] = {VK_STRUCTURE_TYPE_VIDEO_FORMAT_PROPERTIES_KHR};
 
     vkResult = vk.GetPhysicalDeviceVideoFormatPropertiesKHR(device, &formatInfo, &formatNum, formats);
-    NRI_RETURN_ON_BAD_VKRESULT(&device, vkResult, "vkGetPhysicalDeviceVideoFormatPropertiesKHR");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&device, vkResult, "vkGetPhysicalDeviceVideoFormatPropertiesKHR");
 
     if (vkResult == VK_INCOMPLETE)
         return Result::FAILURE;
@@ -267,7 +267,7 @@ static Result GetVideoCapabilities(DeviceVK& deviceVK, const VideoSessionDesc& v
     const auto& vk = deviceVK.GetDispatchTable();
 
     VkResult vkResult = vk.GetPhysicalDeviceVideoCapabilitiesKHR(deviceVK, &profile, &capabilities);
-    NRI_RETURN_ON_BAD_VKRESULT(&deviceVK, vkResult, "vkGetPhysicalDeviceVideoCapabilitiesKHR");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&deviceVK, vkResult, "vkGetPhysicalDeviceVideoCapabilitiesKHR");
 
     bool isVideoFormatSupported = false;
     Result result = IsVideoFormatSupported(deviceVK, videoSessionDesc, profile, isVideoFormatSupported);
@@ -401,7 +401,7 @@ void VideoSessionVK::Reset() {
     m_EncodeFeedbackPayloadReadbacks = {};
 }
 
-NRI_INLINE Result VideoSessionVK::GetEncodeFeedback(BufferVK& resolvedMetadataReadback, uint64_t resolvedMetadataOffset, VideoEncodeFeedback& feedback) {
+OPENRHI_INLINE Result VideoSessionVK::GetEncodeFeedback(BufferVK& resolvedMetadataReadback, uint64_t resolvedMetadataOffset, VideoEncodeFeedback& feedback) {
     if (m_EncodeFeedbackQueryPool == VK_NULL_HANDLE)
         return Result::UNSUPPORTED;
 
@@ -426,7 +426,7 @@ NRI_INLINE Result VideoSessionVK::GetEncodeFeedback(BufferVK& resolvedMetadataRe
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result VideoSessionVK::GetEncodeAV1DecodeInfo(BufferVK& resolvedMetadataReadback, uint64_t resolvedMetadataOffset, const VideoAV1EncodeDecodeInfoDesc& desc, VideoAV1EncodeDecodeInfo& info) {
+OPENRHI_INLINE Result VideoSessionVK::GetEncodeAV1DecodeInfo(BufferVK& resolvedMetadataReadback, uint64_t resolvedMetadataOffset, const VideoAV1EncodeDecodeInfoDesc& desc, VideoAV1EncodeDecodeInfo& info) {
     MaybeUnused(resolvedMetadataReadback, resolvedMetadataOffset);
 
     if (!desc.feedback || desc.feedback->errorFlags || !desc.feedback->encodedBitstreamWrittenBytes)
@@ -441,7 +441,7 @@ NRI_INLINE Result VideoSessionVK::GetEncodeAV1DecodeInfo(BufferVK& resolvedMetad
 Result VideoSessionVK::Create(const VideoSessionDesc& videoSessionDesc) {
     VkVideoCodecOperationFlagBitsKHR operation = GetVideoCodecOperation(videoSessionDesc);
     if (!operation || !IsVideoCodecOperationSupported(m_Device, videoSessionDesc, operation)) {
-        NRI_REPORT_ERROR(&m_Device, "Unsupported Vulkan video codec operation");
+        OPENRHI_REPORT_ERROR(&m_Device, "Unsupported Vulkan video codec operation");
         return Result::UNSUPPORTED;
     }
 
@@ -449,7 +449,7 @@ Result VideoSessionVK::Create(const VideoSessionDesc& videoSessionDesc) {
     const QueueType queueType = videoSessionDesc.type == VideoSessionType::DECODE ? QueueType::VIDEO_DECODE : QueueType::VIDEO_ENCODE;
     Result result = m_Device.GetQueue(queueType, 0, queue);
     if (result != Result::SUCCESS) {
-        NRI_REPORT_ERROR(&m_Device, "Failed to get Vulkan video queue for codec operation 0x%X", operation);
+        OPENRHI_REPORT_ERROR(&m_Device, "Failed to get Vulkan video queue for codec operation 0x%X", operation);
         return result;
     }
 
@@ -472,7 +472,7 @@ Result VideoSessionVK::Create(const VideoSessionDesc& videoSessionDesc) {
     profile.lumaBitDepth = GetVideoBitDepth(videoSessionDesc.format);
     profile.chromaBitDepth = GetVideoBitDepth(videoSessionDesc.format);
     if (!codecProfileInfo) {
-        NRI_REPORT_ERROR(&m_Device, "Unsupported Vulkan video profile");
+        OPENRHI_REPORT_ERROR(&m_Device, "Unsupported Vulkan video profile");
         return Result::UNSUPPORTED;
     }
 
@@ -521,9 +521,9 @@ Result VideoSessionVK::Create(const VideoSessionDesc& videoSessionDesc) {
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.GetPhysicalDeviceVideoCapabilitiesKHR(m_Device, &profile, &capabilities);
     if (vkResult != VK_SUCCESS) {
-        NRI_REPORT_ERROR(&m_Device, "vkGetPhysicalDeviceVideoCapabilitiesKHR failed for operation 0x%X, format %u, result %d", operation, (uint32_t)videoSessionDesc.format, vkResult);
+        OPENRHI_REPORT_ERROR(&m_Device, "vkGetPhysicalDeviceVideoCapabilitiesKHR failed for operation 0x%X, format %u, result %d", operation, (uint32_t)videoSessionDesc.format, vkResult);
     }
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkGetPhysicalDeviceVideoCapabilitiesKHR");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkGetPhysicalDeviceVideoCapabilitiesKHR");
     if (videoSessionDesc.type == VideoSessionType::ENCODE) {
         m_RateControlModes = GetSupportedVideoEncodeRateControlModes(encodeCapabilities.rateControlModes);
         if (videoSessionDesc.codec == VideoCodec::H264) {
@@ -553,7 +553,7 @@ Result VideoSessionVK::Create(const VideoSessionDesc& videoSessionDesc) {
 
     if (videoSessionDesc.width < capabilities.minCodedExtent.width || videoSessionDesc.height < capabilities.minCodedExtent.height || videoSessionDesc.width > capabilities.maxCodedExtent.width
         || videoSessionDesc.height > capabilities.maxCodedExtent.height) {
-        NRI_REPORT_ERROR(&m_Device, "Vulkan video coded extent %ux%u is outside supported range %ux%u..%ux%u", videoSessionDesc.width, videoSessionDesc.height, capabilities.minCodedExtent.width,
+        OPENRHI_REPORT_ERROR(&m_Device, "Vulkan video coded extent %ux%u is outside supported range %ux%u..%ux%u", videoSessionDesc.width, videoSessionDesc.height, capabilities.minCodedExtent.width,
             capabilities.minCodedExtent.height, capabilities.maxCodedExtent.width, capabilities.maxCodedExtent.height);
         return Result::UNSUPPORTED;
     }
@@ -580,9 +580,9 @@ Result VideoSessionVK::Create(const VideoSessionDesc& videoSessionDesc) {
 #endif
     vkResult = vk.CreateVideoSessionKHR(m_Device, &createInfo, m_Device.GetVkAllocationCallbacks(), &m_Handle);
     if (vkResult != VK_SUCCESS) {
-        NRI_REPORT_ERROR(&m_Device, "vkCreateVideoSessionKHR failed for queue family %u, operation 0x%X, format %u, result %d", createInfo.queueFamilyIndex, operation, (uint32_t)videoSessionDesc.format, vkResult);
+        OPENRHI_REPORT_ERROR(&m_Device, "vkCreateVideoSessionKHR failed for queue family %u, operation 0x%X, format %u, result %d", createInfo.queueFamilyIndex, operation, (uint32_t)videoSessionDesc.format, vkResult);
     }
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateVideoSessionKHR");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateVideoSessionKHR");
 
     if (videoSessionDesc.type == VideoSessionType::ENCODE && (encodeCapabilities.supportedEncodeFeedbackFlags & VIDEO_ENCODE_REQUIRED_FEEDBACK_FLAGS) == VIDEO_ENCODE_REQUIRED_FEEDBACK_FLAGS) {
         VkQueryPoolVideoEncodeFeedbackCreateInfoKHR feedbackInfo = {VK_STRUCTURE_TYPE_QUERY_POOL_VIDEO_ENCODE_FEEDBACK_CREATE_INFO_KHR};
@@ -595,22 +595,22 @@ Result VideoSessionVK::Create(const VideoSessionDesc& videoSessionDesc) {
         queryPoolInfo.queryCount = VIDEO_ENCODE_FEEDBACK_QUERY_NUM;
 
         vkResult = vk.CreateQueryPool(m_Device, &queryPoolInfo, m_Device.GetVkAllocationCallbacks(), &m_EncodeFeedbackQueryPool);
-        NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateQueryPool");
+        OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateQueryPool");
     }
 
     uint32_t memoryRequirementNum = 0;
     vkResult = vk.GetVideoSessionMemoryRequirementsKHR(m_Device, m_Handle, &memoryRequirementNum, nullptr);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkGetVideoSessionMemoryRequirementsKHR");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkGetVideoSessionMemoryRequirementsKHR");
 
-    Scratch<VkVideoSessionMemoryRequirementsKHR> memoryRequirements = NRI_ALLOCATE_SCRATCH(m_Device, VkVideoSessionMemoryRequirementsKHR, memoryRequirementNum);
+    Scratch<VkVideoSessionMemoryRequirementsKHR> memoryRequirements = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkVideoSessionMemoryRequirementsKHR, memoryRequirementNum);
     for (uint32_t i = 0; i < memoryRequirementNum; i++)
         memoryRequirements[i] = {VK_STRUCTURE_TYPE_VIDEO_SESSION_MEMORY_REQUIREMENTS_KHR};
 
     vkResult = vk.GetVideoSessionMemoryRequirementsKHR(m_Device, m_Handle, &memoryRequirementNum, memoryRequirements);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkGetVideoSessionMemoryRequirementsKHR");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkGetVideoSessionMemoryRequirementsKHR");
 
     m_Memory.resize(memoryRequirementNum);
-    Scratch<VkBindVideoSessionMemoryInfoKHR> bindInfos = NRI_ALLOCATE_SCRATCH(m_Device, VkBindVideoSessionMemoryInfoKHR, memoryRequirementNum);
+    Scratch<VkBindVideoSessionMemoryInfoKHR> bindInfos = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkBindVideoSessionMemoryInfoKHR, memoryRequirementNum);
     for (uint32_t i = 0; i < memoryRequirementNum; i++) {
         uint32_t memoryTypeIndex = 0;
         if (!FindVideoSessionMemoryType(m_Device, memoryRequirements[i].memoryRequirements.memoryTypeBits, memoryTypeIndex))
@@ -621,7 +621,7 @@ Result VideoSessionVK::Create(const VideoSessionDesc& videoSessionDesc) {
         allocateInfo.memoryTypeIndex = memoryTypeIndex;
 
         vkResult = vk.AllocateMemory(m_Device, &allocateInfo, m_Device.GetVkAllocationCallbacks(), &m_Memory[i]);
-        NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkAllocateMemory");
+        OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkAllocateMemory");
 
         bindInfos[i] = {VK_STRUCTURE_TYPE_BIND_VIDEO_SESSION_MEMORY_INFO_KHR};
         bindInfos[i].memoryBindIndex = memoryRequirements[i].memoryBindIndex;
@@ -630,7 +630,7 @@ Result VideoSessionVK::Create(const VideoSessionDesc& videoSessionDesc) {
     }
 
     vkResult = vk.BindVideoSessionMemoryKHR(m_Device, m_Handle, memoryRequirementNum, bindInfos);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkBindVideoSessionMemoryKHR");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkBindVideoSessionMemoryKHR");
 
     m_Desc = videoSessionDesc;
     m_Desc.maxReferenceNum = maxDpbSlots ? maxDpbSlots - 1 : 0;

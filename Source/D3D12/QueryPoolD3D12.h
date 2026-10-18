@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 // Redefine unused values to types, we need
 const D3D12_QUERY_TYPE QUERY_TYPE_ACCELERATION_STRUCTURE_SIZE = (D3D12_QUERY_TYPE)100;
@@ -38,12 +38,12 @@ struct QueryPoolD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(m_QueryHeap, name);
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(m_QueryHeap, name);
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     inline uint32_t GetQuerySize() const {
@@ -61,4 +61,4 @@ private:
     ComPtr<ID3D12Resource> m_BufferForAccelerationStructuresSizes;
 };
 
-} // namespace nri
+} // namespace openrhi

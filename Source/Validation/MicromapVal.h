@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct MicromapVal final : public ObjectVal {
     MicromapVal(DeviceVal& device, Micromap* micromap, bool isBoundToMemory)
@@ -26,7 +26,7 @@ struct MicromapVal final : public ObjectVal {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     uint64_t GetBuildScratchBufferSize() const;
@@ -39,4 +39,4 @@ private:
     bool m_IsBoundToMemory = false;
 };
 
-} // namespace nri
+} // namespace openrhi

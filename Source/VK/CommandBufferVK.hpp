@@ -452,17 +452,17 @@ Result CommandBufferVK::Create(const CommandBufferVKDesc& commandBufferVKDesc) {
     return Result::SUCCESS;
 }
 
-NRI_INLINE void CommandBufferVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void CommandBufferVK::SetDebugName(const char* name) {
     m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_COMMAND_BUFFER, (uint64_t)m_Handle, name);
 }
 
-NRI_INLINE Result CommandBufferVK::Begin(const DescriptorPool*) {
+OPENRHI_INLINE Result CommandBufferVK::Begin(const DescriptorPool*) {
     VkCommandBufferBeginInfo info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.BeginCommandBuffer(m_Handle, &info);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkBeginCommandBuffer");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkBeginCommandBuffer");
 
     m_PipelineLayout = nullptr;
     m_PipelineBindPoint = BindPoint::INHERIT;
@@ -471,15 +471,15 @@ NRI_INLINE Result CommandBufferVK::Begin(const DescriptorPool*) {
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result CommandBufferVK::End() {
+OPENRHI_INLINE Result CommandBufferVK::End() {
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.EndCommandBuffer(m_Handle);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkEndCommandBuffer");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkEndCommandBuffer");
 
     return Result::SUCCESS;
 }
 
-NRI_INLINE void CommandBufferVK::DecodeVideo(const VideoDecodeDesc& videoDecodeDesc) {
+OPENRHI_INLINE void CommandBufferVK::DecodeVideo(const VideoDecodeDesc& videoDecodeDesc) {
     VideoSessionVK& session = *(VideoSessionVK*)videoDecodeDesc.session;
     VideoSessionParametersVK& parameters = *(VideoSessionParametersVK*)videoDecodeDesc.parameters;
 
@@ -488,13 +488,13 @@ NRI_INLINE void CommandBufferVK::DecodeVideo(const VideoDecodeDesc& videoDecodeD
     const uint32_t h264ReferenceNum = session.GetDesc().codec == VideoCodec::H264 ? videoDecodeDesc.referenceNum : 0;
     const uint32_t h265ReferenceNum = session.GetDesc().codec == VideoCodec::H265 ? videoDecodeDesc.referenceNum : 0;
     const uint32_t av1ReferenceNum = session.GetDesc().codec == VideoCodec::AV1 ? videoDecodeDesc.referenceNum : 0;
-    Scratch<VkVideoReferenceSlotInfoKHR> referenceSlots = NRI_ALLOCATE_SCRATCH(m_Device, VkVideoReferenceSlotInfoKHR, videoDecodeDesc.referenceNum + 1);
-    Scratch<StdVideoDecodeH264ReferenceInfo> h264StdReferences = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoDecodeH264ReferenceInfo, h264ReferenceNum);
-    Scratch<VkVideoDecodeH264DpbSlotInfoKHR> h264References = NRI_ALLOCATE_SCRATCH(m_Device, VkVideoDecodeH264DpbSlotInfoKHR, h264ReferenceNum);
-    Scratch<StdVideoDecodeH265ReferenceInfo> h265StdReferences = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoDecodeH265ReferenceInfo, h265ReferenceNum);
-    Scratch<VkVideoDecodeH265DpbSlotInfoKHR> h265References = NRI_ALLOCATE_SCRATCH(m_Device, VkVideoDecodeH265DpbSlotInfoKHR, h265ReferenceNum);
-    Scratch<StdVideoDecodeAV1ReferenceInfo> av1StdReferences = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoDecodeAV1ReferenceInfo, av1ReferenceNum);
-    Scratch<VkVideoDecodeAV1DpbSlotInfoKHR> av1References = NRI_ALLOCATE_SCRATCH(m_Device, VkVideoDecodeAV1DpbSlotInfoKHR, av1ReferenceNum);
+    Scratch<VkVideoReferenceSlotInfoKHR> referenceSlots = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkVideoReferenceSlotInfoKHR, videoDecodeDesc.referenceNum + 1);
+    Scratch<StdVideoDecodeH264ReferenceInfo> h264StdReferences = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoDecodeH264ReferenceInfo, h264ReferenceNum);
+    Scratch<VkVideoDecodeH264DpbSlotInfoKHR> h264References = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkVideoDecodeH264DpbSlotInfoKHR, h264ReferenceNum);
+    Scratch<StdVideoDecodeH265ReferenceInfo> h265StdReferences = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoDecodeH265ReferenceInfo, h265ReferenceNum);
+    Scratch<VkVideoDecodeH265DpbSlotInfoKHR> h265References = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkVideoDecodeH265DpbSlotInfoKHR, h265ReferenceNum);
+    Scratch<StdVideoDecodeAV1ReferenceInfo> av1StdReferences = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoDecodeAV1ReferenceInfo, av1ReferenceNum);
+    Scratch<VkVideoDecodeAV1DpbSlotInfoKHR> av1References = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkVideoDecodeAV1DpbSlotInfoKHR, av1ReferenceNum);
     for (uint32_t i = 0; i < videoDecodeDesc.referenceNum; i++) {
         VideoPictureVK& picture = *(VideoPictureVK*)videoDecodeDesc.references[i].picture;
         referenceSlots[i] = {VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR};
@@ -503,7 +503,7 @@ NRI_INLINE void CommandBufferVK::DecodeVideo(const VideoDecodeDesc& videoDecodeD
         if (session.GetDesc().codec == VideoCodec::H264) {
             const VideoH264DecodePictureDesc* h264PictureDesc = videoDecodeDesc.h264PictureDesc;
             const VideoH264DecodeReferenceDesc* referenceDesc = h264PictureDesc ? video::FindReferenceDesc(h264PictureDesc->references, h264PictureDesc->referenceNum, videoDecodeDesc.references[i].slot) : nullptr;
-            NRI_CHECK(referenceDesc, "H.264 reference is missing after NRI validation");
+            OPENRHI_CHECK(referenceDesc, "H.264 reference is missing after OpenRHI validation");
 
             h264StdReferences[i] = {};
             h264StdReferences[i].flags.top_field_flag = !!(referenceDesc->flags & VideoH264DecodeReferenceBits::TOP_FIELD);
@@ -528,7 +528,7 @@ NRI_INLINE void CommandBufferVK::DecodeVideo(const VideoDecodeDesc& videoDecodeD
         } else if (session.GetDesc().codec == VideoCodec::AV1) {
             const VideoAV1DecodePictureDesc* av1PictureDesc = videoDecodeDesc.av1PictureDesc;
             const VideoAV1ReferenceDesc* referenceDesc = av1PictureDesc ? video::FindReferenceDesc(av1PictureDesc->references, av1PictureDesc->referenceNum, videoDecodeDesc.references[i].slot) : nullptr;
-            NRI_CHECK(referenceDesc, "AV1 reference is missing after NRI validation");
+            OPENRHI_CHECK(referenceDesc, "AV1 reference is missing after OpenRHI validation");
 
             FillVideoDecodeAV1ReferenceInfo(av1StdReferences[i], referenceDesc->frameType, referenceDesc->orderHint, referenceDesc->savedOrderHints);
             av1References[i] = {VK_STRUCTURE_TYPE_VIDEO_DECODE_AV1_DPB_SLOT_INFO_KHR};
@@ -560,14 +560,14 @@ NRI_INLINE void CommandBufferVK::DecodeVideo(const VideoDecodeDesc& videoDecodeD
 #if defined(VK_STRUCTURE_TYPE_VIDEO_DECODE_AV1_INLINE_SESSION_PARAMETERS_INFO_KHR)
     VkVideoDecodeAV1InlineSessionParametersInfoKHR av1InlineSessionParameters = {VK_STRUCTURE_TYPE_VIDEO_DECODE_AV1_INLINE_SESSION_PARAMETERS_INFO_KHR};
 #endif
-    Scratch<uint32_t> av1TileOffsets = NRI_ALLOCATE_SCRATCH(m_Device, uint32_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum, 1u) : 0);
-    Scratch<uint32_t> av1TileSizes = NRI_ALLOCATE_SCRATCH(m_Device, uint32_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum, 1u) : 0);
-    Scratch<uint32_t> h264SliceOffsets = NRI_ALLOCATE_SCRATCH(m_Device, uint32_t, videoDecodeDesc.h264PictureDesc ? std::max(videoDecodeDesc.h264PictureDesc->sliceOffsetNum, 1u) : 0);
-    Scratch<uint32_t> h265SliceSegmentOffsets = NRI_ALLOCATE_SCRATCH(m_Device, uint32_t, videoDecodeDesc.h265PictureDesc ? std::max(videoDecodeDesc.h265PictureDesc->sliceSegmentOffsetNum, 1u) : 0);
-    Scratch<uint16_t> av1MiColStarts = NRI_ALLOCATE_SCRATCH(m_Device, uint16_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum + 1, 2u) : 0);
-    Scratch<uint16_t> av1MiRowStarts = NRI_ALLOCATE_SCRATCH(m_Device, uint16_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum + 1, 2u) : 0);
-    Scratch<uint16_t> av1WidthInSbsMinus1 = NRI_ALLOCATE_SCRATCH(m_Device, uint16_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum, 1u) : 0);
-    Scratch<uint16_t> av1HeightInSbsMinus1 = NRI_ALLOCATE_SCRATCH(m_Device, uint16_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum, 1u) : 0);
+    Scratch<uint32_t> av1TileOffsets = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint32_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum, 1u) : 0);
+    Scratch<uint32_t> av1TileSizes = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint32_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum, 1u) : 0);
+    Scratch<uint32_t> h264SliceOffsets = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint32_t, videoDecodeDesc.h264PictureDesc ? std::max(videoDecodeDesc.h264PictureDesc->sliceOffsetNum, 1u) : 0);
+    Scratch<uint32_t> h265SliceSegmentOffsets = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint32_t, videoDecodeDesc.h265PictureDesc ? std::max(videoDecodeDesc.h265PictureDesc->sliceSegmentOffsetNum, 1u) : 0);
+    Scratch<uint16_t> av1MiColStarts = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint16_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum + 1, 2u) : 0);
+    Scratch<uint16_t> av1MiRowStarts = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint16_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum + 1, 2u) : 0);
+    Scratch<uint16_t> av1WidthInSbsMinus1 = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint16_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum, 1u) : 0);
+    Scratch<uint16_t> av1HeightInSbsMinus1 = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint16_t, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum, 1u) : 0);
     void* codecPictureInfo = nullptr;
     const void* setupReferenceInfo = nullptr;
     bool activatesSetupReferenceSlot = false;
@@ -633,7 +633,7 @@ NRI_INLINE void CommandBufferVK::DecodeVideo(const VideoDecodeDesc& videoDecodeD
             else if (reference.pictureOrderCount > desc.pictureOrderCount)
                 h265StdPicture.RefPicSetStCurrAfter[afterNum++] = slot;
             else {
-                NRI_CHECK(false, "Unexpected equal H.265 short-term reference picture order count");
+                OPENRHI_CHECK(false, "Unexpected equal H.265 short-term reference picture order count");
                 return;
             }
         }
@@ -658,7 +658,7 @@ NRI_INLINE void CommandBufferVK::DecodeVideo(const VideoDecodeDesc& videoDecodeD
         const VideoAV1PictureBits pictureFlags = desc.flags == VideoAV1PictureBits::NONE ? video::av1::GetDefaultPictureFlags() : desc.flags;
         VideoDecodeAV1ReferenceMappingVK referenceMapping = {};
         const bool isReferenceMappingValid = BuildVideoDecodeAV1ReferenceMapping(desc, referenceMapping);
-        NRI_CHECK(isReferenceMappingValid, "AV1 reference mapping is invalid after NRI validation");
+        OPENRHI_CHECK(isReferenceMappingValid, "AV1 reference mapping is invalid after OpenRHI validation");
         MaybeUnused(isReferenceMappingValid);
 
         FillVideoDecodeAV1PictureInfo(av1StdPicture, desc, pictureFlags);
@@ -760,7 +760,7 @@ NRI_INLINE void CommandBufferVK::DecodeVideo(const VideoDecodeDesc& videoDecodeD
     vk.CmdEndVideoCodingKHR(m_Handle, &endInfo);
 }
 
-NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeDesc) {
+OPENRHI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeDesc) {
     VideoSessionVK& session = *(VideoSessionVK*)videoEncodeDesc.session;
     VideoSessionParametersVK& parameters = *(VideoSessionParametersVK*)videoEncodeDesc.parameters;
 
@@ -771,20 +771,20 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
     const VideoEncodeRateControlDesc defaultRateControl = {VideoEncodeRateControlMode::CQP, 26, 28, 30, 0, 51, 30, 1, 0, 0, 0, 0, 0};
     const VideoEncodeRateControlDesc& rateControlDesc = videoEncodeDesc.rateControlDesc ? *videoEncodeDesc.rateControlDesc : defaultRateControl;
     if ((session.GetRateControlModes() & video::GetEncodeRateControlModeMask(rateControlDesc.mode)) == 0) {
-        NRI_REPORT_ERROR(&m_Device, "Unsupported Vulkan video encode rate control mode");
+        OPENRHI_REPORT_ERROR(&m_Device, "Unsupported Vulkan video encode rate control mode");
         return;
     }
     if (!video::IsFrameTypeSupported(session.GetDesc().codec, pictureDesc.frameType, true)) {
-        NRI_REPORT_ERROR(&m_Device, "Vulkan video encode does not support the requested frame type for this codec");
+        OPENRHI_REPORT_ERROR(&m_Device, "Vulkan video encode does not support the requested frame type for this codec");
         return;
     }
     if (pictureDesc.frameType == VideoFrameType::B) {
         if (session.GetDesc().codec == VideoCodec::H264 && (!session.GetH264MaxBPictureL0ReferenceCount() || !session.GetH264MaxL1ReferenceCount())) {
-            NRI_REPORT_ERROR(&m_Device, "Vulkan H.264 encode session does not support B-frame references");
+            OPENRHI_REPORT_ERROR(&m_Device, "Vulkan H.264 encode session does not support B-frame references");
             return;
         }
         if (session.GetDesc().codec == VideoCodec::H265 && (!session.GetH265MaxBPictureL0ReferenceCount() || !session.GetH265MaxL1ReferenceCount())) {
-            NRI_REPORT_ERROR(&m_Device, "Vulkan H.265 encode session does not support B-frame references");
+            OPENRHI_REPORT_ERROR(&m_Device, "Vulkan H.265 encode session does not support B-frame references");
             return;
         }
     }
@@ -844,11 +844,11 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
                 }
                 if (pictureDesc.frameType == VideoFrameType::B) {
                     if (list0Num > session.GetH264MaxBPictureL0ReferenceCount()) {
-                        NRI_REPORT_ERROR(&m_Device, "H.264 B-frame List0 reference count exceeds Vulkan device limit");
+                        OPENRHI_REPORT_ERROR(&m_Device, "H.264 B-frame List0 reference count exceeds Vulkan device limit");
                         return;
                     }
                     if (list1Num > session.GetH264MaxL1ReferenceCount()) {
-                        NRI_REPORT_ERROR(&m_Device, "H.264 B-frame List1 reference count exceeds Vulkan device limit");
+                        OPENRHI_REPORT_ERROR(&m_Device, "H.264 B-frame List1 reference count exceeds Vulkan device limit");
                         return;
                     }
                 }
@@ -913,7 +913,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
                 VideoEncodeH265ReferenceListsVK h265Lists = {};
                 if (!BuildVideoEncodeH265ReferenceLists(videoEncodeDesc.references, videoEncodeDesc.h265ReferenceDescs, videoEncodeDesc.referenceNum, pictureDesc.frameType,
                         pictureDesc.pictureOrderCount, h265Lists)) {
-                    NRI_CHECK(false, "Failed to build Vulkan H.265 reference lists from validated descriptors");
+                    OPENRHI_CHECK(false, "Failed to build Vulkan H.265 reference lists from validated descriptors");
                     return;
                 }
 
@@ -921,11 +921,11 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
                 const uint32_t list1ReferenceNum = h265Lists.list1Num;
                 if (pictureDesc.frameType == VideoFrameType::B) {
                     if (list0ReferenceNum > session.GetH265MaxBPictureL0ReferenceCount()) {
-                        NRI_REPORT_ERROR(&m_Device, "H.265 B-frame List0 reference count exceeds Vulkan device limit");
+                        OPENRHI_REPORT_ERROR(&m_Device, "H.265 B-frame List0 reference count exceeds Vulkan device limit");
                         return;
                     }
                     if (list1ReferenceNum > session.GetH265MaxL1ReferenceCount()) {
-                        NRI_REPORT_ERROR(&m_Device, "H.265 B-frame List1 reference count exceeds Vulkan device limit");
+                        OPENRHI_REPORT_ERROR(&m_Device, "H.265 B-frame List1 reference count exceeds Vulkan device limit");
                         return;
                     }
                 }
@@ -1007,11 +1007,11 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
             if (av1PictureDesc && av1PictureDesc->flags != VideoAV1PictureBits::NONE) {
                 if ((av1PictureDesc->flags & (VideoAV1PictureBits::ALLOW_SCREEN_CONTENT_TOOLS | VideoAV1PictureBits::FORCE_INTEGER_MV))
                     && parameters.GetAV1SequenceHeader().seq_force_screen_content_tools == 0) {
-                    NRI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode session parameters do not allow screen-content tools");
+                    OPENRHI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode session parameters do not allow screen-content tools");
                     return;
                 }
                 if ((av1PictureDesc->flags & VideoAV1PictureBits::FORCE_INTEGER_MV) && parameters.GetAV1SequenceHeader().seq_force_integer_mv == 0) {
-                    NRI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode session parameters do not allow integer motion vectors");
+                    OPENRHI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode session parameters do not allow integer motion vectors");
                     return;
                 }
 
@@ -1025,7 +1025,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
                 av1StdPicture.delta_lf_res = av1PictureDesc->deltaLfRes;
             }
             if (av1StdPicture.flags.frame_size_override_flag && (session.GetAV1CapabilityFlags() & VK_VIDEO_ENCODE_AV1_CAPABILITY_FRAME_SIZE_OVERRIDE_BIT_KHR) == 0) {
-                NRI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support frame size override");
+                OPENRHI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support frame size override");
                 return;
             }
             for (int8_t& refFrameIndex : av1StdPicture.ref_frame_idx)
@@ -1047,7 +1047,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
             if (av1PictureDesc && av1PictureDesc->referenceNum) {
                 VideoEncodeAV1ReferenceMappingVK referenceMapping = {};
                 if (!BuildVideoEncodeAV1ReferenceMapping(videoEncodeDesc.references, videoEncodeDesc.referenceNum, *av1PictureDesc, referenceMapping)) {
-                    NRI_CHECK(false, "Failed to build Vulkan AV1 reference mapping from validated descriptors");
+                    OPENRHI_CHECK(false, "Failed to build Vulkan AV1 reference mapping from validated descriptors");
                     return;
                 }
 
@@ -1070,7 +1070,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
                 av1StdPicture.primary_ref_frame = primaryReferenceIndex;
             } else if (videoEncodeDesc.referenceNum) {
                 if (videoEncodeDesc.referenceNum > 1) {
-                    NRI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode requires 'av1PictureDesc' for multiple references");
+                    OPENRHI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode requires 'av1PictureDesc' for multiple references");
                     return;
                 }
 
@@ -1079,7 +1079,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
                 av1StdPicture.primary_ref_frame = 0;
             }
             if (av1StdPicture.flags.segmentation_enabled || (av1PictureDesc && av1PictureDesc->segmentation)) {
-                NRI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support segmentation");
+                OPENRHI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support segmentation");
                 return;
             }
             av1TileInfo.flags.uniform_tile_spacing_flag = true;
@@ -1098,7 +1098,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
             av1TileInfo.pHeightInSbsMinus1 = av1HeightInSbsMinus1.data();
             if (encodeAv1TileLayout) {
                 if (encodeAv1TileLayout->columnNum > session.GetAV1MaxTiles().width || encodeAv1TileLayout->rowNum > session.GetAV1MaxTiles().height) {
-                    NRI_REPORT_ERROR(&m_Device, "'av1PictureDesc->tileLayout' exceeds Vulkan AV1 encode tile count limits");
+                    OPENRHI_REPORT_ERROR(&m_Device, "'av1PictureDesc->tileLayout' exceeds Vulkan AV1 encode tile count limits");
                     return;
                 }
 
@@ -1117,20 +1117,20 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
                     for (uint32_t i = 0; i < encodeAv1TileLayout->columnNum; i++) {
                         const uint32_t tileWidth = uint32_t(encodeAv1TileLayout->widthInSuperblocksMinus1[i] + 1) * superblockSize;
                         if (!IsVideoEncodeAV1TileWidthSupported(tileWidth, session.GetAV1MinTileSize(), session.GetAV1MaxTileSize())) {
-                            NRI_REPORT_ERROR(&m_Device, "'av1PictureDesc->tileLayout->widthInSuperblocksMinus1[%u]' is outside Vulkan AV1 encode tile size limits", i);
+                            OPENRHI_REPORT_ERROR(&m_Device, "'av1PictureDesc->tileLayout->widthInSuperblocksMinus1[%u]' is outside Vulkan AV1 encode tile size limits", i);
                             return;
                         }
                     }
                     for (uint32_t i = 0; i < encodeAv1TileLayout->rowNum; i++) {
                         const uint32_t tileHeight = uint32_t(encodeAv1TileLayout->heightInSuperblocksMinus1[i] + 1) * superblockSize;
                         if (!IsVideoEncodeAV1TileHeightSupported(tileHeight, session.GetAV1MinTileSize(), session.GetAV1MaxTileSize())) {
-                            NRI_REPORT_ERROR(&m_Device, "'av1PictureDesc->tileLayout->heightInSuperblocksMinus1[%u]' is outside Vulkan AV1 encode tile size limits", i);
+                            OPENRHI_REPORT_ERROR(&m_Device, "'av1PictureDesc->tileLayout->heightInSuperblocksMinus1[%u]' is outside Vulkan AV1 encode tile size limits", i);
                             return;
                         }
                     }
                 }
             } else if (!IsVideoEncodeAV1TileSizeSupported(session.GetDesc().width, session.GetDesc().height, session.GetAV1MinTileSize(), session.GetAV1MaxTileSize())) {
-                NRI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support the default single-tile size");
+                OPENRHI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support the default single-tile size");
                 return;
             }
             FillVideoEncodeAV1Quantization(av1Quantization, av1PictureDesc, (av1PictureDesc && av1PictureDesc->baseQIndex) ? av1PictureDesc->baseQIndex : video::GetEncodeQPByFrameType(rateControlDesc, pictureDesc.frameType));
@@ -1155,7 +1155,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
                 : VK_VIDEO_ENCODE_AV1_RATE_CONTROL_GROUP_INTRA_KHR;
             if (av1Picture.predictionMode == VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_SINGLE_REFERENCE_KHR) {
                 if (session.GetAV1MaxSingleReferenceCount() == 0 || !HasVideoEncodeAV1ReferenceName(av1Picture.referenceNameSlotIndices, session.GetAV1SingleReferenceNameMask())) {
-                    NRI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support the selected single-reference prediction names");
+                    OPENRHI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support the selected single-reference prediction names");
                     return;
                 }
             } else if (av1Picture.predictionMode == VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_UNIDIRECTIONAL_COMPOUND_KHR) {
@@ -1164,7 +1164,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
                     || HasVideoEncodeAV1ReferenceNamePair(av1Picture.referenceNameSlotIndices, session.GetAV1UnidirectionalCompoundReferenceNameMask(), 0, 3)
                     || HasVideoEncodeAV1ReferenceNamePair(av1Picture.referenceNameSlotIndices, session.GetAV1UnidirectionalCompoundReferenceNameMask(), 4, 6);
                 if (session.GetAV1MaxUnidirectionalCompoundReferenceCount() == 0 || !hasSupportedPair) {
-                    NRI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support the selected unidirectional compound reference prediction names");
+                    OPENRHI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support the selected unidirectional compound reference prediction names");
                     return;
                 }
             } else if (av1Picture.predictionMode == VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_BIDIRECTIONAL_COMPOUND_KHR) {
@@ -1174,12 +1174,12 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
                         hasSupportedPair = HasVideoEncodeAV1ReferenceNamePair(av1Picture.referenceNameSlotIndices, session.GetAV1BidirectionalCompoundReferenceNameMask(), i, j);
                 }
                 if (session.GetAV1MaxBidirectionalCompoundReferenceCount() == 0 || !hasSupportedPair) {
-                    NRI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support the selected bidirectional compound reference prediction names");
+                    OPENRHI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode does not support the selected bidirectional compound reference prediction names");
                     return;
                 }
             }
             if (rateControlDesc.mode == VideoEncodeRateControlMode::CQP && (av1Quantization.base_q_idx < session.GetAV1MinQIndex() || av1Quantization.base_q_idx > session.GetAV1MaxQIndex())) {
-                NRI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode Q index %u is outside supported range %u..%u", av1Quantization.base_q_idx, session.GetAV1MinQIndex(), session.GetAV1MaxQIndex());
+                OPENRHI_REPORT_ERROR(&m_Device, "Vulkan AV1 encode Q index %u is outside supported range %u..%u", av1Quantization.base_q_idx, session.GetAV1MinQIndex(), session.GetAV1MaxQIndex());
                 return;
             }
             av1Picture.constantQIndex = rateControlDesc.mode == VideoEncodeRateControlMode::CQP ? av1Quantization.base_q_idx : 0;
@@ -1194,20 +1194,20 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
             break;
         }
         default:
-            NRI_CHECK(false, "Unexpected video encode codec");
+            OPENRHI_CHECK(false, "Unexpected video encode codec");
             return;
     }
 
-    Scratch<VkVideoReferenceSlotInfoKHR> referenceSlots = NRI_ALLOCATE_SCRATCH(m_Device, VkVideoReferenceSlotInfoKHR, videoEncodeDesc.referenceNum + 1);
+    Scratch<VkVideoReferenceSlotInfoKHR> referenceSlots = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkVideoReferenceSlotInfoKHR, videoEncodeDesc.referenceNum + 1);
     const uint32_t h264ReferenceNum = session.GetDesc().codec == VideoCodec::H264 ? videoEncodeDesc.referenceNum : 0;
     const uint32_t h265ReferenceNum = session.GetDesc().codec == VideoCodec::H265 ? videoEncodeDesc.referenceNum : 0;
     const uint32_t av1ReferenceNum = session.GetDesc().codec == VideoCodec::AV1 ? videoEncodeDesc.referenceNum : 0;
-    Scratch<StdVideoEncodeH264ReferenceInfo> h264StdReferences = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoEncodeH264ReferenceInfo, h264ReferenceNum);
-    Scratch<VkVideoEncodeH264DpbSlotInfoKHR> h264References = NRI_ALLOCATE_SCRATCH(m_Device, VkVideoEncodeH264DpbSlotInfoKHR, h264ReferenceNum);
-    Scratch<StdVideoEncodeH265ReferenceInfo> h265StdReferences = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoEncodeH265ReferenceInfo, h265ReferenceNum);
-    Scratch<VkVideoEncodeH265DpbSlotInfoKHR> h265References = NRI_ALLOCATE_SCRATCH(m_Device, VkVideoEncodeH265DpbSlotInfoKHR, h265ReferenceNum);
-    Scratch<StdVideoEncodeAV1ReferenceInfo> av1StdReferences = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoEncodeAV1ReferenceInfo, av1ReferenceNum);
-    Scratch<VkVideoEncodeAV1DpbSlotInfoKHR> av1References = NRI_ALLOCATE_SCRATCH(m_Device, VkVideoEncodeAV1DpbSlotInfoKHR, av1ReferenceNum);
+    Scratch<StdVideoEncodeH264ReferenceInfo> h264StdReferences = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoEncodeH264ReferenceInfo, h264ReferenceNum);
+    Scratch<VkVideoEncodeH264DpbSlotInfoKHR> h264References = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkVideoEncodeH264DpbSlotInfoKHR, h264ReferenceNum);
+    Scratch<StdVideoEncodeH265ReferenceInfo> h265StdReferences = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoEncodeH265ReferenceInfo, h265ReferenceNum);
+    Scratch<VkVideoEncodeH265DpbSlotInfoKHR> h265References = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkVideoEncodeH265DpbSlotInfoKHR, h265ReferenceNum);
+    Scratch<StdVideoEncodeAV1ReferenceInfo> av1StdReferences = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoEncodeAV1ReferenceInfo, av1ReferenceNum);
+    Scratch<VkVideoEncodeAV1DpbSlotInfoKHR> av1References = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkVideoEncodeAV1DpbSlotInfoKHR, av1ReferenceNum);
     for (uint32_t i = 0; i < videoEncodeDesc.referenceNum; i++) {
         VideoPictureVK& picture = *(VideoPictureVK*)videoEncodeDesc.references[i].picture;
         referenceSlots[i] = {VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR};
@@ -1216,7 +1216,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
 
         if (session.GetDesc().codec == VideoCodec::H264) {
             const VideoH264EncodeReferenceDesc* referenceDesc = video::FindReferenceDesc(videoEncodeDesc.h264PictureDesc, videoEncodeDesc.references[i].slot);
-            NRI_CHECK(referenceDesc, "H.264 reference is missing after NRI validation");
+            OPENRHI_CHECK(referenceDesc, "H.264 reference is missing after OpenRHI validation");
 
             h264StdReferences[i] = {};
             h264StdReferences[i].flags.used_for_long_term_reference = referenceDesc->longTermReference != 0;
@@ -1339,7 +1339,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
     uint32_t encodeFeedbackQueryIndex = UINT32_MAX;
     if (useEncodeFeedback) {
         if (session.FindEncodeFeedbackQuery(resolvedMetadata, videoEncodeDesc.resolvedMetadataOffset) != UINT32_MAX) {
-            NRI_REPORT_ERROR(&m_Device, "A Vulkan video encode feedback query is already pending for this resolved metadata range");
+            OPENRHI_REPORT_ERROR(&m_Device, "A Vulkan video encode feedback query is already pending for this resolved metadata range");
 
             return;
         }
@@ -1347,7 +1347,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
         encodeFeedbackQueryIndex = session.AllocateEncodeFeedbackQuery(resolvedMetadata, videoEncodeDesc.resolvedMetadataOffset);
 
         if (encodeFeedbackQueryIndex == UINT32_MAX) {
-            NRI_REPORT_ERROR(&m_Device, "Too many unresolved Vulkan video encode feedback queries are outstanding for this video session");
+            OPENRHI_REPORT_ERROR(&m_Device, "Too many unresolved Vulkan video encode feedback queries are outstanding for this video session");
 
             return;
         }
@@ -1386,7 +1386,7 @@ NRI_INLINE void CommandBufferVK::EncodeVideo(const VideoEncodeDesc& videoEncodeD
     vk.CmdEndVideoCodingKHR(m_Handle, &endInfo);
 }
 
-NRI_INLINE void CommandBufferVK::ResolveVideoEncodeFeedback(VideoSession& videoSession, Buffer& resolvedMetadata, uint64_t resolvedMetadataOffset) {
+OPENRHI_INLINE void CommandBufferVK::ResolveVideoEncodeFeedback(VideoSession& videoSession, Buffer& resolvedMetadata, uint64_t resolvedMetadataOffset) {
     VideoSessionVK& session = (VideoSessionVK&)videoSession;
     if (!session.GetEncodeFeedbackQueryPool())
         return;
@@ -1394,7 +1394,7 @@ NRI_INLINE void CommandBufferVK::ResolveVideoEncodeFeedback(VideoSession& videoS
     BufferVK& feedbackBuffer = (BufferVK&)resolvedMetadata;
     const uint32_t encodeFeedbackQueryIndex = session.FindEncodeFeedbackQuery(&feedbackBuffer, resolvedMetadataOffset);
     if (encodeFeedbackQueryIndex == UINT32_MAX) {
-        NRI_REPORT_ERROR(&m_Device, "No unresolved Vulkan video encode feedback query is available for this resolved metadata range");
+        OPENRHI_REPORT_ERROR(&m_Device, "No unresolved Vulkan video encode feedback query is available for this resolved metadata range");
         return;
     }
 
@@ -1408,10 +1408,10 @@ NRI_INLINE void CommandBufferVK::ResolveVideoEncodeFeedback(VideoSession& videoS
     session.SetEncodeFeedbackQueryResolved(encodeFeedbackQueryIndex);
 }
 
-NRI_INLINE void CommandBufferVK::SetViewports(const Viewport* viewports, uint32_t viewportNum) {
+OPENRHI_INLINE void CommandBufferVK::SetViewports(const Viewport* viewports, uint32_t viewportNum) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
     uint32_t vkViewportNum = (deviceDesc.features.extendedDynamicState || viewportNum == 0) ? viewportNum : deviceDesc.viewport.maxNum;
-    Scratch<VkViewport> vkViewports = NRI_ALLOCATE_SCRATCH(m_Device, VkViewport, vkViewportNum);
+    Scratch<VkViewport> vkViewports = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkViewport, vkViewportNum);
     for (uint32_t i = 0; i < viewportNum; i++) {
         const Viewport& in = viewports[i];
         VkViewport& out = vkViewports[i];
@@ -1439,10 +1439,10 @@ NRI_INLINE void CommandBufferVK::SetViewports(const Viewport* viewports, uint32_
         vk.CmdSetViewport(m_Handle, 0, vkViewportNum, vkViewports);
 }
 
-NRI_INLINE void CommandBufferVK::SetScissors(const Rect* rects, uint32_t rectNum) {
+OPENRHI_INLINE void CommandBufferVK::SetScissors(const Rect* rects, uint32_t rectNum) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
     uint32_t vkRectNum = (deviceDesc.features.extendedDynamicState || rectNum == 0) ? rectNum : deviceDesc.viewport.maxNum;
-    Scratch<VkRect2D> vkRects = NRI_ALLOCATE_SCRATCH(m_Device, VkRect2D, vkRectNum);
+    Scratch<VkRect2D> vkRects = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkRect2D, vkRectNum);
     for (uint32_t i = 0; i < rectNum; i++) {
         const Rect& in = rects[i];
         VkRect2D& out = vkRects[i];
@@ -1462,12 +1462,12 @@ NRI_INLINE void CommandBufferVK::SetScissors(const Rect* rects, uint32_t rectNum
         vk.CmdSetScissor(m_Handle, 0, vkRectNum, vkRects);
 }
 
-NRI_INLINE void CommandBufferVK::SetDepthBounds(float boundsMin, float boundsMax) {
+OPENRHI_INLINE void CommandBufferVK::SetDepthBounds(float boundsMin, float boundsMax) {
     const auto& vk = m_Device.GetDispatchTable();
     vk.CmdSetDepthBounds(m_Handle, boundsMin, boundsMax);
 }
 
-NRI_INLINE void CommandBufferVK::SetStencilReference(uint8_t frontRef, uint8_t backRef) {
+OPENRHI_INLINE void CommandBufferVK::SetStencilReference(uint8_t frontRef, uint8_t backRef) {
     const auto& vk = m_Device.GetDispatchTable();
 
     if (frontRef == backRef)
@@ -1478,8 +1478,8 @@ NRI_INLINE void CommandBufferVK::SetStencilReference(uint8_t frontRef, uint8_t b
     }
 }
 
-NRI_INLINE void CommandBufferVK::SetSampleLocations(const SampleLocation* locations, Sample_t locationNum, Sample_t sampleNum) {
-    Scratch<VkSampleLocationEXT> sampleLocations = NRI_ALLOCATE_SCRATCH(m_Device, VkSampleLocationEXT, locationNum);
+OPENRHI_INLINE void CommandBufferVK::SetSampleLocations(const SampleLocation* locations, Sample_t locationNum, Sample_t sampleNum) {
+    Scratch<VkSampleLocationEXT> sampleLocations = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkSampleLocationEXT, locationNum);
     for (uint32_t i = 0; i < locationNum; i++)
         sampleLocations[i] = {(float)(locations[i].x + 8) / 16.0f, (float)(locations[i].y + 8) / 16.0f};
 
@@ -1495,12 +1495,12 @@ NRI_INLINE void CommandBufferVK::SetSampleLocations(const SampleLocation* locati
     vk.CmdSetSampleLocationsEXT(m_Handle, &sampleLocationsInfo);
 }
 
-NRI_INLINE void CommandBufferVK::SetBlendConstants(const Color32f& color) {
+OPENRHI_INLINE void CommandBufferVK::SetBlendConstants(const Color32f& color) {
     const auto& vk = m_Device.GetDispatchTable();
     vk.CmdSetBlendConstants(m_Handle, &color.x);
 }
 
-NRI_INLINE void CommandBufferVK::SetShadingRate(const ShadingRateDesc& shadingRateDesc) {
+OPENRHI_INLINE void CommandBufferVK::SetShadingRate(const ShadingRateDesc& shadingRateDesc) {
     VkExtent2D shadingRate = GetShadingRate(shadingRateDesc.shadingRate);
     VkFragmentShadingRateCombinerOpKHR combiners[2] = {
         GetShadingRateCombiner(shadingRateDesc.primitiveCombiner),
@@ -1511,17 +1511,17 @@ NRI_INLINE void CommandBufferVK::SetShadingRate(const ShadingRateDesc& shadingRa
     vk.CmdSetFragmentShadingRateKHR(m_Handle, &shadingRate, combiners);
 }
 
-NRI_INLINE void CommandBufferVK::SetDepthBias(const DepthBiasDesc& depthBiasDesc) {
+OPENRHI_INLINE void CommandBufferVK::SetDepthBias(const DepthBiasDesc& depthBiasDesc) {
     const auto& vk = m_Device.GetDispatchTable();
     vk.CmdSetDepthBias(m_Handle, depthBiasDesc.constant, depthBiasDesc.clamp, depthBiasDesc.slope);
 }
 
-NRI_INLINE void CommandBufferVK::ClearAttachments(const ClearAttachmentDesc* clearAttachmentDescs, uint32_t clearAttachmentDescNum, const Rect* rects, uint32_t rectNum) {
+OPENRHI_INLINE void CommandBufferVK::ClearAttachments(const ClearAttachmentDesc* clearAttachmentDescs, uint32_t clearAttachmentDescNum, const Rect* rects, uint32_t rectNum) {
     static_assert(sizeof(VkClearValue) == sizeof(ClearValue), "Sizeof mismatch");
 
     // Attachments
     uint32_t clearAttachmentNum = 0;
-    Scratch<VkClearAttachment> clearAttachments = NRI_ALLOCATE_SCRATCH(m_Device, VkClearAttachment, clearAttachmentDescNum);
+    Scratch<VkClearAttachment> clearAttachments = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkClearAttachment, clearAttachmentDescNum);
 
     for (uint32_t i = 0; i < clearAttachmentDescNum; i++) {
         const ClearAttachmentDesc& clearAttachmentDesc = clearAttachmentDescs[i];
@@ -1552,7 +1552,7 @@ NRI_INLINE void CommandBufferVK::ClearAttachments(const ClearAttachmentDesc* cle
     if (!hasRects)
         rectNum = 1;
 
-    Scratch<VkClearRect> clearRects = NRI_ALLOCATE_SCRATCH(m_Device, VkClearRect, rectNum);
+    Scratch<VkClearRect> clearRects = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkClearRect, rectNum);
     for (uint32_t i = 0; i < rectNum; i++) {
         VkClearRect& clearRect = clearRects[i];
 
@@ -1573,7 +1573,7 @@ NRI_INLINE void CommandBufferVK::ClearAttachments(const ClearAttachmentDesc* cle
     vk.CmdClearAttachments(m_Handle, clearAttachmentNum, clearAttachments, rectNum, clearRects);
 }
 
-NRI_INLINE void CommandBufferVK::ClearStorage(const ClearStorageDesc& clearStorageDesc) {
+OPENRHI_INLINE void CommandBufferVK::ClearStorage(const ClearStorageDesc& clearStorageDesc) {
     const DescriptorVK& descriptorVK = *(DescriptorVK*)clearStorageDesc.descriptor;
 
     const auto& vk = m_Device.GetDispatchTable();
@@ -1602,19 +1602,19 @@ NRI_INLINE void CommandBufferVK::ClearStorage(const ClearStorageDesc& clearStora
             vk.CmdFillBuffer(m_Handle, descriptorBufferInfo.buffer, descriptorBufferInfo.offset, descriptorBufferInfo.range, clearStorageDesc.value.ui.x);
         } break;
         default:
-            NRI_CHECK(false, "Unexpected 'descriptorType'");
+            OPENRHI_CHECK(false, "Unexpected 'descriptorType'");
             break;
     }
 }
 
-NRI_INLINE void CommandBufferVK::BeginRendering(const RenderingDesc& renderingDesc) {
+OPENRHI_INLINE void CommandBufferVK::BeginRendering(const RenderingDesc& renderingDesc) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
     Dim_t renderWidth = deviceDesc.dimensions.attachmentMaxDim;
     Dim_t renderHeight = deviceDesc.dimensions.attachmentMaxDim;
     Dim_t renderLayerNum = deviceDesc.dimensions.attachmentLayerMaxNum;
 
     if (m_Device.m_IsSupported.dynamicRendering) {
-        Scratch<VkRenderingAttachmentInfo> colors = NRI_ALLOCATE_SCRATCH(m_Device, VkRenderingAttachmentInfo, renderingDesc.colorNum);
+        Scratch<VkRenderingAttachmentInfo> colors = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkRenderingAttachmentInfo, renderingDesc.colorNum);
 
         VkRenderingInfo renderingInfo = {VK_STRUCTURE_TYPE_RENDERING_INFO};
         renderingInfo.viewMask = renderingDesc.viewMask;
@@ -1671,7 +1671,7 @@ NRI_INLINE void CommandBufferVK::BeginRendering(const RenderingDesc& renderingDe
     } else {
         RenderPassDesc renderPassDesc(m_Device.GetStdAllocator());
         FramebufferDesc framebufferDesc(m_Device.GetStdAllocator());
-        Scratch<VkImageView> colorResolves = NRI_ALLOCATE_SCRATCH(m_Device, VkImageView, renderingDesc.colorNum);
+        Scratch<VkImageView> colorResolves = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkImageView, renderingDesc.colorNum);
         bool hasColorResolve = false;
         uint32_t colorResolveNum = 0;
 
@@ -1815,7 +1815,7 @@ NRI_INLINE void CommandBufferVK::BeginRendering(const RenderingDesc& renderingDe
         if (!framebuffer)
             return;
 
-        Scratch<VkClearValue> clearValues = NRI_ALLOCATE_SCRATCH(m_Device, VkClearValue, framebufferDesc.attachments.size());
+        Scratch<VkClearValue> clearValues = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkClearValue, framebufferDesc.attachments.size());
         for (uint32_t i = 0; i < (uint32_t)framebufferDesc.attachments.size(); i++)
             clearValues[i] = {};
 
@@ -1853,7 +1853,7 @@ NRI_INLINE void CommandBufferVK::BeginRendering(const RenderingDesc& renderingDe
     m_RenderPass = true;
 }
 
-NRI_INLINE void CommandBufferVK::EndRendering() {
+OPENRHI_INLINE void CommandBufferVK::EndRendering() {
     const auto& vk = m_Device.GetDispatchTable();
     if (m_Device.m_IsSupported.dynamicRendering)
         vk.CmdEndRendering(m_Handle);
@@ -1864,8 +1864,8 @@ NRI_INLINE void CommandBufferVK::EndRendering() {
     m_RenderPass = false;
 }
 
-NRI_INLINE void CommandBufferVK::SetVertexBuffers(uint32_t baseSlot, const VertexBufferDesc* vertexBufferDescs, uint32_t vertexBufferNum) {
-    Scratch<uint8_t> scratch = NRI_ALLOCATE_SCRATCH(m_Device, uint8_t, vertexBufferNum * (sizeof(VkBuffer) + sizeof(VkDeviceSize) * 3));
+OPENRHI_INLINE void CommandBufferVK::SetVertexBuffers(uint32_t baseSlot, const VertexBufferDesc* vertexBufferDescs, uint32_t vertexBufferNum) {
+    Scratch<uint8_t> scratch = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint8_t, vertexBufferNum * (sizeof(VkBuffer) + sizeof(VkDeviceSize) * 3));
     uint8_t* ptr = scratch;
 
     VkBuffer* handles = (VkBuffer*)ptr;
@@ -1903,7 +1903,7 @@ NRI_INLINE void CommandBufferVK::SetVertexBuffers(uint32_t baseSlot, const Verte
         vk.CmdBindVertexBuffers(m_Handle, baseSlot, vertexBufferNum, handles, offsets);
 }
 
-NRI_INLINE void CommandBufferVK::SetIndexBuffer(const Buffer& buffer, uint64_t offset, IndexType indexType) {
+OPENRHI_INLINE void CommandBufferVK::SetIndexBuffer(const Buffer& buffer, uint64_t offset, IndexType indexType) {
     const BufferVK& bufferVK = (BufferVK&)buffer;
 
     const auto& vk = m_Device.GetDispatchTable();
@@ -1914,7 +1914,7 @@ NRI_INLINE void CommandBufferVK::SetIndexBuffer(const Buffer& buffer, uint64_t o
         vk.CmdBindIndexBuffer(m_Handle, bufferVK.GetHandle(), offset, GetIndexType(indexType));
 }
 
-NRI_INLINE void CommandBufferVK::SetPipelineLayout(BindPoint bindPoint, const PipelineLayout& pipelineLayout) {
+OPENRHI_INLINE void CommandBufferVK::SetPipelineLayout(BindPoint bindPoint, const PipelineLayout& pipelineLayout) {
     m_PipelineLayout = (PipelineLayoutVK*)&pipelineLayout;
     m_PipelineBindPoint = bindPoint;
 
@@ -1940,7 +1940,7 @@ NRI_INLINE void CommandBufferVK::SetPipelineLayout(BindPoint bindPoint, const Pi
     }
 }
 
-NRI_INLINE void CommandBufferVK::SetPipeline(const Pipeline& pipeline) {
+OPENRHI_INLINE void CommandBufferVK::SetPipeline(const Pipeline& pipeline) {
     const PipelineVK& pipelineVK = (PipelineVK&)pipeline;
 
     const auto& vk = m_Device.GetDispatchTable();
@@ -1952,7 +1952,7 @@ NRI_INLINE void CommandBufferVK::SetPipeline(const Pipeline& pipeline) {
         vk.CmdSetDepthBias(m_Handle, depthBias.constant, depthBias.clamp, depthBias.slope);
 }
 
-NRI_INLINE void CommandBufferVK::SetDescriptorSet(const SetDescriptorSetDesc& setDescriptorSetDesc) {
+OPENRHI_INLINE void CommandBufferVK::SetDescriptorSet(const SetDescriptorSetDesc& setDescriptorSetDesc) {
     const DescriptorSetVK& descriptorSetVK = *(DescriptorSetVK*)setDescriptorSetDesc.descriptorSet;
     VkDescriptorSet vkDescriptorSet = descriptorSetVK.GetHandle();
 
@@ -1995,7 +1995,7 @@ NRI_INLINE void CommandBufferVK::SetDescriptorSet(const SetDescriptorSetDesc& se
     }
 }
 
-NRI_INLINE void CommandBufferVK::SetRootConstants(const SetRootConstantsDesc& setRootConstantsDesc) {
+OPENRHI_INLINE void CommandBufferVK::SetRootConstants(const SetRootConstantsDesc& setRootConstantsDesc) {
     const auto& bindingInfo = m_PipelineLayout->GetBindingInfo();
     const PushConstantBindingDesc& pushConstantBindingDesc = bindingInfo.pushConstants[setRootConstantsDesc.rootConstantIndex];
     uint32_t offset = pushConstantBindingDesc.offset + setRootConstantsDesc.offset;
@@ -2020,7 +2020,7 @@ NRI_INLINE void CommandBufferVK::SetRootConstants(const SetRootConstantsDesc& se
         vk.CmdPushConstants(m_Handle, *m_PipelineLayout, pushConstantBindingDesc.stages, offset, setRootConstantsDesc.size, setRootConstantsDesc.data);
 }
 
-NRI_INLINE void CommandBufferVK::SetRootDescriptor(const SetRootDescriptorDesc& setRootDescriptorDesc) {
+OPENRHI_INLINE void CommandBufferVK::SetRootDescriptor(const SetRootDescriptorDesc& setRootDescriptorDesc) {
     const DescriptorVK& descriptorVK = *(DescriptorVK*)setRootDescriptorDesc.descriptor;
 
     if (m_PipelineLayout->IsDescriptorHeap()) {
@@ -2070,7 +2070,7 @@ NRI_INLINE void CommandBufferVK::SetRootDescriptor(const SetRootDescriptorDesc& 
             descriptorWrite.pNext = &accelerationStructureWrite;
             break;
         default:
-            NRI_CHECK(false, "Unexpected 'descriptorType'");
+            OPENRHI_CHECK(false, "Unexpected 'descriptorType'");
             break;
     }
 
@@ -2081,17 +2081,17 @@ NRI_INLINE void CommandBufferVK::SetRootDescriptor(const SetRootDescriptorDesc& 
     vk.CmdPushDescriptorSet(m_Handle, vkPipelineBindPoint, *m_PipelineLayout, bindingInfo.rootRegisterSpace, 1, &descriptorWrite);
 }
 
-NRI_INLINE void CommandBufferVK::Draw(const DrawDesc& drawDesc) {
+OPENRHI_INLINE void CommandBufferVK::Draw(const DrawDesc& drawDesc) {
     const auto& vk = m_Device.GetDispatchTable();
     vk.CmdDraw(m_Handle, drawDesc.vertexNum, drawDesc.instanceNum, drawDesc.baseVertex, drawDesc.baseInstance);
 }
 
-NRI_INLINE void CommandBufferVK::DrawIndexed(const DrawIndexedDesc& drawIndexedDesc) {
+OPENRHI_INLINE void CommandBufferVK::DrawIndexed(const DrawIndexedDesc& drawIndexedDesc) {
     const auto& vk = m_Device.GetDispatchTable();
     vk.CmdDrawIndexed(m_Handle, drawIndexedDesc.indexNum, drawIndexedDesc.instanceNum, drawIndexedDesc.baseIndex, drawIndexedDesc.baseVertex, drawIndexedDesc.baseInstance);
 }
 
-NRI_INLINE void CommandBufferVK::DrawIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
+OPENRHI_INLINE void CommandBufferVK::DrawIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
     const BufferVK& bufferVK = (BufferVK&)buffer;
     const auto& vk = m_Device.GetDispatchTable();
 
@@ -2102,7 +2102,7 @@ NRI_INLINE void CommandBufferVK::DrawIndirect(const Buffer& buffer, uint64_t off
         vk.CmdDrawIndirect(m_Handle, bufferVK.GetHandle(), offset, drawNum, stride);
 }
 
-NRI_INLINE void CommandBufferVK::DrawIndexedIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
+OPENRHI_INLINE void CommandBufferVK::DrawIndexedIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
     const BufferVK& bufferVK = (BufferVK&)buffer;
     const auto& vk = m_Device.GetDispatchTable();
 
@@ -2113,7 +2113,7 @@ NRI_INLINE void CommandBufferVK::DrawIndexedIndirect(const Buffer& buffer, uint6
         vk.CmdDrawIndexedIndirect(m_Handle, bufferVK.GetHandle(), offset, drawNum, stride);
 }
 
-NRI_INLINE void CommandBufferVK::CopyBuffer(Buffer& dstBuffer, uint64_t dstOffset, const Buffer& srcBuffer, uint64_t srcOffset, uint64_t size) {
+OPENRHI_INLINE void CommandBufferVK::CopyBuffer(Buffer& dstBuffer, uint64_t dstOffset, const Buffer& srcBuffer, uint64_t srcOffset, uint64_t size) {
     const BufferVK& src = (BufferVK&)srcBuffer;
     const BufferVK& dstBufferVK = (BufferVK&)dstBuffer;
     const auto& vk = m_Device.GetDispatchTable();
@@ -2141,7 +2141,7 @@ NRI_INLINE void CommandBufferVK::CopyBuffer(Buffer& dstBuffer, uint64_t dstOffse
     }
 }
 
-NRI_INLINE void CommandBufferVK::CopyTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion) {
+OPENRHI_INLINE void CommandBufferVK::CopyTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion) {
     const TextureVK& src = (TextureVK&)srcTexture;
     const TextureVK& dst = (TextureVK&)dstTexture;
     const TextureDesc& dstDesc = dst.GetDesc();
@@ -2149,7 +2149,7 @@ NRI_INLINE void CommandBufferVK::CopyTexture(Texture& dstTexture, const TextureR
 
     bool isWholeResource = !dstRegion && !srcRegion;
     uint32_t regionNum = isWholeResource ? dstDesc.mipNum : 1;
-    Scratch<VkImageCopy2> regions = NRI_ALLOCATE_SCRATCH(m_Device, VkImageCopy2, regionNum);
+    Scratch<VkImageCopy2> regions = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkImageCopy2, regionNum);
 
     if (isWholeResource) {
         for (Dim_t i = 0; i < dstDesc.mipNum; i++) {
@@ -2212,7 +2212,7 @@ NRI_INLINE void CommandBufferVK::CopyTexture(Texture& dstTexture, const TextureR
 
         vk.CmdCopyImage2(m_Handle, &info);
     } else {
-        Scratch<VkImageCopy> regionsLegacy = NRI_ALLOCATE_SCRATCH(m_Device, VkImageCopy, regionNum);
+        Scratch<VkImageCopy> regionsLegacy = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkImageCopy, regionNum);
         for (uint32_t i = 0; i < regionNum; i++) {
             regionsLegacy[i].srcSubresource = regions[i].srcSubresource;
             regionsLegacy[i].srcOffset = regions[i].srcOffset;
@@ -2225,7 +2225,7 @@ NRI_INLINE void CommandBufferVK::CopyTexture(Texture& dstTexture, const TextureR
     }
 }
 
-NRI_INLINE void CommandBufferVK::ResolveTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion, ResolveOp resolveOp) {
+OPENRHI_INLINE void CommandBufferVK::ResolveTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion, ResolveOp resolveOp) {
     const TextureVK& src = (TextureVK&)srcTexture;
     const TextureVK& dst = (TextureVK&)dstTexture;
     const TextureDesc& dstDesc = dst.GetDesc();
@@ -2233,7 +2233,7 @@ NRI_INLINE void CommandBufferVK::ResolveTexture(Texture& dstTexture, const Textu
 
     bool isWholeResource = !dstRegion && !srcRegion;
     uint32_t regionNum = isWholeResource ? dstDesc.mipNum : 1;
-    Scratch<VkImageResolve2> regions = NRI_ALLOCATE_SCRATCH(m_Device, VkImageResolve2, dstDesc.mipNum);
+    Scratch<VkImageResolve2> regions = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkImageResolve2, dstDesc.mipNum);
 
     if (isWholeResource) {
         for (Dim_t i = 0; i < dstDesc.mipNum; i++) {
@@ -2312,7 +2312,7 @@ NRI_INLINE void CommandBufferVK::ResolveTexture(Texture& dstTexture, const Textu
 
         vk.CmdResolveImage2(m_Handle, &info);
     } else {
-        Scratch<VkImageResolve> regionsLegacy = NRI_ALLOCATE_SCRATCH(m_Device, VkImageResolve, regionNum);
+        Scratch<VkImageResolve> regionsLegacy = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkImageResolve, regionNum);
         for (uint32_t i = 0; i < regionNum; i++) {
             regionsLegacy[i].srcSubresource = regions[i].srcSubresource;
             regionsLegacy[i].srcOffset = regions[i].srcOffset;
@@ -2325,7 +2325,7 @@ NRI_INLINE void CommandBufferVK::ResolveTexture(Texture& dstTexture, const Textu
     }
 }
 
-NRI_INLINE void CommandBufferVK::UploadBufferToTexture(Texture& dstTexture, const TextureRegionDesc& dstRegion, const Buffer& srcBuffer, const TextureDataLayoutDesc& srcDataLayout) {
+OPENRHI_INLINE void CommandBufferVK::UploadBufferToTexture(Texture& dstTexture, const TextureRegionDesc& dstRegion, const Buffer& srcBuffer, const TextureDataLayoutDesc& srcDataLayout) {
     const BufferVK& src = (BufferVK&)srcBuffer;
     const TextureVK& dst = (TextureVK&)dstTexture;
     const TextureDesc& dstDesc = dst.GetDesc();
@@ -2409,7 +2409,7 @@ NRI_INLINE void CommandBufferVK::UploadBufferToTexture(Texture& dstTexture, cons
     }
 }
 
-NRI_INLINE void CommandBufferVK::ReadbackTextureToBuffer(Buffer& dstBuffer, const TextureDataLayoutDesc& dstDataLayout, const Texture& srcTexture, const TextureRegionDesc& srcRegion) {
+OPENRHI_INLINE void CommandBufferVK::ReadbackTextureToBuffer(Buffer& dstBuffer, const TextureDataLayoutDesc& dstDataLayout, const Texture& srcTexture, const TextureRegionDesc& srcRegion) {
     const TextureVK& src = (TextureVK&)srcTexture;
     const BufferVK& dst = (BufferVK&)dstBuffer;
     const TextureDesc& srcDesc = src.GetDesc();
@@ -2493,7 +2493,7 @@ NRI_INLINE void CommandBufferVK::ReadbackTextureToBuffer(Buffer& dstBuffer, cons
     }
 }
 
-NRI_INLINE void CommandBufferVK::ZeroBuffer(Buffer& buffer, uint64_t offset, uint64_t size) {
+OPENRHI_INLINE void CommandBufferVK::ZeroBuffer(Buffer& buffer, uint64_t offset, uint64_t size) {
     BufferVK& dst = (BufferVK&)buffer;
 
     if (size == WHOLE_SIZE)
@@ -2503,12 +2503,12 @@ NRI_INLINE void CommandBufferVK::ZeroBuffer(Buffer& buffer, uint64_t offset, uin
     vk.CmdFillBuffer(m_Handle, dst.GetHandle(), offset, size, 0);
 }
 
-NRI_INLINE void CommandBufferVK::Dispatch(const DispatchDesc& dispatchDesc) {
+OPENRHI_INLINE void CommandBufferVK::Dispatch(const DispatchDesc& dispatchDesc) {
     const auto& vk = m_Device.GetDispatchTable();
     vk.CmdDispatch(m_Handle, dispatchDesc.workGroupNumX, dispatchDesc.workGroupNumY, dispatchDesc.workGroupNumZ);
 }
 
-NRI_INLINE void CommandBufferVK::DispatchIndirect(const Buffer& buffer, uint64_t offset) {
+OPENRHI_INLINE void CommandBufferVK::DispatchIndirect(const Buffer& buffer, uint64_t offset) {
     static_assert(sizeof(DispatchDesc) == sizeof(VkDispatchIndirectCommand));
 
     const BufferVK& bufferVK = (BufferVK&)buffer;
@@ -2516,9 +2516,9 @@ NRI_INLINE void CommandBufferVK::DispatchIndirect(const Buffer& buffer, uint64_t
     vk.CmdDispatchIndirect(m_Handle, bufferVK.GetHandle(), offset);
 }
 
-NRI_INLINE void CommandBufferVK::Barrier(const BarrierDesc& barrierDesc) {
+OPENRHI_INLINE void CommandBufferVK::Barrier(const BarrierDesc& barrierDesc) {
     // Global
-    Scratch<VkMemoryBarrier2> memoryBarriers = NRI_ALLOCATE_SCRATCH(m_Device, VkMemoryBarrier2, barrierDesc.globalNum);
+    Scratch<VkMemoryBarrier2> memoryBarriers = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkMemoryBarrier2, barrierDesc.globalNum);
     for (uint32_t i = 0; i < barrierDesc.globalNum; i++) {
         const GlobalBarrierDesc& in = barrierDesc.globals[i];
 
@@ -2531,7 +2531,7 @@ NRI_INLINE void CommandBufferVK::Barrier(const BarrierDesc& barrierDesc) {
     }
 
     // Buffer
-    Scratch<VkBufferMemoryBarrier2> bufferBarriers = NRI_ALLOCATE_SCRATCH(m_Device, VkBufferMemoryBarrier2, barrierDesc.bufferNum);
+    Scratch<VkBufferMemoryBarrier2> bufferBarriers = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkBufferMemoryBarrier2, barrierDesc.bufferNum);
     for (uint32_t i = 0; i < barrierDesc.bufferNum; i++) {
         const BufferBarrierDesc& in = barrierDesc.buffers[i];
         const BufferVK& bufferVK = *(const BufferVK*)in.buffer;
@@ -2551,7 +2551,7 @@ NRI_INLINE void CommandBufferVK::Barrier(const BarrierDesc& barrierDesc) {
 
     // Texture
     bool isRegionLocal = false;
-    Scratch<VkImageMemoryBarrier2> textureBarriers = NRI_ALLOCATE_SCRATCH(m_Device, VkImageMemoryBarrier2, barrierDesc.textureNum);
+    Scratch<VkImageMemoryBarrier2> textureBarriers = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkImageMemoryBarrier2, barrierDesc.textureNum);
     for (uint32_t i = 0; i < barrierDesc.textureNum; i++) {
         const TextureBarrierDesc& in = barrierDesc.textures[i];
         const TextureVK& textureVK = *(TextureVK*)in.texture;
@@ -2608,13 +2608,13 @@ NRI_INLINE void CommandBufferVK::Barrier(const BarrierDesc& barrierDesc) {
     vk.CmdPipelineBarrier2(m_Handle, &dependencyInfo);
 }
 
-NRI_INLINE void CommandBufferVK::BeginQuery(QueryPool& queryPool, uint32_t offset) {
+OPENRHI_INLINE void CommandBufferVK::BeginQuery(QueryPool& queryPool, uint32_t offset) {
     QueryPoolVK& queryPoolVK = (QueryPoolVK&)queryPool;
     const auto& vk = m_Device.GetDispatchTable();
     vk.CmdBeginQuery(m_Handle, queryPoolVK.GetHandle(), offset, (VkQueryControlFlagBits)0);
 }
 
-NRI_INLINE void CommandBufferVK::EndQuery(QueryPool& queryPool, uint32_t offset) {
+OPENRHI_INLINE void CommandBufferVK::EndQuery(QueryPool& queryPool, uint32_t offset) {
     QueryPoolVK& queryPoolVK = (QueryPoolVK&)queryPool;
     const auto& vk = m_Device.GetDispatchTable();
 
@@ -2626,7 +2626,7 @@ NRI_INLINE void CommandBufferVK::EndQuery(QueryPool& queryPool, uint32_t offset)
         vk.CmdEndQuery(m_Handle, queryPoolVK.GetHandle(), offset);
 }
 
-NRI_INLINE void CommandBufferVK::CopyQueries(const QueryPool& queryPool, uint32_t offset, uint32_t num, Buffer& dstBuffer, uint64_t dstOffset) {
+OPENRHI_INLINE void CommandBufferVK::CopyQueries(const QueryPool& queryPool, uint32_t offset, uint32_t num, Buffer& dstBuffer, uint64_t dstOffset) {
     const QueryPoolVK& queryPoolVK = (QueryPoolVK&)queryPool;
     const BufferVK& bufferVK = (BufferVK&)dstBuffer;
 
@@ -2637,14 +2637,14 @@ NRI_INLINE void CommandBufferVK::CopyQueries(const QueryPool& queryPool, uint32_
     vk.CmdCopyQueryPoolResults(m_Handle, queryPoolVK.GetHandle(), offset, num, bufferVK.GetHandle(), dstOffset, queryPoolVK.GetQuerySize(), flags);
 }
 
-NRI_INLINE void CommandBufferVK::ResetQueries(QueryPool& queryPool, uint32_t offset, uint32_t num) {
+OPENRHI_INLINE void CommandBufferVK::ResetQueries(QueryPool& queryPool, uint32_t offset, uint32_t num) {
     QueryPoolVK& queryPoolVK = (QueryPoolVK&)queryPool;
 
     const auto& vk = m_Device.GetDispatchTable();
     vk.CmdResetQueryPool(m_Handle, queryPoolVK.GetHandle(), offset, num);
 }
 
-NRI_INLINE void CommandBufferVK::BeginAnnotation(const char* name, uint32_t bgra) {
+OPENRHI_INLINE void CommandBufferVK::BeginAnnotation(const char* name, uint32_t bgra) {
     VkDebugUtilsLabelEXT info = {VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
     info.pLabelName = name;
     info.color[0] = ((bgra >> 16) & 0xFF) / 255.0f;
@@ -2657,13 +2657,13 @@ NRI_INLINE void CommandBufferVK::BeginAnnotation(const char* name, uint32_t bgra
         vk.CmdBeginDebugUtilsLabelEXT(m_Handle, &info);
 }
 
-NRI_INLINE void CommandBufferVK::EndAnnotation() {
+OPENRHI_INLINE void CommandBufferVK::EndAnnotation() {
     const auto& vk = m_Device.GetDispatchTable();
     if (vk.CmdEndDebugUtilsLabelEXT)
         vk.CmdEndDebugUtilsLabelEXT(m_Handle);
 }
 
-NRI_INLINE void CommandBufferVK::Annotation(const char* name, uint32_t bgra) {
+OPENRHI_INLINE void CommandBufferVK::Annotation(const char* name, uint32_t bgra) {
     VkDebugUtilsLabelEXT info = {VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
     info.pLabelName = name;
     info.color[0] = ((bgra >> 16) & 0xFF) / 255.0f;
@@ -2676,13 +2676,13 @@ NRI_INLINE void CommandBufferVK::Annotation(const char* name, uint32_t bgra) {
         vk.CmdInsertDebugUtilsLabelEXT(m_Handle, &info);
 }
 
-NRI_INLINE void CommandBufferVK::BuildTopLevelAccelerationStructures(const BuildTopLevelAccelerationStructureDesc* buildTopLevelAccelerationStructureDescs, uint32_t buildTopLevelAccelerationStructureDescNum) {
+OPENRHI_INLINE void CommandBufferVK::BuildTopLevelAccelerationStructures(const BuildTopLevelAccelerationStructureDesc* buildTopLevelAccelerationStructureDescs, uint32_t buildTopLevelAccelerationStructureDescNum) {
     static_assert(sizeof(VkAccelerationStructureInstanceKHR) == sizeof(TopLevelInstance), "Mismatched sizeof");
 
-    Scratch<VkAccelerationStructureBuildGeometryInfoKHR> infos = NRI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureBuildGeometryInfoKHR, buildTopLevelAccelerationStructureDescNum);
-    Scratch<const VkAccelerationStructureBuildRangeInfoKHR*> pRanges = NRI_ALLOCATE_SCRATCH(m_Device, const VkAccelerationStructureBuildRangeInfoKHR*, buildTopLevelAccelerationStructureDescNum);
-    Scratch<VkAccelerationStructureGeometryKHR> geometries = NRI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureGeometryKHR, buildTopLevelAccelerationStructureDescNum);
-    Scratch<VkAccelerationStructureBuildRangeInfoKHR> ranges = NRI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureBuildRangeInfoKHR, buildTopLevelAccelerationStructureDescNum);
+    Scratch<VkAccelerationStructureBuildGeometryInfoKHR> infos = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureBuildGeometryInfoKHR, buildTopLevelAccelerationStructureDescNum);
+    Scratch<const VkAccelerationStructureBuildRangeInfoKHR*> pRanges = OPENRHI_ALLOCATE_SCRATCH(m_Device, const VkAccelerationStructureBuildRangeInfoKHR*, buildTopLevelAccelerationStructureDescNum);
+    Scratch<VkAccelerationStructureGeometryKHR> geometries = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureGeometryKHR, buildTopLevelAccelerationStructureDescNum);
+    Scratch<VkAccelerationStructureBuildRangeInfoKHR> ranges = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureBuildRangeInfoKHR, buildTopLevelAccelerationStructureDescNum);
 
     for (uint32_t i = 0; i < buildTopLevelAccelerationStructureDescNum; i++) {
         const BuildTopLevelAccelerationStructureDesc& in = buildTopLevelAccelerationStructureDescs[i];
@@ -2727,7 +2727,7 @@ NRI_INLINE void CommandBufferVK::BuildTopLevelAccelerationStructures(const Build
     vk.CmdBuildAccelerationStructuresKHR(m_Handle, buildTopLevelAccelerationStructureDescNum, infos, pRanges);
 }
 
-NRI_INLINE void CommandBufferVK::BuildBottomLevelAccelerationStructures(const BuildBottomLevelAccelerationStructureDesc* buildBottomLevelAccelerationStructureDescs, uint32_t buildBottomLevelAccelerationStructureDescNum) {
+OPENRHI_INLINE void CommandBufferVK::BuildBottomLevelAccelerationStructures(const BuildBottomLevelAccelerationStructureDesc* buildBottomLevelAccelerationStructureDescs, uint32_t buildBottomLevelAccelerationStructureDescNum) {
     // Count
     uint32_t geometryTotalNum = 0;
     uint32_t micromapTotalNum = 0;
@@ -2746,11 +2746,11 @@ NRI_INLINE void CommandBufferVK::BuildBottomLevelAccelerationStructures(const Bu
     }
 
     // Convert
-    Scratch<VkAccelerationStructureBuildGeometryInfoKHR> infos = NRI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureBuildGeometryInfoKHR, buildBottomLevelAccelerationStructureDescNum);
-    Scratch<const VkAccelerationStructureBuildRangeInfoKHR*> pRanges = NRI_ALLOCATE_SCRATCH(m_Device, const VkAccelerationStructureBuildRangeInfoKHR*, buildBottomLevelAccelerationStructureDescNum);
-    Scratch<VkAccelerationStructureGeometryKHR> geometriesScratch = NRI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureGeometryKHR, geometryTotalNum);
-    Scratch<VkAccelerationStructureBuildRangeInfoKHR> rangesScratch = NRI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureBuildRangeInfoKHR, geometryTotalNum);
-    Scratch<VkAccelerationStructureTrianglesOpacityMicromapEXT> trianglesMicromapsScratch = NRI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureTrianglesOpacityMicromapEXT, micromapTotalNum);
+    Scratch<VkAccelerationStructureBuildGeometryInfoKHR> infos = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureBuildGeometryInfoKHR, buildBottomLevelAccelerationStructureDescNum);
+    Scratch<const VkAccelerationStructureBuildRangeInfoKHR*> pRanges = OPENRHI_ALLOCATE_SCRATCH(m_Device, const VkAccelerationStructureBuildRangeInfoKHR*, buildBottomLevelAccelerationStructureDescNum);
+    Scratch<VkAccelerationStructureGeometryKHR> geometriesScratch = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureGeometryKHR, geometryTotalNum);
+    Scratch<VkAccelerationStructureBuildRangeInfoKHR> rangesScratch = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureBuildRangeInfoKHR, geometryTotalNum);
+    Scratch<VkAccelerationStructureTrianglesOpacityMicromapEXT> trianglesMicromapsScratch = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureTrianglesOpacityMicromapEXT, micromapTotalNum);
 
     VkAccelerationStructureBuildRangeInfoKHR* ranges = rangesScratch;
     VkAccelerationStructureGeometryKHR* geometries = geometriesScratch;
@@ -2796,10 +2796,10 @@ NRI_INLINE void CommandBufferVK::BuildBottomLevelAccelerationStructures(const Bu
     vk.CmdBuildAccelerationStructuresKHR(m_Handle, buildBottomLevelAccelerationStructureDescNum, infos, pRanges);
 }
 
-NRI_INLINE void CommandBufferVK::BuildMicromaps(const BuildMicromapDesc* buildMicromapDescs, uint32_t buildMicromapDescNum) {
+OPENRHI_INLINE void CommandBufferVK::BuildMicromaps(const BuildMicromapDesc* buildMicromapDescs, uint32_t buildMicromapDescNum) {
     static_assert(sizeof(MicromapTriangle) == sizeof(VkMicromapTriangleEXT), "Mismatched sizeof");
 
-    Scratch<VkMicromapBuildInfoEXT> infos = NRI_ALLOCATE_SCRATCH(m_Device, VkMicromapBuildInfoEXT, buildMicromapDescNum);
+    Scratch<VkMicromapBuildInfoEXT> infos = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkMicromapBuildInfoEXT, buildMicromapDescNum);
     for (uint32_t i = 0; i < buildMicromapDescNum; i++) {
         const BuildMicromapDesc& in = buildMicromapDescs[i];
 
@@ -2826,7 +2826,7 @@ NRI_INLINE void CommandBufferVK::BuildMicromaps(const BuildMicromapDesc* buildMi
     vk.CmdBuildMicromapsEXT(m_Handle, buildMicromapDescNum, infos);
 }
 
-NRI_INLINE void CommandBufferVK::CopyAccelerationStructure(AccelerationStructure& dst, const AccelerationStructure& src, CopyMode copyMode) {
+OPENRHI_INLINE void CommandBufferVK::CopyAccelerationStructure(AccelerationStructure& dst, const AccelerationStructure& src, CopyMode copyMode) {
     VkAccelerationStructureKHR dstHandle = ((AccelerationStructureVK&)dst).GetHandle();
     VkAccelerationStructureKHR srcHandle = ((AccelerationStructureVK&)src).GetHandle();
 
@@ -2839,7 +2839,7 @@ NRI_INLINE void CommandBufferVK::CopyAccelerationStructure(AccelerationStructure
     vk.CmdCopyAccelerationStructureKHR(m_Handle, &info);
 }
 
-NRI_INLINE void CommandBufferVK::CopyMicromap(Micromap& dst, const Micromap& src, CopyMode copyMode) {
+OPENRHI_INLINE void CommandBufferVK::CopyMicromap(Micromap& dst, const Micromap& src, CopyMode copyMode) {
     VkMicromapEXT dstHandle = ((MicromapVK&)dst).GetHandle();
     VkMicromapEXT srcHandle = ((MicromapVK&)src).GetHandle();
 
@@ -2852,8 +2852,8 @@ NRI_INLINE void CommandBufferVK::CopyMicromap(Micromap& dst, const Micromap& src
     vk.CmdCopyMicromapEXT(m_Handle, &info);
 }
 
-NRI_INLINE void CommandBufferVK::WriteAccelerationStructureSizes(const AccelerationStructure* const* accelerationStructures, uint32_t accelerationStructureNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
-    Scratch<VkAccelerationStructureKHR> handles = NRI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureKHR, accelerationStructureNum);
+OPENRHI_INLINE void CommandBufferVK::WriteAccelerationStructureSizes(const AccelerationStructure* const* accelerationStructures, uint32_t accelerationStructureNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
+    Scratch<VkAccelerationStructureKHR> handles = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkAccelerationStructureKHR, accelerationStructureNum);
     for (uint32_t i = 0; i < accelerationStructureNum; i++)
         handles[i] = ((AccelerationStructureVK*)accelerationStructures[i])->GetHandle();
 
@@ -2863,8 +2863,8 @@ NRI_INLINE void CommandBufferVK::WriteAccelerationStructureSizes(const Accelerat
     vk.CmdWriteAccelerationStructuresPropertiesKHR(m_Handle, accelerationStructureNum, handles, queryPoolVK.GetType(), queryPoolVK.GetHandle(), queryPoolOffset);
 }
 
-NRI_INLINE void CommandBufferVK::WriteMicromapSizes(const Micromap* const* micromaps, uint32_t micromapNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
-    Scratch<VkMicromapEXT> handles = NRI_ALLOCATE_SCRATCH(m_Device, VkMicromapEXT, micromapNum);
+OPENRHI_INLINE void CommandBufferVK::WriteMicromapSizes(const Micromap* const* micromaps, uint32_t micromapNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
+    Scratch<VkMicromapEXT> handles = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkMicromapEXT, micromapNum);
     for (uint32_t i = 0; i < micromapNum; i++)
         handles[i] = ((MicromapVK*)micromaps[i])->GetHandle();
 
@@ -2874,7 +2874,7 @@ NRI_INLINE void CommandBufferVK::WriteMicromapSizes(const Micromap* const* micro
     vk.CmdWriteMicromapsPropertiesEXT(m_Handle, micromapNum, handles, queryPoolVK.GetType(), queryPoolVK.GetHandle(), queryPoolOffset);
 }
 
-NRI_INLINE void CommandBufferVK::DispatchRays(const DispatchRaysDesc& dispatchRaysDesc) {
+OPENRHI_INLINE void CommandBufferVK::DispatchRays(const DispatchRaysDesc& dispatchRaysDesc) {
     VkStridedDeviceAddressRegionKHR raygen = {};
     raygen.deviceAddress = GetBufferDeviceAddress(dispatchRaysDesc.raygenShaderRecord.buffer, dispatchRaysDesc.raygenShaderRecord.offset);
     raygen.size = dispatchRaysDesc.raygenShaderRecord.size;
@@ -2899,7 +2899,7 @@ NRI_INLINE void CommandBufferVK::DispatchRays(const DispatchRaysDesc& dispatchRa
     vk.CmdTraceRaysKHR(m_Handle, &raygen, &miss, &hit, &callable, dispatchRaysDesc.width, dispatchRaysDesc.height, dispatchRaysDesc.depth);
 }
 
-NRI_INLINE void CommandBufferVK::DispatchRaysIndirect(const Buffer& buffer, uint64_t offset) {
+OPENRHI_INLINE void CommandBufferVK::DispatchRaysIndirect(const Buffer& buffer, uint64_t offset) {
     static_assert(sizeof(DispatchRaysIndirectDesc) == sizeof(VkTraceRaysIndirectCommand2KHR));
 
     VkDeviceAddress deviceAddress = GetBufferDeviceAddress(&buffer, offset);
@@ -2908,12 +2908,12 @@ NRI_INLINE void CommandBufferVK::DispatchRaysIndirect(const Buffer& buffer, uint
     vk.CmdTraceRaysIndirect2KHR(m_Handle, deviceAddress);
 }
 
-NRI_INLINE void CommandBufferVK::DrawMeshTasks(const DrawMeshTasksDesc& drawMeshTasksDesc) {
+OPENRHI_INLINE void CommandBufferVK::DrawMeshTasks(const DrawMeshTasksDesc& drawMeshTasksDesc) {
     const auto& vk = m_Device.GetDispatchTable();
     vk.CmdDrawMeshTasksEXT(m_Handle, drawMeshTasksDesc.x, drawMeshTasksDesc.y, drawMeshTasksDesc.z);
 }
 
-NRI_INLINE void CommandBufferVK::DrawMeshTasksIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
+OPENRHI_INLINE void CommandBufferVK::DrawMeshTasksIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
     static_assert(sizeof(DrawMeshTasksDesc) == sizeof(VkDrawMeshTasksIndirectCommandEXT));
 
     const BufferVK& bufferVK = (BufferVK&)buffer;

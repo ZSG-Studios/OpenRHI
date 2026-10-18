@@ -43,7 +43,10 @@ struct D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY {
 #include "SharedExternal.h"
 #include "VideoHelpersD3D12.h"
 
-namespace nri {
+namespace openrhi {
+
+constexpr uint32_t SHADER_EXT_REGISTER = 63;
+constexpr uint32_t DRAW_EMULATION_SPACE = 999;
 
 struct AccelerationStructureD3D12;
 struct BufferD3D12;
@@ -100,8 +103,8 @@ enum DescriptorHeapType : uint8_t {
 #define NO_CASTABLE_FORMATS 0, nullptr
 
 struct DescriptorHandle {
-    uint32_t heapType : DESCRIPTOR_HANDLE_HEAP_TYPE_BIT_NUM;
-    uint32_t heapIndex : DESCRIPTOR_HANDLE_HEAP_INDEX_BIT_NUM;
+    uint32_t heapType          : DESCRIPTOR_HANDLE_HEAP_TYPE_BIT_NUM;
+    uint32_t heapIndex         : DESCRIPTOR_HANDLE_HEAP_INDEX_BIT_NUM;
     uint32_t heapOffsetPlusOne : DESCRIPTOR_HANDLE_HEAP_OFFSET_BIT_NUM; // 0 is reserved for an invalid handle
 
     inline bool IsAllocated() const {
@@ -176,9 +179,9 @@ D3D12_SHADING_RATE GetShadingRate(ShadingRate shadingRate);
 D3D12_SHADING_RATE_COMBINER GetShadingRateCombiner(ShadingRateCombiner shadingRateCombiner);
 D3D12_FILTER GetFilter(const SamplerDesc& samplerDesc);
 
-} // namespace nri
+} // namespace openrhi
 
-#if NRI_ENABLE_AMDAGS
+#if OPENRHI_ENABLE_AMDAGS
 #    define AGS_GCC // Fixes Clang warning: 'dllexport' attribute only applies to functions, variables, classes, and Objective-C interfaces [-Werror,-Wignored-attributes]
 #    include "amd_ags.h"
 
@@ -188,7 +191,7 @@ struct AmdExtD3D12 {
     AGS_DEINITIALIZE Deinitialize;
     AGS_DRIVEREXTENSIONSDX12_CREATEDEVICE CreateDeviceD3D12;
     AGS_DRIVEREXTENSIONSDX12_DESTROYDEVICE DestroyDeviceD3D12;
-    nri::Library* library;
+    openrhi::Library* library;
     AGSContext* context;
     bool isWrapped;
 
@@ -203,7 +206,7 @@ struct AmdExtD3D12 {
 
 #endif
 
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
 #    include "nvShaderExtnEnums.h"
 #    include "nvapi.h"
 
@@ -233,7 +236,7 @@ struct PixExt {
     PIX_BEGINEVENTONCOMMANDQUEUE BeginEventOnQueue;
     PIX_ENDEVENTONCOMMANDQUEUE EndEventOnQueue;
     PIX_SETMARKERONCOMMANDQUEUE SetMarkerOnQueue;
-    nri::Library* library;
+    openrhi::Library* library;
 
     ~PixExt() {
         if (library)

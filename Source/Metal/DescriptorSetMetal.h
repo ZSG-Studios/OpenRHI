@@ -1,7 +1,7 @@
 // © 2026 NVIDIA Corporation
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorRangeMappingMetal {
     uint32_t offset = 0;
@@ -33,7 +33,7 @@ struct DescriptorSetMetal final : public DebugNameBase {
     void Copy(uint32_t dstRange, uint32_t dstBase, const DescriptorSetMetal& source, uint32_t srcRange, uint32_t srcBase, uint32_t num);
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     static void UpdateDescriptorRanges(const UpdateDescriptorRangeDesc* descs, uint32_t num);
@@ -48,4 +48,4 @@ private:
     uint32_t m_SamplerOffset = 0;
 };
 
-} // namespace nri
+} // namespace openrhi

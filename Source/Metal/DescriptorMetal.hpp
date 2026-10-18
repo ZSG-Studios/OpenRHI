@@ -12,9 +12,9 @@ constexpr std::array<MTL::TextureType, (size_t)TextureView::MAX_NUM> g_TextureVi
     MTL::TextureType2D,        // DEPTH_STENCIL_ATTACHMENT
     MTL::TextureType2D,        // SHADING_RATE_ATTACHMENT
 };
-NRI_VALIDATE_ARRAY(g_TextureViewTypes);
+OPENRHI_VALIDATE_ARRAY(g_TextureViewTypes);
 
-// 1D textures are height-one 2D textures (see "NRI.metal")
+// 1D textures are height-one 2D textures (see "OpenRHI.slang")
 static inline MTL::TextureType GetTextureViewType(TextureView type, const TextureDesc& textureDesc) {
     const MTL::TextureType viewType = g_TextureViewTypes[(size_t)type];
 
@@ -36,7 +36,7 @@ constexpr std::array<MTL::TextureSwizzle, (size_t)ComponentSwizzle::MAX_NUM> g_T
     MTL::TextureSwizzleBlue,  // B
     MTL::TextureSwizzleAlpha, // A
 };
-NRI_VALIDATE_ARRAY(g_TextureSwizzles);
+OPENRHI_VALIDATE_ARRAY(g_TextureSwizzles);
 
 static inline MTL::TextureSwizzle GetTextureSwizzle(ComponentSwizzle swizzle, MTL::TextureSwizzle identity) {
     return swizzle == ComponentSwizzle::IDENTITY ? identity : g_TextureSwizzles[(uint32_t)swizzle];
@@ -49,7 +49,7 @@ constexpr std::array<MTL::SamplerAddressMode, (size_t)AddressMode::MAX_NUM> g_Ad
     MTL::SamplerAddressModeClampToBorderColor, // CLAMP_TO_BORDER
     MTL::SamplerAddressModeMirrorClampToEdge,  // MIRROR_CLAMP_TO_EDGE
 };
-NRI_VALIDATE_ARRAY(g_AddressModes);
+OPENRHI_VALIDATE_ARRAY(g_AddressModes);
 
 static inline bool IsBorderColor(const SamplerDesc& desc, float r, float g, float b, float a) {
     if (desc.isInteger)
@@ -188,7 +188,7 @@ Result DescriptorMetal::Create(const SamplerDesc& desc) {
         else if (IsBorderColor(desc, 0.0f, 0.0f, 0.0f, 0.0f))
             d->setBorderColor(MTL::SamplerBorderColorTransparentBlack);
         else {
-            NRI_REPORT_WARNING(&m_Device, "'borderColor' must be opaque white, opaque black or transparent black");
+            OPENRHI_REPORT_WARNING(&m_Device, "'borderColor' must be opaque white, opaque black or transparent black");
             d->release();
 
             return Result::UNSUPPORTED;
@@ -196,7 +196,7 @@ Result DescriptorMetal::Create(const SamplerDesc& desc) {
     }
 
     // "lodBias" is silently ignored before Apple10. There the bias goes to descriptor metadata:
-    // converted shaders apply it via "IRCompatibilityFlagSamplerLODBias", native shaders via "NriGetSamplerMipBias"
+    // Slang shaders apply it through OpenRhiGetSamplerMipBias
     if (m_Device.GetNativeObject()->supportsFamily(MTL::GPUFamilyApple10))
         d->setLodBias(desc.mipBias);
     else
@@ -264,7 +264,7 @@ uint64_t DescriptorMetal::GetNativeObject() const {
 }
 
 void DescriptorMetal::WriteEntry(void* dst) const {
-    // Layout matches "IRDescriptorTableSetBufferView/Texture/Sampler" (see "NRI.metal")
+    // Native descriptor table ABI (see "OpenRHI.slang")
     DescriptorEntryMetal entry = {};
 
     if (m_Sampler) {
@@ -287,7 +287,7 @@ void DescriptorMetal::WriteEntry(void* dst) const {
     memcpy(dst, &entry, sizeof(entry));
 }
 
-NRI_INLINE void DescriptorMetal::SetDebugName(const char* name) {
+OPENRHI_INLINE void DescriptorMetal::SetDebugName(const char* name) {
     // Sampler labels are immutable after creation
     if (!m_TextureView)
         return;

@@ -124,9 +124,9 @@ Result DescriptorHeapVK::WriteResourceDescriptors(const WriteResourceDescriptors
 }
 
 Result DescriptorHeapVK::WriteResourceDescriptorsInternal(const WriteResourceDescriptorsDesc* writeDescs, uint32_t writeDescNum) {
-    Scratch<VkResourceDescriptorInfoEXT> resources = NRI_ALLOCATE_SCRATCH(m_Device, VkResourceDescriptorInfoEXT, writeDescNum);
-    Scratch<VkHostAddressRangeEXT> outputs = NRI_ALLOCATE_SCRATCH(m_Device, VkHostAddressRangeEXT, writeDescNum);
-    Scratch<ResourceDescriptorWriteDataVK> writeData = NRI_ALLOCATE_SCRATCH(m_Device, ResourceDescriptorWriteDataVK, writeDescNum);
+    Scratch<VkResourceDescriptorInfoEXT> resources = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkResourceDescriptorInfoEXT, writeDescNum);
+    Scratch<VkHostAddressRangeEXT> outputs = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkHostAddressRangeEXT, writeDescNum);
+    Scratch<ResourceDescriptorWriteDataVK> writeData = OPENRHI_ALLOCATE_SCRATCH(m_Device, ResourceDescriptorWriteDataVK, writeDescNum);
 
     for (uint32_t i = 0; i < writeDescNum; i++) {
         const DescriptorVK& descriptor = *(DescriptorVK*)writeDescs[i].resource;
@@ -167,7 +167,7 @@ Result DescriptorHeapVK::WriteResourceDescriptorsInternal(const WriteResourceDes
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.WriteResourceDescriptorsEXT(m_Device, writeDescNum, resources, outputs);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkWriteResourceDescriptorsEXT");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkWriteResourceDescriptorsEXT");
 
     if (m_ResourceHeap->RequiresMappedMemoryFlush())
         return FlushDescriptorWrites(*m_ResourceHeap, outputs, writeDescNum);
@@ -189,9 +189,9 @@ Result DescriptorHeapVK::WriteSamplerDescriptors(const WriteSamplerDescriptorsDe
 }
 
 Result DescriptorHeapVK::WriteSamplerDescriptorsInternal(const WriteSamplerDescriptorsDesc* writeDescs, uint32_t writeDescNum) {
-    Scratch<VkSamplerCreateInfo> samplers = NRI_ALLOCATE_SCRATCH(m_Device, VkSamplerCreateInfo, writeDescNum);
-    Scratch<VkHostAddressRangeEXT> outputs = NRI_ALLOCATE_SCRATCH(m_Device, VkHostAddressRangeEXT, writeDescNum);
-    Scratch<SamplerDescriptorWriteDataVK> writeData = NRI_ALLOCATE_SCRATCH(m_Device, SamplerDescriptorWriteDataVK, writeDescNum);
+    Scratch<VkSamplerCreateInfo> samplers = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkSamplerCreateInfo, writeDescNum);
+    Scratch<VkHostAddressRangeEXT> outputs = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkHostAddressRangeEXT, writeDescNum);
+    Scratch<SamplerDescriptorWriteDataVK> writeData = OPENRHI_ALLOCATE_SCRATCH(m_Device, SamplerDescriptorWriteDataVK, writeDescNum);
 
     const auto& vk = m_Device.GetDispatchTable();
     bool hasNewCustomBorderColors = false;
@@ -267,7 +267,7 @@ Result DescriptorHeapVK::WriteSamplerDescriptorsInternal(const WriteSamplerDescr
     return Result::SUCCESS;
 }
 
-NRI_INLINE void DescriptorHeapVK::Bind(VkCommandBuffer commandBuffer) const {
+OPENRHI_INLINE void DescriptorHeapVK::Bind(VkCommandBuffer commandBuffer) const {
     const auto& vk = m_Device.GetDispatchTable();
     if (m_ResourceHeap)
         vk.CmdBindResourceHeapEXT(commandBuffer, &m_ResourceBindInfo);
@@ -275,7 +275,7 @@ NRI_INLINE void DescriptorHeapVK::Bind(VkCommandBuffer commandBuffer) const {
         vk.CmdBindSamplerHeapEXT(commandBuffer, &m_SamplerBindInfo);
 }
 
-NRI_INLINE void DescriptorHeapVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void DescriptorHeapVK::SetDebugName(const char* name) {
     if (m_ResourceHeap)
         m_ResourceHeap->SetDebugName(name);
     if (m_SamplerHeap)

@@ -2,44 +2,23 @@
 
 #include <cmath>
 
-#if NRI_ENABLE_D3D11_SUPPORT
-#    include <d3d11.h>
-#endif
-
-#if NRI_ENABLE_D3D12_SUPPORT
+#if OPENRHI_ENABLE_D3D12_SUPPORT
 #    include <d3d12.h>
 #endif
 
-#if NRI_ENABLE_VK_SUPPORT
+#if OPENRHI_ENABLE_VK_SUPPORT
 #    include <vulkan/vulkan.h>
 #endif
 
 //=====================================================================================================================================
 // NIS
 //=====================================================================================================================================
-#if NRI_ENABLE_NIS_SDK
+#if OPENRHI_ENABLE_NIS_SDK
 #    include "NIS.h"
-#    include "ShaderMake/ShaderBlob.h"
-
-#    if NRI_ENABLE_D3D11_SUPPORT
-#        include "NIS.cs.dxbc.h"
-#    endif
-
-#    if (NRI_ENABLE_D3D12_SUPPORT || (NRI_ENABLE_METAL_SUPPORT && NRI_ENABLE_METAL_SHADER_CONVERTER))
-#        include "NIS.cs.dxil.h"
-#    endif
-
-#    if (NRI_ENABLE_VK_SUPPORT || NRI_ENABLE_WGPU_SUPPORT)
-#        include "NIS.cs.spirv.h"
-#    endif
+#    include "NisShaders.h"
 
 // Ring buffer, should cover any reasonable number of queued frames even if "CmdDispatchUpscale" is called several times per frame
 const uint32_t NIS_DESCRIPTOR_SET_NUM = 32;
-
-struct BytecodeSize {
-    const uint8_t* bytecode;
-    uint32_t size;
-};
 
 struct Nis {
     DescriptorPool* descriptorPool = nullptr;
@@ -77,17 +56,17 @@ static inline const char* GetNisOutputFormatShaderConstant(const DeviceDesc& dev
 //=====================================================================================================================================
 // FFX
 //=====================================================================================================================================
-#if NRI_ENABLE_FFX_SDK
+#if OPENRHI_ENABLE_FFX_SDK
 #    include "ffx_upscale.h"
 
 // Satisfy the SDK's malloc-equivalent alignment without depending on Windows headers
 constexpr size_t FFX_ALLOCATION_ALIGNMENT = 16;
 
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
 #        include "dx12/ffx_api_dx12.h"
 #    endif
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
 
 // Legacy SDK 1.1.4 Vulkan ABI, retained alongside the newer D3D12 headers
 #        define FFX_API_CREATE_CONTEXT_DESC_TYPE_BACKEND_VK 0x0000003u
@@ -109,11 +88,11 @@ struct FfxVkPair {
 
 struct FfxGlobals {
     // Each SDK DLL has mutable global setup and diagnostic state
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
     Lock d3d12Lock = {};
 #    endif
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
     Lock vkLock = {};
     Lock vkRegistryLock = {};
     FfxVkPair* vkPairs = nullptr;
@@ -132,21 +111,21 @@ struct Ffx {
     ffxCreateContextDescUpscale contextDesc = {};
     Lock* sdkLock = nullptr;
 
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
     ffxCreateBackendDX12Desc backendD3D12Desc = {};
     ffxCreateContextDescUpscaleVersion versionDesc = {};
 #    endif
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
     ffxCreateBackendVKDesc backendVKDesc = {};
     FfxVkPair vkPair = {};
 #    endif
 };
 
 static inline Lock& FfxGetSdkLock(GraphicsAPI graphicsAPI) {
-#    if (NRI_ENABLE_D3D12_SUPPORT && NRI_ENABLE_VK_SUPPORT)
+#    if (OPENRHI_ENABLE_D3D12_SUPPORT && OPENRHI_ENABLE_VK_SUPPORT)
     return graphicsAPI == GraphicsAPI::D3D12 ? g_ffx.d3d12Lock : g_ffx.vkLock;
-#    elif NRI_ENABLE_D3D12_SUPPORT
+#    elif OPENRHI_ENABLE_D3D12_SUPPORT
     MaybeUnused(graphicsAPI);
 
     return g_ffx.d3d12Lock;
@@ -157,7 +136,7 @@ static inline Lock& FfxGetSdkLock(GraphicsAPI graphicsAPI) {
 #    endif
 }
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
 static inline void FfxRegisterDevice(FfxVkPair& pair, VkDevice device, PFN_vkGetDeviceProcAddr getDeviceProcAddress) {
     ExclusiveScope lock(g_ffx.vkRegistryLock);
 
@@ -176,7 +155,7 @@ static inline void FfxUnregisterDevice(FfxVkPair& pair) {
         }
     }
 
-    NRI_CHECK(false, "Unregistered FFX device");
+    OPENRHI_CHECK(false, "Unregistered FFX device");
 }
 
 static inline PFN_vkVoidFunction VKAPI_PTR FfxVkGetDeviceProcAddr(VkDevice device, const char* pName) {
@@ -196,11 +175,11 @@ static inline PFN_vkVoidFunction VKAPI_PTR FfxVkGetDeviceProcAddr(VkDevice devic
         }
     }
 
-    NRI_CHECK(getDeviceProcAddress, "Unexpected");
+    OPENRHI_CHECK(getDeviceProcAddress, "Unexpected");
 
     // Use corresponding "vkGetDeviceProcAddr"
     PFN_vkVoidFunction func = getDeviceProcAddress(device, pName);
-    NRI_CHECK(func || strstr(pName, "AMD"), "Another non-CORE function name?");
+    OPENRHI_CHECK(func || strstr(pName, "AMD"), "Another non-CORE function name?");
 
     return func;
 }
@@ -283,14 +262,14 @@ static inline FfxApiSurfaceFormat FfxConvertFormat(Format format) {
     }
 }
 
-static inline FfxApiResource FfxGetResource(const CoreInterface& NRI, const UpscalerResource& resource, bool isStorage = false) {
+static inline FfxApiResource FfxGetResource(const CoreInterface& OpenRHI, const UpscalerResource& resource, bool isStorage = false) {
     FfxApiResource res{};
-    res.resource = (void*)NRI.GetTextureNativeObject(resource.texture);
+    res.resource = (void*)OpenRHI.GetTextureNativeObject(resource.texture);
     res.state = isStorage ? FFX_API_RESOURCE_STATE_UNORDERED_ACCESS : FFX_API_RESOURCE_STATE_COMPUTE_READ;
     res.description.flags = FFX_API_RESOURCE_FLAGS_NONE;
 
     if (res.resource) {
-        const TextureDesc& textureDesc = NRI.GetTextureDesc(*resource.texture);
+        const TextureDesc& textureDesc = OpenRHI.GetTextureDesc(*resource.texture);
         const FormatProps& formatProps = GetFormatProps(textureDesc.format);
 
         res.description.format = FfxConvertFormat(textureDesc.format);
@@ -320,7 +299,7 @@ static inline FfxApiResource FfxGetResource(const CoreInterface& NRI, const Upsc
                 res.description.type = FFX_API_RESOURCE_TYPE_TEXTURE3D;
                 break;
             default:
-                NRI_CHECK(false, "Unexpected 'textureDesc.type'");
+                OPENRHI_CHECK(false, "Unexpected 'textureDesc.type'");
                 break;
         }
     }
@@ -344,7 +323,7 @@ static inline void FfxDealloc(void* pUserData, void* pMem) {
 #    ifndef NDEBUG
 
 static void FfxDebugMessage(uint32_t messageType, const wchar_t* message) {
-    NRI_FFX_DEBUG_LOG(messageType, message);
+    OPENRHI_FFX_DEBUG_LOG(messageType, message);
 }
 
 #    endif
@@ -354,11 +333,11 @@ static void FfxDebugMessage(uint32_t messageType, const wchar_t* message) {
 //=====================================================================================================================================
 // XESS
 //=====================================================================================================================================
-#if NRI_ENABLE_XESS_SDK
+#if OPENRHI_ENABLE_XESS_SDK
 #    include "xess.h"
 #    include "xess_debug.h"
 
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
 #        include "xess_d3d12.h"
 #    endif
 
@@ -395,7 +374,7 @@ static inline Result XessConvertError(xess_result_t code) {
 //=====================================================================================================================================
 // NGX
 //=====================================================================================================================================
-#if NRI_ENABLE_NGX_SDK
+#if OPENRHI_ENABLE_NGX_SDK
 #    if defined(__GNUC__)
 #        pragma GCC diagnostic push
 #        pragma GCC diagnostic ignored "-Wsign-compare"
@@ -407,12 +386,12 @@ static inline Result XessConvertError(xess_result_t code) {
 #    endif
 
 #    include "nvsdk_ngx_helpers.h"
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
 #        include "nvsdk_ngx_helpers_vk.h"
 
 #        include "nvsdk_ngx_helpers_dlssd_vk.h"
 #    endif
-#    if NRI_ENABLE_D3D11_SUPPORT || NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
 #        include "nvsdk_ngx_helpers_dlssd_d3d.h"
 #    endif
 
@@ -447,7 +426,7 @@ static inline int32_t NgxIncrRef(void* deviceNative) {
 
     if (i == g_ngx.refCounterNum) {
         g_ngx.refCounterNum++;
-        NRI_CHECK(g_ngx.refCounterNum < g_ngx.refCounters.size(), "Too many devices?");
+        OPENRHI_CHECK(g_ngx.refCounterNum < g_ngx.refCounters.size(), "Too many devices?");
     }
 
     g_ngx.refCounters[i].deviceNative = deviceNative;
@@ -461,8 +440,8 @@ static inline int32_t NgxDecrRef(void* deviceNative) {
     for (; i < g_ngx.refCounterNum && g_ngx.refCounters[i].deviceNative != deviceNative; i++)
         ;
 
-    NRI_CHECK(i < g_ngx.refCounterNum, "Destroy before create?");
-    NRI_CHECK(g_ngx.refCounters[i].refCounter > 0, "Unexpected");
+    OPENRHI_CHECK(i < g_ngx.refCounterNum, "Destroy before create?");
+    OPENRHI_CHECK(g_ngx.refCounters[i].refCounter > 0, "Unexpected");
 
     g_ngx.refCounters[i].deviceNative = deviceNative;
     g_ngx.refCounters[i].refCounter--;
@@ -485,16 +464,16 @@ static inline void NgxSetEvalParams(NVSDK_NGX_Parameter* params, const DispatchU
 static void NVSDK_CONV NgxLogCallback(const char*, NVSDK_NGX_Logging_Level, NVSDK_NGX_Feature) {
 }
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
 
-static inline NVSDK_NGX_Resource_VK NgxGetResource(const CoreInterface& NRI, const UpscalerResource& resource, uint64_t resourceNative, bool isStorage = false) {
+static inline NVSDK_NGX_Resource_VK NgxGetResource(const CoreInterface& OpenRHI, const UpscalerResource& resource, uint64_t resourceNative, bool isStorage = false) {
     if (!resource.texture)
         return {};
 
-    const TextureDesc& textureDesc = NRI.GetTextureDesc(*resource.texture);
-    VkImageView view = (VkImageView)NRI.GetDescriptorNativeObject(resource.descriptor);
+    const TextureDesc& textureDesc = OpenRHI.GetTextureDesc(*resource.texture);
+    VkImageView view = (VkImageView)OpenRHI.GetDescriptorNativeObject(resource.descriptor);
     VkImageSubresourceRange subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-    VkFormat format = (VkFormat)nriConvertNRIFormatToVK(textureDesc.format);
+    VkFormat format = (VkFormat)openrhiConvertOpenRHIFormatToVK(textureDesc.format);
 
     return NVSDK_NGX_Create_ImageView_Resource_VK(view, (VkImage)resourceNative, subresourceRange, format, textureDesc.width, textureDesc.height, isStorage);
 }
@@ -505,7 +484,7 @@ static inline NVSDK_NGX_Resource_VK NgxGetResource(const CoreInterface& NRI, con
 //=====================================================================================================================================
 // MetalFX
 //=====================================================================================================================================
-#if NRI_ENABLE_METAL_SUPPORT
+#if OPENRHI_ENABLE_METAL_SUPPORT
 
 // MetalFX encodes its own passes. "Dispatch" is ordered by app barriers with "COMPUTE_SHADER" stage, other stages are bridged
 constexpr MTL::Stages METALFX_EXTRA_STAGES = MTL::StageVertex | MTL::StageFragment | MTL::StageMachineLearning;
@@ -521,12 +500,12 @@ static inline bool IsMetalFx(UpscalerType type) {
     return type == UpscalerType::METALFX_SPATIAL || type == UpscalerType::METALFX_TEMPORAL || type == UpscalerType::METALFX_DENOISED;
 }
 
-static inline MTL::Texture* MetalFxGetTexture(const CoreInterface& NRI, const UpscalerResource& resource) {
-    return (MTL::Texture*)NRI.GetDescriptorNativeObject(resource.descriptor);
+static inline MTL::Texture* MetalFxGetTexture(const CoreInterface& OpenRHI, const UpscalerResource& resource) {
+    return (MTL::Texture*)OpenRHI.GetDescriptorNativeObject(resource.descriptor);
 }
 
-static inline MTL::PixelFormat MetalFxGetFormat(const CoreInterface& NRI, const UpscalerResource& resource) {
-    MTL::Texture* texture = MetalFxGetTexture(NRI, resource);
+static inline MTL::PixelFormat MetalFxGetFormat(const CoreInterface& OpenRHI, const UpscalerResource& resource) {
+    MTL::Texture* texture = MetalFxGetTexture(OpenRHI, resource);
 
     return texture ? texture->pixelFormat() : MTL::PixelFormatInvalid;
 }
@@ -545,9 +524,9 @@ static MTL::Texture* MetalFxCreateRoughnessView(MTL4::CommandBuffer* commandBuff
     return view;
 }
 
-static bool MetalFxCreateScaler(MetalFx& metalFx, MTL::Device* device, const CoreInterface& NRI, const UpscalerDesc& upscalerDesc, const DispatchUpscaleDesc& dispatchUpscaleDesc) {
-    MTL::Texture* input = MetalFxGetTexture(NRI, dispatchUpscaleDesc.input);
-    MTL::Texture* output = MetalFxGetTexture(NRI, dispatchUpscaleDesc.output);
+static bool MetalFxCreateScaler(MetalFx& metalFx, MTL::Device* device, const CoreInterface& OpenRHI, const UpscalerDesc& upscalerDesc, const DispatchUpscaleDesc& dispatchUpscaleDesc) {
+    MTL::Texture* input = MetalFxGetTexture(OpenRHI, dispatchUpscaleDesc.input);
+    MTL::Texture* output = MetalFxGetTexture(OpenRHI, dispatchUpscaleDesc.output);
 
     if (upscalerDesc.type == UpscalerType::METALFX_SPATIAL) {
         MTLFX::SpatialScalerColorProcessingMode colorProcessingMode = MTLFX::SpatialScalerColorProcessingModeLinear;
@@ -582,8 +561,8 @@ static bool MetalFxCreateScaler(MetalFx& metalFx, MTL::Device* device, const Cor
         scalerDesc->setOutputHeight(upscalerDesc.upscaleResolution.h);
         scalerDesc->setColorTextureFormat(input->pixelFormat());
         scalerDesc->setOutputTextureFormat(output->pixelFormat());
-        scalerDesc->setDepthTextureFormat(MetalFxGetFormat(NRI, guides.depth));
-        scalerDesc->setMotionTextureFormat(MetalFxGetFormat(NRI, guides.mv));
+        scalerDesc->setDepthTextureFormat(MetalFxGetFormat(OpenRHI, guides.depth));
+        scalerDesc->setMotionTextureFormat(MetalFxGetFormat(OpenRHI, guides.mv));
         scalerDesc->setAutoExposureEnabled(!(upscalerDesc.flags & UpscalerBits::USE_EXPOSURE));
         scalerDesc->setInputContentPropertiesEnabled(true);
         scalerDesc->setInputContentMinScale(MTLFX::TemporalScalerDescriptor::supportedInputContentMinScale(device));
@@ -594,7 +573,7 @@ static bool MetalFxCreateScaler(MetalFx& metalFx, MTL::Device* device, const Cor
 
         if (upscalerDesc.flags & UpscalerBits::USE_REACTIVE) {
             scalerDesc->setReactiveMaskTextureEnabled(true);
-            scalerDesc->setReactiveMaskTextureFormat(MetalFxGetFormat(NRI, guides.reactive));
+            scalerDesc->setReactiveMaskTextureFormat(MetalFxGetFormat(OpenRHI, guides.reactive));
         }
 
         metalFx.temporal = scalerDesc->newTemporalScaler(device, metalFx.compiler);
@@ -604,7 +583,7 @@ static bool MetalFxCreateScaler(MetalFx& metalFx, MTL::Device* device, const Cor
     }
 
     const DenoiserGuides& guides = dispatchUpscaleDesc.guides.denoiser;
-    MTL::PixelFormat normalRoughnessFormat = MetalFxGetFormat(NRI, guides.normalRoughness);
+    MTL::PixelFormat normalRoughnessFormat = MetalFxGetFormat(OpenRHI, guides.normalRoughness);
 
     MTLFX::TemporalDenoisedScalerDescriptor* scalerDesc = MTLFX::TemporalDenoisedScalerDescriptor::alloc()->init();
     scalerDesc->setInputWidth(input->width());
@@ -613,19 +592,19 @@ static bool MetalFxCreateScaler(MetalFx& metalFx, MTL::Device* device, const Cor
     scalerDesc->setOutputHeight(upscalerDesc.upscaleResolution.h);
     scalerDesc->setColorTextureFormat(input->pixelFormat());
     scalerDesc->setOutputTextureFormat(output->pixelFormat());
-    scalerDesc->setDepthTextureFormat(MetalFxGetFormat(NRI, guides.depth));
-    scalerDesc->setMotionTextureFormat(MetalFxGetFormat(NRI, guides.mv));
+    scalerDesc->setDepthTextureFormat(MetalFxGetFormat(OpenRHI, guides.depth));
+    scalerDesc->setMotionTextureFormat(MetalFxGetFormat(OpenRHI, guides.mv));
     scalerDesc->setNormalTextureFormat(normalRoughnessFormat);
     scalerDesc->setRoughnessTextureFormat(normalRoughnessFormat); // a swizzled view of "normalRoughness"
-    scalerDesc->setDiffuseAlbedoTextureFormat(MetalFxGetFormat(NRI, guides.diffuseAlbedo));
-    scalerDesc->setSpecularAlbedoTextureFormat(MetalFxGetFormat(NRI, guides.specularAlbedo));
-    scalerDesc->setSpecularHitDistanceTextureFormat(MetalFxGetFormat(NRI, guides.specularMvOrHitT));
+    scalerDesc->setDiffuseAlbedoTextureFormat(MetalFxGetFormat(OpenRHI, guides.diffuseAlbedo));
+    scalerDesc->setSpecularAlbedoTextureFormat(MetalFxGetFormat(OpenRHI, guides.specularAlbedo));
+    scalerDesc->setSpecularHitDistanceTextureFormat(MetalFxGetFormat(OpenRHI, guides.specularMvOrHitT));
     scalerDesc->setSpecularHitDistanceTextureEnabled(true);
     scalerDesc->setAutoExposureEnabled(!(upscalerDesc.flags & UpscalerBits::USE_EXPOSURE));
 
     if (upscalerDesc.flags & UpscalerBits::USE_REACTIVE) {
         scalerDesc->setReactiveMaskTextureEnabled(true);
-        scalerDesc->setReactiveMaskTextureFormat(MetalFxGetFormat(NRI, guides.reactive));
+        scalerDesc->setReactiveMaskTextureFormat(MetalFxGetFormat(OpenRHI, guides.reactive));
     }
 
     metalFx.denoised = scalerDesc->newTemporalDenoisedScaler(device, metalFx.compiler);
@@ -639,8 +618,8 @@ static bool MetalFxCreateScaler(MetalFx& metalFx, MTL::Device* device, const Cor
 //=====================================================================================================================================
 // Upscaler
 //=====================================================================================================================================
-#if NRI_ENABLE_METAL_SUPPORT
-bool nri::IsMetalFxSupportedMetal(NS::Object* device, UpscalerType type) {
+#if OPENRHI_ENABLE_METAL_SUPPORT
+bool openrhi::IsMetalFxSupportedMetal(NS::Object* device, UpscalerType type) {
     MTL::Device* deviceNative = (MTL::Device*)device;
 
     if (type == UpscalerType::METALFX_SPATIAL)
@@ -656,41 +635,37 @@ bool nri::IsMetalFxSupportedMetal(NS::Object* device, UpscalerType type) {
 }
 #endif
 
-bool nri::IsUpscalerSupported(const DeviceDesc& deviceDesc, UpscalerType type) {
+bool openrhi::IsUpscalerSupported(const DeviceDesc& deviceDesc, UpscalerType type) {
     MaybeUnused(deviceDesc, type);
 
-#if NRI_ENABLE_NIS_SDK
+#if OPENRHI_ENABLE_NIS_SDK
     if (type == UpscalerType::NIS) {
-#    if (NRI_ENABLE_METAL_SUPPORT && !NRI_ENABLE_METAL_SHADER_CONVERTER)
-        if (deviceDesc.graphicsAPI == GraphicsAPI::METAL)
-            return false;
-#    endif
         return true;
     }
 #endif
 
-#if NRI_ENABLE_FFX_SDK
+#if OPENRHI_ENABLE_FFX_SDK
     if (type == UpscalerType::FSR) {
         if (deviceDesc.graphicsAPI == GraphicsAPI::D3D12 || deviceDesc.graphicsAPI == GraphicsAPI::VK)
             return true;
     }
 #endif
 
-#if NRI_ENABLE_XESS_SDK
+#if OPENRHI_ENABLE_XESS_SDK
     if (type == UpscalerType::XESS) {
         if (deviceDesc.graphicsAPI == GraphicsAPI::D3D12)
             return true;
     }
 #endif
 
-#if NRI_ENABLE_NGX_SDK
+#if OPENRHI_ENABLE_NGX_SDK
     if (type == UpscalerType::DLSR || type == UpscalerType::DLRR) {
         if (deviceDesc.adapterDesc.vendor == Vendor::NVIDIA && deviceDesc.tiers.rayTracing) // an elegant way to detect an RTX GPU?
             return true;
     }
 #endif
 
-#if NRI_ENABLE_METAL_SUPPORT
+#if OPENRHI_ENABLE_METAL_SUPPORT
     if (IsMetalFx(type)) {
         if (deviceDesc.graphicsAPI == GraphicsAPI::METAL) // the device check is "IsMetalFxSupportedMetal"
             return true;
@@ -701,7 +676,7 @@ bool nri::IsUpscalerSupported(const DeviceDesc& deviceDesc, UpscalerType type) {
 }
 
 UpscalerImpl::~UpscalerImpl() {
-#if NRI_ENABLE_NIS_SDK
+#if OPENRHI_ENABLE_NIS_SDK
     if (m_Desc.type == UpscalerType::NIS && m.nis) {
         m_iCore.DestroyDescriptor(m.nis->srvScale);
         m_iCore.DestroyDescriptor(m.nis->srvUsm);
@@ -717,30 +692,30 @@ UpscalerImpl::~UpscalerImpl() {
     }
 #endif
 
-#if NRI_ENABLE_XESS_SDK
+#if OPENRHI_ENABLE_XESS_SDK
     if (m_Desc.type == UpscalerType::XESS && m.xess) {
         ExclusiveScope lock(g_xess.lock);
 
         xess_result_t result = xessDestroyContext(m.xess->context);
         MaybeUnused(result);
-        NRI_CHECK(result == XESS_RESULT_SUCCESS, "xessDestroyContext() failed!");
+        OPENRHI_CHECK(result == XESS_RESULT_SUCCESS, "xessDestroyContext() failed!");
 
         const auto& allocationCallbacks = ((DeviceBase&)m_Device).GetAllocationCallbacks();
         Destroy<Xess>(allocationCallbacks, m.xess);
     }
 #endif
 
-#if NRI_ENABLE_FFX_SDK
+#if OPENRHI_ENABLE_FFX_SDK
     if (m_Desc.type == UpscalerType::FSR && m.ffx) {
         ExclusiveScope lock(*m.ffx->sdkLock);
 
         if (m.ffx->context) {
             ffxReturnCode_t result = m.ffx->DestroyContext(&m.ffx->context, m.ffx->allocationCallbacksPtr);
             MaybeUnused(result);
-            NRI_CHECK(result == FFX_API_RETURN_OK, "ffxDestroyContext() failed!");
+            OPENRHI_CHECK(result == FFX_API_RETURN_OK, "ffxDestroyContext() failed!");
         }
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
         if (m.ffx->vkPair.device)
             FfxUnregisterDevice(m.ffx->vkPair);
 #    endif
@@ -753,7 +728,7 @@ UpscalerImpl::~UpscalerImpl() {
     }
 #endif
 
-#if NRI_ENABLE_NGX_SDK
+#if OPENRHI_ENABLE_NGX_SDK
     if ((m_Desc.type == UpscalerType::DLSR || m_Desc.type == UpscalerType::DLRR) && m.ngx) {
         ExclusiveScope lock(g_ngx.lock);
 
@@ -761,47 +736,32 @@ UpscalerImpl::~UpscalerImpl() {
         void* deviceNative = m_iCore.GetDeviceNativeObject(&m_Device);
         int32_t refCount = NgxDecrRef(deviceNative);
 
-#    if NRI_ENABLE_D3D11_SUPPORT
-        if (deviceDesc.graphicsAPI == GraphicsAPI::D3D11) {
-            NVSDK_NGX_Result result = NVSDK_NGX_D3D11_DestroyParameters(m.ngx->params);
-            NRI_CHECK(!m.ngx->params || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D11_DestroyParameters() failed!");
-
-            result = NVSDK_NGX_D3D11_ReleaseFeature(m.ngx->handle);
-            NRI_CHECK(!m.ngx->handle || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D11_ReleaseFeature() failed!");
-
-            if (refCount == 0) {
-                result = NVSDK_NGX_D3D11_Shutdown1((ID3D11Device*)deviceNative);
-                NRI_CHECK(result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D11_Shutdown1() failed!");
-            }
-        }
-#    endif
-
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
         if (deviceDesc.graphicsAPI == GraphicsAPI::D3D12) {
             NVSDK_NGX_Result result = NVSDK_NGX_D3D12_DestroyParameters(m.ngx->params);
-            NRI_CHECK(!m.ngx->params || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D12_DestroyParameters() failed!");
+            OPENRHI_CHECK(!m.ngx->params || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D12_DestroyParameters() failed!");
 
             result = NVSDK_NGX_D3D12_ReleaseFeature(m.ngx->handle);
-            NRI_CHECK(!m.ngx->handle || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D12_ReleaseFeature() failed!");
+            OPENRHI_CHECK(!m.ngx->handle || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D12_ReleaseFeature() failed!");
 
             if (refCount == 0) {
                 result = NVSDK_NGX_D3D12_Shutdown1((ID3D12Device*)deviceNative);
-                NRI_CHECK(result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D12_Shutdown1() failed!");
+                OPENRHI_CHECK(result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D12_Shutdown1() failed!");
             }
         }
 #    endif
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
         if (deviceDesc.graphicsAPI == GraphicsAPI::VK) {
             NVSDK_NGX_Result result = NVSDK_NGX_VULKAN_DestroyParameters(m.ngx->params);
-            NRI_CHECK(!m.ngx->params || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_VULKAN_DestroyParameters() failed!");
+            OPENRHI_CHECK(!m.ngx->params || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_VULKAN_DestroyParameters() failed!");
 
             result = NVSDK_NGX_VULKAN_ReleaseFeature(m.ngx->handle);
-            NRI_CHECK(!m.ngx->handle || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_VULKAN_ReleaseFeature() failed!");
+            OPENRHI_CHECK(!m.ngx->handle || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_VULKAN_ReleaseFeature() failed!");
 
             if (refCount == 0) {
                 result = NVSDK_NGX_VULKAN_Shutdown1((VkDevice)deviceNative);
-                NRI_CHECK(result == NVSDK_NGX_Result_Success, "NVSDK_NGX_VULKAN_Shutdown1() failed!");
+                OPENRHI_CHECK(result == NVSDK_NGX_Result_Success, "NVSDK_NGX_VULKAN_Shutdown1() failed!");
             }
         }
 #    endif
@@ -811,7 +771,7 @@ UpscalerImpl::~UpscalerImpl() {
     }
 #endif
 
-#if NRI_ENABLE_METAL_SUPPORT
+#if OPENRHI_ENABLE_METAL_SUPPORT
     if (IsMetalFx(m_Desc.type) && m.metalfx) {
         if (m.metalfx->spatial)
             m.metalfx->spatial->release();
@@ -841,7 +801,7 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
     UpscalerProps upscalerProps = {};
     GetUpscalerProps(upscalerProps);
 
-#if NRI_ENABLE_NIS_SDK
+#if OPENRHI_ENABLE_NIS_SDK
     if (upscalerDesc.type == UpscalerType::NIS) {
         const char* outputFormat = GetNisOutputFormatShaderConstant(deviceDesc, upscalerDesc.outputFormat);
         if (!outputFormat)
@@ -868,11 +828,11 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
 
             DescriptorSetDesc descriptorSetDescs[2] = {};
             {
-                descriptorSetDescs[0].registerSpace = NRI_NIS_SET_STATIC;
+                descriptorSetDescs[0].registerSpace = NIS::OPENRHI_NIS_SET_STATIC;
                 descriptorSetDescs[0].ranges = descriptorSet0Ranges;
                 descriptorSetDescs[0].rangeNum = GetCountOf(descriptorSet0Ranges);
 
-                descriptorSetDescs[1].registerSpace = NRI_NIS_SET_DYNAMIC;
+                descriptorSetDescs[1].registerSpace = NIS::OPENRHI_NIS_SET_DYNAMIC;
                 descriptorSetDescs[1].ranges = descriptorSet1Ranges;
                 descriptorSetDescs[1].rangeNum = GetCountOf(descriptorSet1Ranges);
                 descriptorSetDescs[1].flags = DescriptorSetBits::ALLOW_UPDATE_AFTER_SET;
@@ -892,39 +852,14 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
         }
 
         { // Pipeline
+            const bool nativeHalf = deviceDesc.shaderFeatures.nativeF16;
             m.nis->blockSize.w = 32;
-            m.nis->blockSize.h = deviceDesc.shaderModel >= NriShaderModel(6, 2) ? 32 : 24;
-
-            std::array<ShaderMake::ShaderConstant, 4> defines = {{
-                {"NIS_FP16", (deviceDesc.shaderModel >= NriShaderModel(6, 2)) ? "1" : "0"},
-                {"NIS_HDR_MODE", (upscalerDesc.flags & UpscalerBits::HDR) ? "1" : "0"},
-                {"NIS_OUTPUT_FORMAT", outputFormat},
-                {"NIS_THREAD_GROUP_SIZE", (deviceDesc.adapterDesc.vendor == Vendor::NVIDIA) ? "128" : "256"}, // TODO: verify performance
-            }};
-
-            const void* bytecode = nullptr;
-            size_t size = 0;
-            bool shaderMakeResult = false;
-#    if NRI_ENABLE_D3D11_SUPPORT
-            if (deviceDesc.graphicsAPI == GraphicsAPI::D3D11)
-                shaderMakeResult = ShaderMake::FindPermutationInBlob(g_NIS_cs_dxbc, GetCountOf(g_NIS_cs_dxbc), defines.data(), (uint32_t)defines.size(), &bytecode, &size);
-#    endif
-#    if (NRI_ENABLE_D3D12_SUPPORT || (NRI_ENABLE_METAL_SUPPORT && NRI_ENABLE_METAL_SHADER_CONVERTER))
-            if (deviceDesc.graphicsAPI == GraphicsAPI::D3D12 || deviceDesc.graphicsAPI == GraphicsAPI::METAL)
-                shaderMakeResult = ShaderMake::FindPermutationInBlob(g_NIS_cs_dxil, GetCountOf(g_NIS_cs_dxil), defines.data(), (uint32_t)defines.size(), &bytecode, &size);
-#    endif
-#    if (NRI_ENABLE_VK_SUPPORT || NRI_ENABLE_WGPU_SUPPORT)
-            if (deviceDesc.graphicsAPI == GraphicsAPI::VK || deviceDesc.graphicsAPI == GraphicsAPI::WGPU)
-                shaderMakeResult = ShaderMake::FindPermutationInBlob(g_NIS_cs_spirv, GetCountOf(g_NIS_cs_spirv), defines.data(), (uint32_t)defines.size(), &bytecode, &size);
-#    endif
-            if (!shaderMakeResult)
-                return Result::FAILURE;
-
+            const bool metal = deviceDesc.graphicsAPI == GraphicsAPI::METAL;
+            m.nis->blockSize.h = nativeHalf ? (metal ? 24 : 32) : (metal ? 16 : 24);
+            const uint32_t permutation = (nativeHalf ? 8 : 0) + ((upscalerDesc.flags & UpscalerBits::HDR) ? 4 : 0) + uint32_t(outputFormat[0] - '0');
             ComputePipelineDesc computePipelineDesc = {};
             computePipelineDesc.pipelineLayout = m.nis->pipelineLayout;
-            computePipelineDesc.shader.stage = StageBits::COMPUTE_SHADER;
-            computePipelineDesc.shader.bytecode = bytecode;
-            computePipelineDesc.shader.size = size;
+            computePipelineDesc.shader = g_NisShaders[permutation];
 
             Result result = m_iCore.CreateComputePipeline(m_Device, computePipelineDesc, m.nis->pipeline);
             if (result != Result::SUCCESS)
@@ -952,7 +887,7 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
 
         { // Upload data // TODO: allow to merge with "UploadData" requests on user side
             HelperInterface iHelper = {};
-            Result result = nriGetInterface(m_Device, NRI_INTERFACE(HelperInterface), &iHelper);
+            Result result = openrhiGetInterface(m_Device, OPENRHI_INTERFACE(HelperInterface), &iHelper);
             if (result != Result::SUCCESS)
                 return result;
 
@@ -1023,11 +958,11 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
         }
 
         { // Descriptor sets
-            Result result = m_iCore.AllocateDescriptorSets(*m.nis->descriptorPool, *m.nis->pipelineLayout, NRI_NIS_SET_STATIC, &m.nis->descriptorSet0, 1, 0);
+            Result result = m_iCore.AllocateDescriptorSets(*m.nis->descriptorPool, *m.nis->pipelineLayout, NIS::OPENRHI_NIS_SET_STATIC, &m.nis->descriptorSet0, 1, 0);
             if (result != Result::SUCCESS)
                 return result;
 
-            result = m_iCore.AllocateDescriptorSets(*m.nis->descriptorPool, *m.nis->pipelineLayout, NRI_NIS_SET_DYNAMIC, m.nis->descriptorSets1.data(), NIS_DESCRIPTOR_SET_NUM, 0);
+            result = m_iCore.AllocateDescriptorSets(*m.nis->descriptorPool, *m.nis->pipelineLayout, NIS::OPENRHI_NIS_SET_DYNAMIC, m.nis->descriptorSets1.data(), NIS_DESCRIPTOR_SET_NUM, 0);
             if (result != Result::SUCCESS)
                 return result;
         }
@@ -1048,7 +983,7 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
     }
 #endif
 
-#if NRI_ENABLE_FFX_SDK
+#if OPENRHI_ENABLE_FFX_SDK
     if (upscalerDesc.type == UpscalerType::FSR) {
         const auto& allocationCallbacks = ((DeviceBase&)m_Device).GetAllocationCallbacks();
         m.ffx = Allocate<Ffx>(allocationCallbacks);
@@ -1107,7 +1042,7 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
         contextDesc.fpMessage = FfxDebugMessage;
 #    endif
 
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
         ffxCreateBackendDX12Desc& backendD3D12Desc = m.ffx->backendD3D12Desc;
         ffxCreateContextDescUpscaleVersion& versionDesc = m.ffx->versionDesc;
 
@@ -1122,12 +1057,12 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
         }
 #    endif
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
         ffxCreateBackendVKDesc& backendVKDesc = m.ffx->backendVKDesc;
 
         if (deviceDesc.graphicsAPI == GraphicsAPI::VK) {
             WrapperVKInterface iWrapperVK = {};
-            if (nriGetInterface(m_Device, NRI_INTERFACE(WrapperVKInterface), &iWrapperVK) != Result::SUCCESS)
+            if (openrhiGetInterface(m_Device, OPENRHI_INTERFACE(WrapperVKInterface), &iWrapperVK) != Result::SUCCESS)
                 return Result::UNSUPPORTED;
 
             VkDevice vkDevice = (VkDevice)m_iCore.GetDeviceNativeObject(&m_Device);
@@ -1153,16 +1088,16 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
         result = m.ffx->Query(&m.ffx->context, &providerVersion.header);
 
         if (result == FFX_API_RETURN_OK)
-            NRI_REPORT_INFO((DeviceBase*)&m_Device, "FSR provider: %s", providerVersion.versionName);
+            OPENRHI_REPORT_INFO((DeviceBase*)&m_Device, "FSR provider: %s", providerVersion.versionName);
     }
 #endif
 
-#if NRI_ENABLE_XESS_SDK
+#if OPENRHI_ENABLE_XESS_SDK
     if (upscalerDesc.type == UpscalerType::XESS) {
         const auto& allocationCallbacks = ((DeviceBase&)m_Device).GetAllocationCallbacks();
         m.xess = Allocate<Xess>(allocationCallbacks);
 
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
         if (deviceDesc.graphicsAPI == GraphicsAPI::D3D12) {
             ExclusiveScope lock(g_xess.lock);
 
@@ -1233,7 +1168,7 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
     }
 #endif
 
-#if NRI_ENABLE_NGX_SDK
+#if OPENRHI_ENABLE_NGX_SDK
     if (upscalerDesc.type == UpscalerType::DLSR || upscalerDesc.type == UpscalerType::DLRR) {
         void* deviceNative = m_iCore.GetDeviceNativeObject(&m_Device);
         const wchar_t* path = L""; // don't care
@@ -1250,17 +1185,7 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
             featureCommonInfo.LoggingInfo.MinimumLoggingLevel = NVSDK_NGX_LOGGING_LEVEL_OFF; // TODO: NGX spams to "stdout" if not OFF
             featureCommonInfo.LoggingInfo.DisableOtherLoggingSinks = true;
 
-#    if NRI_ENABLE_D3D11_SUPPORT
-            if (deviceDesc.graphicsAPI == GraphicsAPI::D3D11) {
-                ngxResult = NVSDK_NGX_D3D11_Init(APPLICATION_ID, path, (ID3D11Device*)deviceNative, &featureCommonInfo);
-                if (ngxResult == NVSDK_NGX_Result_Success) {
-                    NgxIncrRef(deviceNative);
-                    ngxResult = NVSDK_NGX_D3D11_GetCapabilityParameters(&m.ngx->params);
-                }
-            }
-#    endif
-
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
             if (deviceDesc.graphicsAPI == GraphicsAPI::D3D12) {
                 ngxResult = NVSDK_NGX_D3D12_Init(APPLICATION_ID, path, (ID3D12Device*)deviceNative, &featureCommonInfo);
                 if (ngxResult == NVSDK_NGX_Result_Success) {
@@ -1270,10 +1195,10 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
             }
 #    endif
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
             if (deviceDesc.graphicsAPI == GraphicsAPI::VK) {
                 WrapperVKInterface iWrapperVK = {};
-                if (nriGetInterface(m_Device, NRI_INTERFACE(WrapperVKInterface), &iWrapperVK) != Result::SUCCESS)
+                if (openrhiGetInterface(m_Device, OPENRHI_INTERFACE(WrapperVKInterface), &iWrapperVK) != Result::SUCCESS)
                     return Result::UNSUPPORTED;
 
                 VkPhysicalDevice vkPhysicalDevice = (VkPhysicalDevice)iWrapperVK.GetPhysicalDeviceVK(m_Device);
@@ -1356,17 +1281,12 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
                 srCreateParams.Feature.InPerfQualityValue = qualityValue;
                 srCreateParams.InFeatureCreateFlags = featureCreateFlags;
 
-#    if NRI_ENABLE_D3D11_SUPPORT
-                if (deviceDesc.graphicsAPI == GraphicsAPI::D3D11)
-                    ngxResult = NGX_D3D11_CREATE_DLSS_EXT((ID3D11DeviceContext*)commandBufferNative, &m.ngx->handle, m.ngx->params, &srCreateParams);
-#    endif
-
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
                 if (deviceDesc.graphicsAPI == GraphicsAPI::D3D12)
                     ngxResult = NGX_D3D12_CREATE_DLSS_EXT((ID3D12GraphicsCommandList*)commandBufferNative, NODE_MASK, NODE_MASK, &m.ngx->handle, m.ngx->params, &srCreateParams);
 #    endif
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
                 if (deviceDesc.graphicsAPI == GraphicsAPI::VK)
                     ngxResult = NGX_VULKAN_CREATE_DLSS_EXT1((VkDevice)deviceNative, (VkCommandBuffer)commandBufferNative, NODE_MASK, NODE_MASK, &m.ngx->handle, m.ngx->params, &srCreateParams);
 #    endif
@@ -1384,17 +1304,12 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
                 rrCreateParams.InPerfQualityValue = qualityValue;
                 rrCreateParams.InFeatureCreateFlags = featureCreateFlags;
 
-#    if NRI_ENABLE_D3D11_SUPPORT
-                if (deviceDesc.graphicsAPI == GraphicsAPI::D3D11)
-                    ngxResult = NGX_D3D11_CREATE_DLSSD_EXT((ID3D11DeviceContext*)commandBufferNative, &m.ngx->handle, m.ngx->params, &rrCreateParams);
-#    endif
-
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
                 if (deviceDesc.graphicsAPI == GraphicsAPI::D3D12)
                     ngxResult = NGX_D3D12_CREATE_DLSSD_EXT((ID3D12GraphicsCommandList*)commandBufferNative, NODE_MASK, NODE_MASK, &m.ngx->handle, m.ngx->params, &rrCreateParams);
 #    endif
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
                 if (deviceDesc.graphicsAPI == GraphicsAPI::VK)
                     ngxResult = NGX_VULKAN_CREATE_DLSSD_EXT1((VkDevice)deviceNative, (VkCommandBuffer)commandBufferNative, NODE_MASK, NODE_MASK, &m.ngx->handle, m.ngx->params, &rrCreateParams);
 #    endif
@@ -1441,7 +1356,7 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
     }
 #endif
 
-#if NRI_ENABLE_METAL_SUPPORT
+#if OPENRHI_ENABLE_METAL_SUPPORT
     if (IsMetalFx(upscalerDesc.type)) {
         MTL::Device* deviceNative = (MTL::Device*)m_iCore.GetDeviceNativeObject(&m_Device);
 
@@ -1528,7 +1443,7 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
 
     MaybeUnused(commandBuffer, output, input, preExposure);
 
-#if NRI_ENABLE_NIS_SDK
+#if OPENRHI_ENABLE_NIS_SDK
     if (m_Desc.type == UpscalerType::NIS) {
         DescriptorSet* descriptorSet1 = m.nis->descriptorSets1[m.nis->descriptorSetIndex];
 
@@ -1537,10 +1452,10 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
             m_iCore.CmdSetPipelineLayout(commandBuffer, BindPoint::COMPUTE, *m.nis->pipelineLayout);
             m_iCore.CmdSetPipeline(commandBuffer, *m.nis->pipeline);
 
-            SetDescriptorSetDesc staticSet = {NRI_NIS_SET_STATIC, m.nis->descriptorSet0};
+            SetDescriptorSetDesc staticSet = {NIS::OPENRHI_NIS_SET_STATIC, m.nis->descriptorSet0};
             m_iCore.CmdSetDescriptorSet(commandBuffer, staticSet);
 
-            SetDescriptorSetDesc dynamicSet = {NRI_NIS_SET_DYNAMIC, descriptorSet1};
+            SetDescriptorSetDesc dynamicSet = {NIS::OPENRHI_NIS_SET_DYNAMIC, descriptorSet1};
             m_iCore.CmdSetDescriptorSet(commandBuffer, dynamicSet);
         }
 
@@ -1583,7 +1498,7 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
     }
 #endif
 
-#if NRI_ENABLE_FFX_SDK
+#if OPENRHI_ENABLE_FFX_SDK
     if (m_Desc.type == UpscalerType::FSR) {
         ExclusiveScope lock(*m.ffx->sdkLock);
 
@@ -1618,11 +1533,11 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
 
         ffxReturnCode_t result = m.ffx->Dispatch(&m.ffx->context, &dispatchDesc.header);
         MaybeUnused(result);
-        NRI_CHECK(result == FFX_API_RETURN_OK, "ffxDispatch() failed!");
+        OPENRHI_CHECK(result == FFX_API_RETURN_OK, "ffxDispatch() failed!");
     }
 #endif
 
-#if NRI_ENABLE_XESS_SDK
+#if OPENRHI_ENABLE_XESS_SDK
     if (m_Desc.type == UpscalerType::XESS) {
         const UpscalerGuides& guides = dispatchUpscaleDesc.guides.upscaler;
 
@@ -1643,15 +1558,15 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
         ID3D12GraphicsCommandList* commandList = (ID3D12GraphicsCommandList*)m_iCore.GetCommandBufferNativeObject(&commandBuffer);
 
         xess_result_t result = xessSetExposureMultiplier(m.xess->context, 1.0f / preExposure);
-        NRI_CHECK(result == XESS_RESULT_SUCCESS, "xessSetExposureMultiplier() failed!");
+        OPENRHI_CHECK(result == XESS_RESULT_SUCCESS, "xessSetExposureMultiplier() failed!");
 
         result = xessD3D12Execute(m.xess->context, commandList, &executeParams);
         MaybeUnused(result);
-        NRI_CHECK(result == XESS_RESULT_SUCCESS, "xessD3D12Execute() failed!");
+        OPENRHI_CHECK(result == XESS_RESULT_SUCCESS, "xessD3D12Execute() failed!");
     }
 #endif
 
-#if NRI_ENABLE_NGX_SDK
+#if OPENRHI_ENABLE_NGX_SDK
     if (m_Desc.type == UpscalerType::DLSR) {
         ExclusiveScope lock(g_ngx.lock);
 
@@ -1672,20 +1587,7 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
 
         NVSDK_NGX_Result result = NVSDK_NGX_Result_Fail;
 
-#    if NRI_ENABLE_D3D11_SUPPORT
-        if (deviceDesc.graphicsAPI == GraphicsAPI::D3D11) {
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_Color, (ID3D11Resource*)inputNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_Output, (ID3D11Resource*)outputNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_MotionVectors, (ID3D11Resource*)mvNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_Depth, (ID3D11Resource*)depthNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_ExposureTexture, (ID3D11Resource*)exposureNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_DLSS_Input_Bias_Current_Color_Mask, (ID3D11Resource*)reactiveNative);
-
-            result = NVSDK_NGX_D3D11_EvaluateFeature_C((ID3D11DeviceContext*)commandBufferNative, m.ngx->handle, m.ngx->params, nullptr);
-        }
-#    endif
-
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
         if (deviceDesc.graphicsAPI == GraphicsAPI::D3D12) {
             NVSDK_NGX_Parameter_SetD3d12Resource(m.ngx->params, NVSDK_NGX_Parameter_Color, (ID3D12Resource*)inputNative);
             NVSDK_NGX_Parameter_SetD3d12Resource(m.ngx->params, NVSDK_NGX_Parameter_Output, (ID3D12Resource*)outputNative);
@@ -1698,7 +1600,7 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
         }
 #    endif
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
         if (deviceDesc.graphicsAPI == GraphicsAPI::VK) {
             NVSDK_NGX_Resource_VK outputVk = NgxGetResource(m_iCore, output, outputNative, true);
             NVSDK_NGX_Resource_VK inputVk = NgxGetResource(m_iCore, input, inputNative);
@@ -1718,7 +1620,7 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
         }
 #    endif
 
-        NRI_CHECK(result == NVSDK_NGX_Result_Success, "DLSR evaluation failed!");
+        OPENRHI_CHECK(result == NVSDK_NGX_Result_Success, "DLSR evaluation failed!");
     }
 
     if (m_Desc.type == UpscalerType::DLRR) {
@@ -1750,27 +1652,7 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
 
         NVSDK_NGX_Result result = NVSDK_NGX_Result_Fail;
 
-#    if NRI_ENABLE_D3D11_SUPPORT
-        if (deviceDesc.graphicsAPI == GraphicsAPI::D3D11) {
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_Color, (ID3D11Resource*)inputNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_Output, (ID3D11Resource*)outputNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_MotionVectors, (ID3D11Resource*)mvNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_Depth, (ID3D11Resource*)depthNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_DiffuseAlbedo, (ID3D11Resource*)diffuseAlbedoNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_SpecularAlbedo, (ID3D11Resource*)specularAlbedoNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_ExposureTexture, (ID3D11Resource*)exposureNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_GBuffer_Normals, (ID3D11Resource*)normalRoughnessNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_GBuffer_SpecularMvec, (ID3D11Resource*)(useSpecularMotion ? specularMvOrHitTNative : 0));
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_DLSSD_ResponsivityMask, (ID3D11Resource*)reactiveNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_DLSSD_SpecularHitDistance, (ID3D11Resource*)(useSpecularMotion ? 0 : specularMvOrHitTNative));
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_DLSSD_ScreenSpaceSubsurfaceScatteringGuide, (ID3D11Resource*)sssNative);
-            NVSDK_NGX_Parameter_SetD3d11Resource(m.ngx->params, NVSDK_NGX_Parameter_DLSSD_ColorBeforeTransparency, (ID3D11Resource*)preTransparencyNative);
-
-            result = NVSDK_NGX_D3D11_EvaluateFeature_C((ID3D11DeviceContext*)commandBufferNative, m.ngx->handle, m.ngx->params, nullptr);
-        }
-#    endif
-
-#    if NRI_ENABLE_D3D12_SUPPORT
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
         if (deviceDesc.graphicsAPI == GraphicsAPI::D3D12) {
             NVSDK_NGX_Parameter_SetD3d12Resource(m.ngx->params, NVSDK_NGX_Parameter_Color, (ID3D12Resource*)inputNative);
             NVSDK_NGX_Parameter_SetD3d12Resource(m.ngx->params, NVSDK_NGX_Parameter_Output, (ID3D12Resource*)outputNative);
@@ -1790,7 +1672,7 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
         }
 #    endif
 
-#    if NRI_ENABLE_VK_SUPPORT
+#    if OPENRHI_ENABLE_VK_SUPPORT
         if (deviceDesc.graphicsAPI == GraphicsAPI::VK) {
             NVSDK_NGX_Resource_VK outputVk = NgxGetResource(m_iCore, output, outputNative, true);
             NVSDK_NGX_Resource_VK inputVk = NgxGetResource(m_iCore, input, inputNative);
@@ -1823,18 +1705,18 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
         }
 #    endif
 
-        NRI_CHECK(result == NVSDK_NGX_Result_Success, "DLRR evaluation failed!");
+        OPENRHI_CHECK(result == NVSDK_NGX_Result_Success, "DLRR evaluation failed!");
     }
 #endif
 
-#if NRI_ENABLE_METAL_SUPPORT
+#if OPENRHI_ENABLE_METAL_SUPPORT
     if (IsMetalFx(m_Desc.type)) {
         NS::AutoreleasePool* autoreleasePool = NS::AutoreleasePool::alloc()->init();
         MetalFx& metalFx = *m.metalfx;
 
         MTL::Texture* inputNative = MetalFxGetTexture(m_iCore, input);
         MTL::Texture* outputNative = MetalFxGetTexture(m_iCore, output);
-        NRI_CHECK(inputNative && outputNative, "'input' and 'output' must be valid textures");
+        OPENRHI_CHECK(inputNative && outputNative, "'input' and 'output' must be valid textures");
 
         // Lazy creation: needs formats (can compile shaders)
         bool isCreated = metalFx.spatial || metalFx.temporal || metalFx.denoised;
@@ -1844,7 +1726,7 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
             isCreated = MetalFxCreateScaler(metalFx, deviceNative, m_iCore, m_Desc, dispatchUpscaleDesc);
 
             if (!isCreated)
-                NRI_REPORT_ERROR(&(DeviceBase&)m_Device, "MetalFX scaler creation failed");
+                OPENRHI_REPORT_ERROR(&(DeviceBase&)m_Device, "MetalFX scaler creation failed");
         }
 
         // The scaler is created for the "input" size of the first dispatch
@@ -1855,7 +1737,7 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
             NS::UInteger inputHeight = metalFx.spatial ? metalFx.spatial->inputHeight() : (metalFx.temporal ? metalFx.temporal->inputHeight() : metalFx.denoised->inputHeight());
 
             isInputValid = inputNative->width() == inputWidth && inputNative->height() == inputHeight;
-            NRI_CHECK(isInputValid, "'input' size must not change");
+            OPENRHI_CHECK(isInputValid, "'input' size must not change");
         }
 
         if (isInputValid) {

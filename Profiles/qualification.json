@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "profile_revision": 1,
+  "records": [
+    {
+      "vendor_id": "1002",
+      "device_id": "7550",
+      "revision_id": "C0",
+      "device": "AMD Radeon RX 9070 XT",
+      "platform": "Windows",
+      "backend": "D3D12",
+      "os_build": "26300",
+      "driver": "32.0.32015.2008",
+      "compatibility": "passed",
+      "correctness": "documented_subset_passed",
+      "performance": "not_qualified",
+      "tuned_policies_enabled": false,
+      "receipt": "../Qualification/RX9070XT-Windows/README.md",
+      "slang_correctness_receipt": "../Qualification/Slang-20261018/README.md"
+    },
+    {
+      "vendor_id": "106B",
+      "device": "Apple M6",
+      "platform": "macOS",
+      "backend": "Metal",
+      "os_version": "27.0.1",
+      "os_build": "26A434",
+      "driver": "OS-integrated Metal 4",
+      "compatibility": "passed",
+      "correctness": "documented_subset_passed",
+      "performance": "not_qualified",
+      "tuned_policies_enabled": false,
+      "receipt": "../Qualification/Slang-20261018/README.md"
+    }
+  ],
+  "other_device_os_driver_combinations": "unqualified"
+}

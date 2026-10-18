@@ -24,7 +24,7 @@ Result QueryPoolMetal::Create(const QueryPoolDesc& desc) {
         heapDesc->release();
 
         if (!m_CounterHeap) {
-            NRI_REPORT_ERROR(&m_Device, "Metal counter heap creation failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
+            OPENRHI_REPORT_ERROR(&m_Device, "Metal counter heap creation failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
 
             return Result::FAILURE;
         }
@@ -52,14 +52,14 @@ Result QueryPoolMetal::Create(const QueryPoolDesc& desc) {
     return Result::UNSUPPORTED;
 }
 
-NRI_INLINE void QueryPoolMetal::Reset(uint32_t offset, uint32_t num) {
+OPENRHI_INLINE void QueryPoolMetal::Reset(uint32_t offset, uint32_t num) {
     if (m_CounterHeap)
         m_CounterHeap->invalidateCounterRange(NS::Range(offset, num));
     else if (m_Type == QueryType::OCCLUSION)
         memset((uint8_t*)m_VisibilityBuffer->contents() + uint64_t(offset) * sizeof(uint64_t), 0, uint64_t(num) * sizeof(uint64_t));
 }
 
-NRI_INLINE void QueryPoolMetal::SetDebugName(const char* name) {
+OPENRHI_INLINE void QueryPoolMetal::SetDebugName(const char* name) {
     NS::String* label = NS::String::alloc()->init(name, NS::UTF8StringEncoding);
 
     if (m_CounterHeap)

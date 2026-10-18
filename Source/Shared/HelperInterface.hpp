@@ -116,7 +116,7 @@ Result HelperDataUpload::Create(const TextureUploadDesc* textureUploadDescs, uin
                 uint64_t alignedSlicePitch = Align(sliceRowNum * alignedRowPitch, deviceDesc.memoryAlignment.uploadBufferTextureSlice);
                 uint64_t alignedSize = alignedSlicePitch * subresource0.sliceNum;
 
-                NRI_CHECK(alignedSize != 0, "Unexpected");
+                OPENRHI_CHECK(alignedSize != 0, "Unexpected");
 
                 maxSubresourceSize = std::max(maxSubresourceSize, alignedSize);
 
@@ -309,11 +309,11 @@ bool HelperDataUpload::CopyTextureContent(const TextureUploadDesc& textureUpload
             uint64_t freeSpace = m_UploadBufferSize - m_UploadBufferOffset;
 
             if (alignedSize > freeSpace) {
-                NRI_CHECK(alignedSize <= m_UploadBufferSize, "Unexpected");
+                OPENRHI_CHECK(alignedSize <= m_UploadBufferSize, "Unexpected");
                 return false;
             }
 
-            // Upload data (D3D11 does not allow to use upload buffer while it's mapped)
+            // Upload data after unmapping the upload buffer
             uint8_t* slices = (uint8_t*)m_iCore.MapBuffer(*m_UploadBuffer, m_UploadBufferOffset, subresource.sliceNum * alignedSlicePitch);
             {
                 for (uint32_t k = 0; k < subresource.sliceNum; k++) {
@@ -383,11 +383,12 @@ HelperDeviceMemoryAllocator::MemoryHeap::MemoryHeap(MemoryType memoryType, const
     , textures(stdAllocator)
     , textureOffsets(stdAllocator)
     , size(0)
+    , alignment(0)
     , type(memoryType) {
 }
 
-HelperDeviceMemoryAllocator::HelperDeviceMemoryAllocator(const CoreInterface& NRI, Device& device)
-    : m_iCore(NRI)
+HelperDeviceMemoryAllocator::HelperDeviceMemoryAllocator(const CoreInterface& OpenRHI, Device& device)
+    : m_iCore(OpenRHI)
     , m_Device(device)
     , m_Heaps(((DeviceBase&)device).GetStdAllocator())
     , m_DedicatedBuffers(((DeviceBase&)device).GetStdAllocator())
@@ -538,7 +539,7 @@ void HelperDeviceMemoryAllocator::GroupByMemoryType(MemoryLocation memoryLocatio
     };
 
     // Copy to temp memory
-    Scratch<BufferAndMemoryDesc> buffers = NRI_ALLOCATE_SCRATCH((DeviceBase&)m_Device, BufferAndMemoryDesc, resourceGroupDesc.bufferNum);
+    Scratch<BufferAndMemoryDesc> buffers = OPENRHI_ALLOCATE_SCRATCH((DeviceBase&)m_Device, BufferAndMemoryDesc, resourceGroupDesc.bufferNum);
     for (uint32_t i = 0; i < resourceGroupDesc.bufferNum; i++) {
         Buffer* buffer = resourceGroupDesc.buffers[i];
 
@@ -546,7 +547,7 @@ void HelperDeviceMemoryAllocator::GroupByMemoryType(MemoryLocation memoryLocatio
         m_iCore.GetBufferMemoryDesc(*buffer, memoryLocation, buffers[i].memoryDesc);
     }
 
-    Scratch<TextureAndMemoryDesc> textures = NRI_ALLOCATE_SCRATCH((DeviceBase&)m_Device, TextureAndMemoryDesc, resourceGroupDesc.textureNum);
+    Scratch<TextureAndMemoryDesc> textures = OPENRHI_ALLOCATE_SCRATCH((DeviceBase&)m_Device, TextureAndMemoryDesc, resourceGroupDesc.textureNum);
     for (uint32_t i = 0; i < resourceGroupDesc.textureNum; i++) {
         Texture* texture = resourceGroupDesc.textures[i];
 

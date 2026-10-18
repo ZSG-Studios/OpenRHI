@@ -1,0 +1,1 @@
+Historical unqualified comparison at commit 4ee588b. The manually supplied toolchain string used an incorrect compiler patch version; the actual compiler was MSVC 19.51.36260.0 (recorded by work/build-openrhi/CMakeFiles/4.4.4/CMakeCXXCompiler.cmake). Raw receipts are retained unchanged. This series failed its tail-latency gate and is not used to promote any policy.

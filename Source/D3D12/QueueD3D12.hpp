@@ -8,7 +8,7 @@ Result QueueD3D12::Create(QueueType queueType, float priority) {
     queueDesc.Type = GetCommandListType(queueType);
 
     HRESULT hr = m_Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_Queue));
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateQueue");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateQueue");
 
     m_CommandListType = queueDesc.Type;
 
@@ -27,33 +27,33 @@ Result QueueD3D12::Create(ID3D12CommandQueue* queue) {
     return Result::SUCCESS;
 }
 
-NRI_INLINE void QueueD3D12::BeginAnnotation(const char* name, uint32_t bgra) {
+OPENRHI_INLINE void QueueD3D12::BeginAnnotation(const char* name, uint32_t bgra) {
     if (m_Device.HasPix())
         m_Device.GetPix().BeginEventOnQueue(m_Queue, bgra, name);
     else
         PIXBeginEvent(m_Queue, bgra, name);
 }
 
-NRI_INLINE void QueueD3D12::EndAnnotation() {
+OPENRHI_INLINE void QueueD3D12::EndAnnotation() {
     if (m_Device.HasPix())
         m_Device.GetPix().EndEventOnQueue(m_Queue);
     else
         PIXEndEvent(m_Queue);
 }
 
-NRI_INLINE void QueueD3D12::Annotation(const char* name, uint32_t bgra) {
+OPENRHI_INLINE void QueueD3D12::Annotation(const char* name, uint32_t bgra) {
     if (m_Device.HasPix())
         m_Device.GetPix().SetMarkerOnQueue(m_Queue, bgra, name);
     else
         PIXSetMarker(m_Queue, bgra, name);
 }
 
-NRI_INLINE void QueueD3D12::GetCalibratedTimestamps(uint64_t& timestampGPU, uint64_t& timestampCPU) {
+OPENRHI_INLINE void QueueD3D12::GetCalibratedTimestamps(uint64_t& timestampGPU, uint64_t& timestampCPU) {
     HRESULT hr = m_Queue->GetClockCalibration(&timestampGPU, &timestampCPU);
-    NRI_RETURN_VOID_ON_BAD_HRESULT(&m_Device, hr, "GetClockCalibration");
+    OPENRHI_RETURN_VOID_ON_BAD_HRESULT(&m_Device, hr, "GetClockCalibration");
 }
 
-NRI_INLINE Result QueueD3D12::Submit(const QueueSubmitDesc& queueSubmitDesc) {
+OPENRHI_INLINE Result QueueD3D12::Submit(const QueueSubmitDesc& queueSubmitDesc) {
     for (uint32_t i = 0; i < queueSubmitDesc.waitFenceNum; i++) {
         const FenceSubmitDesc& fenceSubmitDesc = queueSubmitDesc.waitFences[i];
         FenceD3D12* fence = (FenceD3D12*)fenceSubmitDesc.fence;
@@ -61,7 +61,7 @@ NRI_INLINE Result QueueD3D12::Submit(const QueueSubmitDesc& queueSubmitDesc) {
     }
 
     if (queueSubmitDesc.commandBufferNum) {
-        Scratch<ID3D12CommandList*> commandLists = NRI_ALLOCATE_SCRATCH(m_Device, ID3D12CommandList*, queueSubmitDesc.commandBufferNum);
+        Scratch<ID3D12CommandList*> commandLists = OPENRHI_ALLOCATE_SCRATCH(m_Device, ID3D12CommandList*, queueSubmitDesc.commandBufferNum);
         for (uint32_t j = 0; j < queueSubmitDesc.commandBufferNum; j++)
             commandLists[j] = *(CommandBufferD3D12*)queueSubmitDesc.commandBuffers[j];
 
@@ -76,12 +76,12 @@ NRI_INLINE Result QueueD3D12::Submit(const QueueSubmitDesc& queueSubmitDesc) {
 
     // Is device lost?
     HRESULT hr = m_Device->GetDeviceRemovedReason() == S_OK ? S_OK : DXGI_ERROR_DEVICE_REMOVED;
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "Submit");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "Submit");
 
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result QueueD3D12::WaitIdle() {
+OPENRHI_INLINE Result QueueD3D12::WaitIdle() {
     FenceD3D12* fence = nullptr;
     Result result = m_Device.CreateImplementation<FenceD3D12>(fence, 0);
     if (result == Result::SUCCESS) {

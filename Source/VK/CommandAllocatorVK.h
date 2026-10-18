@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct CommandAllocatorVK final : public DebugNameBase {
     inline CommandAllocatorVK(DeviceVK& device)
@@ -26,10 +26,10 @@ struct CommandAllocatorVK final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result CreateCommandBuffer(CommandBuffer*& commandBuffer);
@@ -43,4 +43,4 @@ private:
     Lock m_Lock;
 };
 
-} // namespace nri
+} // namespace openrhi

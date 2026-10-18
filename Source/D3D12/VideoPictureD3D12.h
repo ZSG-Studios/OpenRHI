@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct VideoPictureD3D12 final : public DebugNameBase {
     inline VideoPictureD3D12(DeviceD3D12& device)
@@ -25,11 +25,11 @@ struct VideoPictureD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char*) NRI_DEBUG_NAME_OVERRIDE {
+    void SetDebugName(const char*) OPENRHI_DEBUG_NAME_OVERRIDE {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result Create(const VideoPictureDesc& videoPictureDesc);
@@ -40,4 +40,4 @@ private:
     uint32_t m_Subresource = 0;
 };
 
-} // namespace nri
+} // namespace openrhi

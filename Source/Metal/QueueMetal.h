@@ -6,7 +6,7 @@
 #include <chrono>
 #include <thread>
 
-namespace nri {
+namespace openrhi {
 
 struct QueueMetal final : public DebugNameBase {
     inline QueueMetal(DeviceMetal& device)
@@ -32,7 +32,7 @@ struct QueueMetal final : public DebugNameBase {
     void GetCalibratedTimestamps(uint64_t& timestampGPU, uint64_t& timestampCPU);
     Result UploadHostMemoryToTexture(const UploadHostMemoryToTextureDesc* copyDescs, uint32_t copyDescNum);
     Result ReadbackTextureToHostMemory(const ReadbackTextureToHostMemoryDesc* copyDescs, uint32_t copyDescNum);
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     Result Finalize();
@@ -63,4 +63,4 @@ private:
     uint64_t m_TransferValue = 0; // "m_IdleEvent" value signaled after the last transfer
 };
 
-} // namespace nri
+} // namespace openrhi

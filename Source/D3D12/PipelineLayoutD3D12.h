@@ -4,7 +4,7 @@
 
 #include "DescriptorSetD3D12.h"
 
-namespace nri {
+namespace openrhi {
 
 typedef uint16_t RootParameterIndexType;
 constexpr RootParameterIndexType ROOT_PARAMETER_UNUSED = RootParameterIndexType(-1);
@@ -72,8 +72,8 @@ struct PipelineLayoutD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(m_RootSignature, name);
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(m_RootSignature, name);
     }
 
 private:
@@ -89,4 +89,4 @@ private:
     bool m_DrawIndexEmulation = false;
 };
 
-} // namespace nri
+} // namespace openrhi

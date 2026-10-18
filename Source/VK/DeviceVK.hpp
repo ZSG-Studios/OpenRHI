@@ -437,7 +437,7 @@ constexpr std::array<WriteDescriptorsFunc, (size_t)DescriptorType::MAX_NUM> g_Wr
     WriteBuffers,                // STORAGE_STRUCTURED_BUFFER
     WriteAccelerationStructures, // ACCELERATION_STRUCTURE
 };
-NRI_VALIDATE_ARRAY_BY_PTR(g_WriteFuncs);
+OPENRHI_VALIDATE_ARRAY_BY_PTR(g_WriteFuncs);
 
 VkResult DeviceVK::CreateVma() {
     VmaVulkanFunctions vulkanFunctions = {};
@@ -496,16 +496,10 @@ void DeviceVK::ProcessInstanceExtensions(Vector<const char*>& desiredInstanceExt
     m_VK.EnumerateInstanceExtensionProperties(nullptr, &extensionNum, supportedExts.data());
 
     if constexpr (VERBOSE) {
-        NRI_REPORT_INFO(this, "Supported instance extensions:");
+        OPENRHI_REPORT_INFO(this, "Supported instance extensions:");
         for (const VkExtensionProperties& props : supportedExts)
-            NRI_REPORT_INFO(this, "    %s (v%u)", props.extensionName, props.specVersion);
+            OPENRHI_REPORT_INFO(this, "    %s (v%u)", props.extensionName, props.specVersion);
     }
-
-#ifdef __APPLE__
-    // Mandatory
-    desiredInstanceExts.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-    desiredInstanceExts.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-#endif
 
     // Optional
     if (IsExtensionSupported(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME, supportedExts))
@@ -514,17 +508,11 @@ void DeviceVK::ProcessInstanceExtensions(Vector<const char*>& desiredInstanceExt
     if (IsExtensionSupported(VK_KHR_SURFACE_EXTENSION_NAME, supportedExts)) {
         desiredInstanceExts.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        desiredInstanceExts.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
         desiredInstanceExts.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
         desiredInstanceExts.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
-#endif
-#ifdef VK_USE_PLATFORM_METAL_EXT
-        desiredInstanceExts.push_back(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
         desiredInstanceExts.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
@@ -550,14 +538,10 @@ void DeviceVK::ProcessDeviceExtensions(Vector<const char*>& desiredDeviceExts, b
     m_VK.EnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &extensionNum, supportedExts.data());
 
     if constexpr (VERBOSE) {
-        NRI_REPORT_INFO(this, "Supported device extensions:");
+        OPENRHI_REPORT_INFO(this, "Supported device extensions:");
         for (const VkExtensionProperties& props : supportedExts)
-            NRI_REPORT_INFO(this, "    %s (v%u)", props.extensionName, props.specVersion);
+            OPENRHI_REPORT_INFO(this, "    %s (v%u)", props.extensionName, props.specVersion);
     }
-
-#ifdef __APPLE__
-    APPEND_EXT(true, VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
-#endif
 
     APPEND_EXT(m_MinorVersion < 3, VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME);
     APPEND_EXT(m_MinorVersion < 3, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
@@ -657,7 +641,7 @@ DeviceVK::DeviceVK(const CallbackInterface& callbacks, const AllocationCallbacks
     m_AllocationCallbacks.pfnFree = vkFreeHostMemory;
 
     m_Desc.graphicsAPI = GraphicsAPI::VK;
-    m_Desc.nriVersion = NRI_VERSION;
+    m_Desc.openrhiVersion = OPENRHI_VERSION;
 }
 
 DeviceVK::~DeviceVK() {
@@ -713,10 +697,10 @@ Result DeviceVK::Create(const DeviceCreationDesc& desc, const DeviceCreationVKDe
     m_Desc.adapterDesc = *desc.adapterDesc;
 
     { // Loader
-        const char* loaderPath = descVK.libraryPath ? descVK.libraryPath : NRI_VULKAN_LOADER_NAME;
+        const char* loaderPath = descVK.libraryPath ? descVK.libraryPath : OPENRHI_VULKAN_LOADER_NAME;
         m_Loader = LoadSharedLibrary(loaderPath);
         if (!m_Loader) {
-            NRI_REPORT_ERROR(this, "Failed to load Vulkan loader: '%s'", loaderPath);
+            OPENRHI_REPORT_ERROR(this, "Failed to load Vulkan loader: '%s'", loaderPath);
             return Result::UNSUPPORTED;
         }
     }
@@ -753,16 +737,16 @@ Result DeviceVK::Create(const DeviceCreationDesc& desc, const DeviceCreationVKDe
         if (!isWrapper) {
             uint32_t deviceGroupNum = 0;
             VkResult vkResult = m_VK.EnumeratePhysicalDeviceGroups(m_Instance, &deviceGroupNum, nullptr);
-            NRI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkEnumeratePhysicalDeviceGroups");
+            OPENRHI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkEnumeratePhysicalDeviceGroups");
 
-            Scratch<VkPhysicalDeviceGroupProperties> deviceGroups = NRI_ALLOCATE_SCRATCH(*this, VkPhysicalDeviceGroupProperties, deviceGroupNum);
+            Scratch<VkPhysicalDeviceGroupProperties> deviceGroups = OPENRHI_ALLOCATE_SCRATCH(*this, VkPhysicalDeviceGroupProperties, deviceGroupNum);
             for (uint32_t j = 0; j < deviceGroupNum; j++) {
                 deviceGroups[j].sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES;
                 deviceGroups[j].pNext = nullptr;
             }
 
             vkResult = m_VK.EnumeratePhysicalDeviceGroups(m_Instance, &deviceGroupNum, deviceGroups);
-            NRI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkEnumeratePhysicalDeviceGroups");
+            OPENRHI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkEnumeratePhysicalDeviceGroups");
 
             uint32_t i = 0;
             for (i = 0; i < deviceGroupNum; i++) {
@@ -776,32 +760,54 @@ Result DeviceVK::Create(const DeviceCreationDesc& desc, const DeviceCreationVKDe
                 uint32_t majorVersion = VK_API_VERSION_MAJOR(props.properties.apiVersion);
                 m_MinorVersion = VK_API_VERSION_MINOR(props.properties.apiVersion);
 
-                bool isSupported = (majorVersion * 10 + m_MinorVersion) >= 12;
+                bool isSupported = (majorVersion * 10 + m_MinorVersion) >= 13;
                 if (desc.adapterDesc) {
                     Uid_t uid = ConstructUid(idProps.deviceLUID, idProps.deviceUUID, idProps.deviceLUIDValid);
                     if (CompareUid(uid, desc.adapterDesc->uid)) {
-                        NRI_RETURN_ON_FAILURE(this, isSupported, Result::UNSUPPORTED, "Can't create a device: the specified physical device does not support Vulkan 1.2+!");
+                        OPENRHI_RETURN_ON_FAILURE(this, isSupported, Result::UNSUPPORTED, "Can't create a device: the specified physical device does not support Vulkan 1.3+!");
                         break;
                     }
                 } else if (isSupported)
                     break;
             }
 
-            NRI_RETURN_ON_FAILURE(this, i != deviceGroupNum, Result::INVALID_ARGUMENT, "Can't create a device: physical device not found");
+            OPENRHI_RETURN_ON_FAILURE(this, i != deviceGroupNum, Result::INVALID_ARGUMENT, "Can't create a device: physical device not found");
 
             if (deviceGroups[i].physicalDeviceCount > 1 && deviceGroups[i].subsetAllocation == VK_FALSE)
-                NRI_REPORT_WARNING(this, "The device group does not support memory allocation on a subset of the physical devices");
+                OPENRHI_REPORT_WARNING(this, "The device group does not support memory allocation on a subset of the physical devices");
 
             m_PhysicalDevice = deviceGroups[i].physicalDevices[0];
         }
     }
 
+    VkPhysicalDeviceIDProperties identity = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES};
+    VkPhysicalDeviceDriverProperties driver = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES};
+    identity.pNext = &driver;
+    VkPhysicalDeviceProperties2 physicalProperties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &identity};
+    m_VK.GetPhysicalDeviceProperties2(m_PhysicalDevice, &physicalProperties);
+    m_Desc.adapterDesc.architecture = Architecture::UNKNOWN;
+    if (physicalProperties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) m_Desc.adapterDesc.architecture = Architecture::DISCRETE;
+    else if (physicalProperties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) m_Desc.adapterDesc.architecture = Architecture::INTEGRATED;
+    else if (physicalProperties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU) m_Desc.adapterDesc.architecture = Architecture::SOFTWARE;
+    else if (physicalProperties.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU) m_Desc.adapterDesc.architecture = Architecture::VIRTUAL;
+    strncpy(m_Desc.adapterDesc.name, physicalProperties.properties.deviceName, sizeof(m_Desc.adapterDesc.name) - 1);
+    m_Desc.adapterDesc.vendorId = physicalProperties.properties.vendorID;
+    m_Desc.adapterDesc.deviceId = physicalProperties.properties.deviceID;
+    m_Desc.adapterDesc.vendor = GetVendorFromID(physicalProperties.properties.vendorID);
+    m_Desc.adapterDesc.nativeDriverVersion = physicalProperties.properties.driverVersion;
+    m_Desc.adapterDesc.nativeDriverId = uint32_t(driver.driverID);
+    memcpy(m_Desc.adapterDesc.deviceUuid, identity.deviceUUID, 16);
+    memcpy(m_Desc.adapterDesc.driverUuid, identity.driverUUID, 16);
+    snprintf(m_Desc.adapterDesc.driverDescription, sizeof(m_Desc.adapterDesc.driverDescription), "%.120s %.120s", driver.driverName, driver.driverInfo);
+    const uint32_t physicalMinor = VK_API_VERSION_MINOR(physicalProperties.properties.apiVersion);
+    if (isWrapper) m_MinorVersion = uint8_t(std::min(uint32_t(descVK.minorVersion), physicalMinor));
+
     // Queue family properties
     uint32_t familyNum = 0;
     m_VK.GetPhysicalDeviceQueueFamilyProperties2(m_PhysicalDevice, &familyNum, nullptr);
 
-    Scratch<VkQueueFamilyProperties2> familyProps2 = NRI_ALLOCATE_SCRATCH(*this, VkQueueFamilyProperties2, familyNum);
-    Scratch<VkQueueFamilyVideoPropertiesKHR> familyVideoProps = NRI_ALLOCATE_SCRATCH(*this, VkQueueFamilyVideoPropertiesKHR, familyNum);
+    Scratch<VkQueueFamilyProperties2> familyProps2 = OPENRHI_ALLOCATE_SCRATCH(*this, VkQueueFamilyProperties2, familyNum);
+    Scratch<VkQueueFamilyVideoPropertiesKHR> familyVideoProps = OPENRHI_ALLOCATE_SCRATCH(*this, VkQueueFamilyVideoPropertiesKHR, familyNum);
     for (uint32_t i = 0; i < familyNum; i++) {
         familyProps2[i] = {VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2};
         familyVideoProps[i] = {VK_STRUCTURE_TYPE_QUEUE_FAMILY_VIDEO_PROPERTIES_KHR};
@@ -900,7 +906,7 @@ Result DeviceVK::Create(const DeviceCreationDesc& desc, const DeviceCreationVKDe
         m_VideoCodecOperations[(size_t)QueueType::VIDEO_ENCODE] &= enabledEncodeCodecOperations;
     }
 
-    NRI_REPORT_INFO(this, "Using Vulkan v1.%u (%u device extensions initialized)", m_MinorVersion, (uint32_t)desiredDeviceExts.size());
+    OPENRHI_REPORT_INFO(this, "Using Vulkan v1.%u (%u device extensions initialized)", m_MinorVersion, (uint32_t)desiredDeviceExts.size());
 
     // Device features
     VkPhysicalDeviceFeatures2 features = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
@@ -971,10 +977,6 @@ Result DeviceVK::Create(const DeviceCreationDesc& desc, const DeviceCreationVKDe
     PNEXTCHAIN_APPEND_FEATURES(true, EXT, ZeroInitializeDeviceMemory, ZERO_INITIALIZE_DEVICE_MEMORY);
     PNEXTCHAIN_APPEND_FEATURES(true, EXT, MutableDescriptorType, MUTABLE_DESCRIPTOR_TYPE);
 
-#ifdef __APPLE__
-    PNEXTCHAIN_APPEND_FEATURES(true, KHR, PortabilitySubset, PORTABILITY_SUBSET);
-#endif
-
     VkPhysicalDeviceFaultFeaturesEXT DeviceFaultFeatures = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT};
     if (desc.deviceLostInfoLevel != DeviceLostInfoLevel::NONE && IsExtensionSupported(VK_EXT_DEVICE_FAULT_EXTENSION_NAME, desiredDeviceExts))
         PNEXTCHAIN_APPEND_STRUCT(DeviceFaultFeatures);
@@ -1040,23 +1042,51 @@ Result DeviceVK::Create(const DeviceCreationDesc& desc, const DeviceCreationVKDe
     m_IsSupported.videoMaintenance2 = VideoMaintenance2Features.videoMaintenance2;
     m_IsSupported.videoEncodeAV1 = VideoEncodeAV1Features.videoEncodeAV1;
     m_IsSupported.descriptorHeap = DescriptorHeapFeatures.descriptorHeap && ShaderUntypedPointersFeatures.shaderUntypedPointers && features12.bufferDeviceAddress;
-#ifdef __APPLE__
-    m_IsSupported.imageView2DOn3D = !IsExtensionSupported(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME, desiredDeviceExts) || PortabilitySubsetFeatures.imageView2DOn3DImage;
-#else
     m_IsSupported.imageView2DOn3D = true;
-#endif
 
     m_IsMemoryZeroInitializationEnabled = desc.enableMemoryZeroInitialization && ZeroInitializeDeviceMemoryFeatures.zeroInitializeDeviceMemory;
 
+    if (m_IsSupported.memoryBudget) {
+        VkPhysicalDeviceMemoryBudgetPropertiesEXT budget = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT};
+        VkPhysicalDeviceMemoryProperties2 memory = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2, &budget};
+        m_VK.GetPhysicalDeviceMemoryProperties2(m_PhysicalDevice, &memory);
+        m_Desc.adapterDesc.memoryBudget = 0;
+        m_Desc.adapterDesc.memoryBudgetKnown = true;
+        for (uint32_t i = 0; i < memory.memoryProperties.memoryHeapCount; i++)
+            if (memory.memoryProperties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+                m_Desc.adapterDesc.memoryBudget += budget.heapBudget[i] > budget.heapUsage[i] ? budget.heapBudget[i] - budget.heapUsage[i] : 0;
+    }
+    m_Desc.graphicsAPI = GraphicsAPI::VK;
+    using Capability = DeviceCapabilityBits;
+    m_Desc.nativeCapabilities = m_MinorVersion >= 3 ? Capability::VULKAN_1_3 : Capability::NONE;
+    if (m_MinorVersion >= 4) m_Desc.nativeCapabilities |= Capability::VULKAN_1_4;
+    if (features13.dynamicRendering) m_Desc.nativeCapabilities |= Capability::DYNAMIC_RENDERING;
+    if (features13.synchronization2) m_Desc.nativeCapabilities |= Capability::SYNCHRONIZATION_2;
+    if (features13.maintenance4) m_Desc.nativeCapabilities |= Capability::MAINTENANCE_4;
+    if (features12.bufferDeviceAddress) m_Desc.nativeCapabilities |= Capability::BUFFER_DEVICE_ADDRESS;
+    if (features12.timelineSemaphore) m_Desc.nativeCapabilities |= Capability::TIMELINE_SEMAPHORE;
+    if (features12.runtimeDescriptorArray) m_Desc.nativeCapabilities |= Capability::RUNTIME_DESCRIPTOR_ARRAY;
+    if (features12.descriptorBindingPartiallyBound) m_Desc.nativeCapabilities |= Capability::PARTIALLY_BOUND_DESCRIPTORS;
+    if (features12.shaderSampledImageArrayNonUniformIndexing) m_Desc.nativeCapabilities |= Capability::SAMPLED_IMAGE_NONUNIFORM_INDEXING;
+    if (isWrapper)
+        m_Desc.nativeCapabilities &= descVK.enabledCapabilities;
+    DeviceRequirements featureRequirements = desc.requirements ? *desc.requirements : DeviceRequirements{};
+    featureRequirements.minShaderModel = 0;
+    DeviceCreationDesc featureCheck = desc;
+    featureCheck.requirements = &featureRequirements;
+    Result compatibility = CheckDeviceRequirements(featureCheck, m_Desc);
+    if (compatibility != Result::SUCCESS)
+        return compatibility;
+
     // Check hard requirements
-    NRI_RETURN_ON_FAILURE(this, features13.synchronization2, Result::UNSUPPORTED, "'synchronization2' is not supported");
+    OPENRHI_RETURN_ON_FAILURE(this, features13.synchronization2, Result::UNSUPPORTED, "'synchronization2' is not supported");
 
     // Check soft requirement
     if (!ExtendedDynamicStateFeatures.extendedDynamicState)
-        NRI_REPORT_INFO(this, "'extendedDynamicState' is not supported, using static vertex input stride and fixed viewport/scissor counts");
+        OPENRHI_REPORT_INFO(this, "'extendedDynamicState' is not supported, using static vertex input stride and fixed viewport/scissor counts");
 
     if (!features13.dynamicRendering)
-        NRI_REPORT_INFO(this, "'dynamicRendering' is not supported, using 'render passes'");
+        OPENRHI_REPORT_INFO(this, "'dynamicRendering' is not supported, using 'render passes'");
 
     { // Create device
         if (isWrapper)
@@ -1086,7 +1116,7 @@ Result DeviceVK::Create(const DeviceCreationDesc& desc, const DeviceCreationVKDe
             deviceCreateInfo.queueCreateInfoCount = BuildQueueCreateInfos(desc.queueFamilies, desc.queueFamilyNum, queueFamilyIndices, queueCreateInfos, queuePriorities);
 
             VkResult vkResult = m_VK.CreateDevice(m_PhysicalDevice, &deviceCreateInfo, m_AllocationCallbackPtr, &m_Device);
-            NRI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkCreateDevice");
+            OPENRHI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkCreateDevice");
         }
 
         Result res = ResolveDispatchTable(desiredDeviceExts);
@@ -1099,14 +1129,11 @@ Result DeviceVK::Create(const DeviceCreationDesc& desc, const DeviceCreationVKDe
         uint32_t timeDomainNum = 0;
         m_VK.GetPhysicalDeviceCalibrateableTimeDomainsEXT(m_PhysicalDevice, &timeDomainNum, nullptr);
 
-        Scratch<VkTimeDomainKHR> timeDomains = NRI_ALLOCATE_SCRATCH(*this, VkTimeDomainKHR, timeDomainNum);
+        Scratch<VkTimeDomainKHR> timeDomains = OPENRHI_ALLOCATE_SCRATCH(*this, VkTimeDomainKHR, timeDomainNum);
         m_VK.GetPhysicalDeviceCalibrateableTimeDomainsEXT(m_PhysicalDevice, &timeDomainNum, timeDomains);
 
-#if defined(_WIN32)
-        constexpr std::array<VkTimeDomainKHR, 1> preferredTimeDomainsCPU = {VK_TIME_DOMAIN_QUERY_PERFORMANCE_COUNTER_KHR}; // matches D3D12
-#else
         constexpr std::array<VkTimeDomainKHR, 2> preferredTimeDomainsCPU = {VK_TIME_DOMAIN_CLOCK_MONOTONIC_KHR, VK_TIME_DOMAIN_CLOCK_MONOTONIC_RAW_KHR};
-#endif
+
 
         bool isDeviceTimeDomainSupported = false;
         for (uint32_t i = 0; i < timeDomainNum; i++)
@@ -1260,7 +1287,7 @@ Result DeviceVK::Create(const DeviceCreationDesc& desc, const DeviceCreationVKDe
         uint32_t queueFamilyNum = 0;
         m_VK.GetPhysicalDeviceQueueFamilyProperties2(m_PhysicalDevice, &queueFamilyNum, nullptr);
 
-        Scratch<VkQueueFamilyProperties2> queueFamilyProps2 = NRI_ALLOCATE_SCRATCH(*this, VkQueueFamilyProperties2, queueFamilyNum);
+        Scratch<VkQueueFamilyProperties2> queueFamilyProps2 = OPENRHI_ALLOCATE_SCRATCH(*this, VkQueueFamilyProperties2, queueFamilyNum);
         for (uint32_t i = 0; i < queueFamilyNum; i++)
             queueFamilyProps2[i] = {VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2};
 
@@ -1686,30 +1713,30 @@ Result DeviceVK::Create(const DeviceCreationDesc& desc, const DeviceCreationVKDe
 
         // Estimate shader model last since it depends on many "m_Desc" fields
         // Based on https://docs.vulkan.org/guide/latest/hlsl.html#_shader_model_coverage // TODO: code below needs to be improved
-        m_Desc.shaderModel = NriShaderModel(5, 1);
+        m_Desc.shaderModel = OpenRhiShaderModel(5, 1);
         if (m_Desc.shaderFeatures.nativeI64)
-            m_Desc.shaderModel = NriShaderModel(6, 0);
+            m_Desc.shaderModel = OpenRhiShaderModel(6, 0);
         if (m_Desc.other.viewMaxNum > 1 || m_Desc.shaderFeatures.barycentric)
-            m_Desc.shaderModel = NriShaderModel(6, 1);
+            m_Desc.shaderModel = OpenRhiShaderModel(6, 1);
         if (m_Desc.shaderFeatures.nativeF16 || m_Desc.shaderFeatures.nativeI16)
-            m_Desc.shaderModel = NriShaderModel(6, 2);
+            m_Desc.shaderModel = OpenRhiShaderModel(6, 2);
         if (m_Desc.tiers.rayTracing)
-            m_Desc.shaderModel = NriShaderModel(6, 3);
+            m_Desc.shaderModel = OpenRhiShaderModel(6, 3);
         if (m_Desc.tiers.shadingRate >= 2)
-            m_Desc.shaderModel = NriShaderModel(6, 4);
+            m_Desc.shaderModel = OpenRhiShaderModel(6, 4);
         if (m_Desc.features.meshShader || m_Desc.tiers.rayTracing >= 2)
-            m_Desc.shaderModel = NriShaderModel(6, 5);
+            m_Desc.shaderModel = OpenRhiShaderModel(6, 5);
         // TODO: "m_Desc.features.mutableDescriptorType" is an optional feature, despite that it's needed to emulate SM 6.6 "ultimate" bindless
         if (m_Desc.shaderFeatures.atomicsI64 || m_Desc.features.descriptorHeap)
-            m_Desc.shaderModel = NriShaderModel(6, 6);
+            m_Desc.shaderModel = OpenRhiShaderModel(6, 6);
         if (features.features.shaderStorageImageMultisample)
-            m_Desc.shaderModel = NriShaderModel(6, 7);
+            m_Desc.shaderModel = OpenRhiShaderModel(6, 7);
         // TODO: add SM 6.8+ detection
     }
 
     // Create VMA
     VkResult vkResult = CreateVma();
-    NRI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vmaCreateAllocator");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vmaCreateAllocator");
 
     if constexpr (VERBOSE)
         ReportMemoryTypes();
@@ -1900,7 +1927,7 @@ bool DeviceVK::GetMemoryDesc(MemoryLocation memoryLocation, const VkMemoryRequir
     }
 
     if (memoryTypeIndex == UINT32_MAX) {
-        NRI_CHECK(false, "Can't find suitable memory type");
+        OPENRHI_CHECK(false, "Can't find suitable memory type");
 
         return false;
     }
@@ -1954,9 +1981,9 @@ void DeviceVK::GetAccelerationStructureBuildSizesInfo(const AccelerationStructur
     } else
         geometryNum = 1;
 
-    Scratch<uint32_t> primitiveNums = NRI_ALLOCATE_SCRATCH(*this, uint32_t, geometryNum);
-    Scratch<VkAccelerationStructureGeometryKHR> geometries = NRI_ALLOCATE_SCRATCH(*this, VkAccelerationStructureGeometryKHR, geometryNum);
-    Scratch<VkAccelerationStructureTrianglesOpacityMicromapEXT> trianglesMicromaps = NRI_ALLOCATE_SCRATCH(*this, VkAccelerationStructureTrianglesOpacityMicromapEXT, micromapNum);
+    Scratch<uint32_t> primitiveNums = OPENRHI_ALLOCATE_SCRATCH(*this, uint32_t, geometryNum);
+    Scratch<VkAccelerationStructureGeometryKHR> geometries = OPENRHI_ALLOCATE_SCRATCH(*this, VkAccelerationStructureGeometryKHR, geometryNum);
+    Scratch<VkAccelerationStructureTrianglesOpacityMicromapEXT> trianglesMicromaps = OPENRHI_ALLOCATE_SCRATCH(*this, VkAccelerationStructureTrianglesOpacityMicromapEXT, micromapNum);
 
     // Convert geometries
     if (accelerationStructureDesc.type == AccelerationStructureType::BOTTOM_LEVEL) {
@@ -1994,7 +2021,7 @@ void DeviceVK::GetMicromapBuildSizesInfo(const MicromapDesc& micromapDesc, VkMic
     static_assert((uint32_t)MicromapFormat::OPACITY_2_STATE == VK_OPACITY_MICROMAP_FORMAT_2_STATE_EXT, "Format doesn't match");
     static_assert((uint32_t)MicromapFormat::OPACITY_4_STATE == VK_OPACITY_MICROMAP_FORMAT_4_STATE_EXT, "Format doesn't match");
 
-    Scratch<VkMicromapUsageEXT> usages = NRI_ALLOCATE_SCRATCH(*this, VkMicromapUsageEXT, micromapDesc.usageNum);
+    Scratch<VkMicromapUsageEXT> usages = OPENRHI_ALLOCATE_SCRATCH(*this, VkMicromapUsageEXT, micromapDesc.usageNum);
     for (uint32_t i = 0; i < micromapDesc.usageNum; i++) {
         const MicromapUsageDesc& in = micromapDesc.usages[i];
 
@@ -2023,23 +2050,20 @@ Result DeviceVK::CreateInstance(bool enableGraphicsAPIValidation, const Vector<c
     FilterInstanceLayers(layers);
 
     PFN_vkEnumerateInstanceVersion vkEnumerateInstanceVersion = (PFN_vkEnumerateInstanceVersion)m_VK.GetInstanceProcAddr(VK_NULL_HANDLE, "vkEnumerateInstanceVersion");
-    NRI_RETURN_ON_FAILURE(this, vkEnumerateInstanceVersion, Result::UNSUPPORTED, "Vulkan 1.0 loader is not supported");
+    OPENRHI_RETURN_ON_FAILURE(this, vkEnumerateInstanceVersion, Result::UNSUPPORTED, "Vulkan 1.0 loader is not supported");
 
     uint32_t instanceVersion = 0;
     VkResult vkResult = vkEnumerateInstanceVersion(&instanceVersion);
-    NRI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkEnumerateInstanceVersion");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkEnumerateInstanceVersion");
 
     VkApplicationInfo appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
-    appInfo.apiVersion = std::clamp(instanceVersion, VK_API_VERSION_1_2, VK_API_VERSION_1_4);
+    appInfo.apiVersion = std::clamp(instanceVersion, VK_API_VERSION_1_3, VK_API_VERSION_1_4);
 
     const VkValidationFeatureEnableEXT enabledValidationFeatures[] = {
         VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT, // TODO: add VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT?
     };
 
     VkInstanceCreateInfo instanceCreateInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
-#ifdef __APPLE__
-    instanceCreateInfo.flags = (VkInstanceCreateFlags)VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
-#endif
     instanceCreateInfo.pApplicationInfo = &appInfo;
     instanceCreateInfo.enabledLayerCount = (uint32_t)layers.size();
     instanceCreateInfo.ppEnabledLayerNames = layers.data();
@@ -2068,13 +2092,13 @@ Result DeviceVK::CreateInstance(bool enableGraphicsAPIValidation, const Vector<c
         PNEXTCHAIN_APPEND_STRUCT(validationFeatures);
 
     vkResult = m_VK.CreateInstance(&instanceCreateInfo, m_AllocationCallbackPtr, &m_Instance);
-    NRI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkCreateInstance");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkCreateInstance");
 
     if (enableGraphicsAPIValidation) {
         PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)m_VK.GetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT");
         vkResult = vkCreateDebugUtilsMessengerEXT(m_Instance, &messengerCreateInfo, m_AllocationCallbackPtr, &m_Messenger);
 
-        NRI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkCreateDebugUtilsMessengerEXT");
+        OPENRHI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkCreateDebugUtilsMessengerEXT");
     }
 
     return Result::SUCCESS;
@@ -2087,13 +2111,13 @@ void DeviceVK::SetDebugNameToTrivialObject(VkObjectType objectType, uint64_t han
     VkDebugUtilsObjectNameInfoEXT objectNameInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, nullptr, objectType, (uint64_t)handle, name};
 
     VkResult vkResult = m_VK.SetDebugUtilsObjectNameEXT(m_Device, &objectNameInfo);
-    NRI_RETURN_VOID_ON_BAD_VKRESULT(this, vkResult, "vkSetDebugUtilsObjectNameEXT");
+    OPENRHI_RETURN_VOID_ON_BAD_VKRESULT(this, vkResult, "vkSetDebugUtilsObjectNameEXT");
 }
 
 void DeviceVK::ReportMemoryTypes() {
     String text(GetStdAllocator());
 
-    NRI_REPORT_INFO(this, "Memory heaps:");
+    OPENRHI_REPORT_INFO(this, "Memory heaps:");
     for (uint32_t i = 0; i < m_MemoryProps.memoryHeapCount; i++) {
         text.clear();
 
@@ -2105,15 +2129,15 @@ void DeviceVK::ReportMemoryTypes() {
             text += "MULTI_INSTANCE_BIT ";
 
         double size = double(m_MemoryProps.memoryHeaps[i].size) / (1024.0 * 1024.0);
-        NRI_REPORT_INFO(this, "  Heap #%u: %.f Mb - %s", i, size, text.c_str());
+        OPENRHI_REPORT_INFO(this, "  Heap #%u: %.f Mb - %s", i, size, text.c_str());
     }
 
-    NRI_REPORT_INFO(this, "Memory types:");
+    OPENRHI_REPORT_INFO(this, "Memory types:");
     for (uint32_t i = 0; i < m_MemoryProps.memoryTypeCount; i++) {
         text.clear();
 
-        NRI_REPORT_INFO(this, "  Memory type #%u", i);
-        NRI_REPORT_INFO(this, "    Heap #%u", m_MemoryProps.memoryTypes[i].heapIndex);
+        OPENRHI_REPORT_INFO(this, "  Memory type #%u", i);
+        OPENRHI_REPORT_INFO(this, "    Heap #%u", m_MemoryProps.memoryTypes[i].heapIndex);
 
         VkMemoryPropertyFlags flags = m_MemoryProps.memoryTypes[i].propertyFlags;
         if (flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
@@ -2136,7 +2160,7 @@ void DeviceVK::ReportMemoryTypes() {
             text += "RDMA_CAPABLE_BIT_NV ";
 
         if (!text.empty())
-            NRI_REPORT_INFO(this, "    %s", text.c_str());
+            OPENRHI_REPORT_INFO(this, "    %s", text.c_str());
     }
 }
 
@@ -2146,38 +2170,38 @@ void DeviceVK::ReportMemoryTypes() {
 #define GET_DEVICE_OPTIONAL_CORE_FUNC(name) \
     { \
         /* Core */ \
-        m_VK.name = (PFN_vk##name)m_VK.GetDeviceProcAddr(m_Device, NRI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
+        m_VK.name = (PFN_vk##name)m_VK.GetDeviceProcAddr(m_Device, OPENRHI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
         /* KHR */ \
         if (!m_VK.name) \
-            m_VK.name = (PFN_vk##name)m_VK.GetDeviceProcAddr(m_Device, NRI_STRINGIFY(MERGE_TOKENS3(vk, name, KHR))); \
+            m_VK.name = (PFN_vk##name)m_VK.GetDeviceProcAddr(m_Device, OPENRHI_STRINGIFY(MERGE_TOKENS3(vk, name, KHR))); \
         /* EXT (some extensions were promoted to core from EXT bypassing KHR status) */ \
         if (!m_VK.name) \
-            m_VK.name = (PFN_vk##name)m_VK.GetDeviceProcAddr(m_Device, NRI_STRINGIFY(MERGE_TOKENS3(vk, name, EXT))); \
+            m_VK.name = (PFN_vk##name)m_VK.GetDeviceProcAddr(m_Device, OPENRHI_STRINGIFY(MERGE_TOKENS3(vk, name, EXT))); \
     }
 
 #define GET_DEVICE_CORE_FUNC(name) \
     { \
         GET_DEVICE_OPTIONAL_CORE_FUNC(name); \
         if (!m_VK.name) { \
-            NRI_REPORT_ERROR(this, "Failed to get device function: '%s'", NRI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
+            OPENRHI_REPORT_ERROR(this, "Failed to get device function: '%s'", OPENRHI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
             return Result::UNSUPPORTED; \
         } \
     }
 
 #define GET_DEVICE_FUNC(name) \
     { \
-        m_VK.name = (PFN_vk##name)m_VK.GetDeviceProcAddr(m_Device, NRI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
+        m_VK.name = (PFN_vk##name)m_VK.GetDeviceProcAddr(m_Device, OPENRHI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
         if (!m_VK.name) { \
-            NRI_REPORT_ERROR(this, "Failed to get device function: '%s'", NRI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
+            OPENRHI_REPORT_ERROR(this, "Failed to get device function: '%s'", OPENRHI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
             return Result::UNSUPPORTED; \
         } \
     }
 
 #define GET_INSTANCE_FUNC(name) \
     { \
-        m_VK.name = (PFN_vk##name)m_VK.GetInstanceProcAddr(m_Instance, NRI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
+        m_VK.name = (PFN_vk##name)m_VK.GetInstanceProcAddr(m_Instance, OPENRHI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
         if (!m_VK.name) { \
-            NRI_REPORT_ERROR(this, "Failed to get instance function: '%s'", NRI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
+            OPENRHI_REPORT_ERROR(this, "Failed to get instance function: '%s'", OPENRHI_STRINGIFY(MERGE_TOKENS2(vk, name))); \
             return Result::UNSUPPORTED; \
         } \
     }
@@ -2187,7 +2211,7 @@ Result DeviceVK::ResolvePreInstanceDispatchTable() {
 
     m_VK.GetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)GetSharedLibraryFunction(*m_Loader, "vkGetInstanceProcAddr");
     if (!m_VK.GetInstanceProcAddr) {
-        NRI_REPORT_ERROR(this, "Failed to get 'vkGetInstanceProcAddr'");
+        OPENRHI_REPORT_ERROR(this, "Failed to get 'vkGetInstanceProcAddr'");
         return Result::UNSUPPORTED;
     }
 
@@ -2234,17 +2258,11 @@ Result DeviceVK::ResolveInstanceDispatchTable(const Vector<const char*>& desired
         GET_INSTANCE_FUNC(GetPhysicalDeviceSurfacePresentModesKHR);
         GET_INSTANCE_FUNC(DestroySurfaceKHR);
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-        GET_INSTANCE_FUNC(CreateWin32SurfaceKHR);
-#endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
         GET_INSTANCE_FUNC(CreateXlibSurfaceKHR);
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
         GET_INSTANCE_FUNC(CreateWaylandSurfaceKHR);
-#endif
-#ifdef VK_USE_PLATFORM_METAL_EXT
-        GET_INSTANCE_FUNC(CreateMetalSurfaceEXT);
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
         GET_INSTANCE_FUNC(CreateAndroidSurfaceKHR);
@@ -2403,10 +2421,6 @@ Result DeviceVK::ResolveDispatchTable(const Vector<const char*>& desiredDeviceEx
     if (IsExtensionSupported(VK_KHR_PRESENT_WAIT_EXTENSION_NAME, desiredDeviceExts))
         GET_DEVICE_FUNC(WaitForPresentKHR);
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    if (IsExtensionSupported(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME, desiredDeviceExts))
-        GET_DEVICE_FUNC(GetMemoryWin32HandlePropertiesKHR);
-#endif
 
     if (IsExtensionSupported(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, desiredDeviceExts)) {
         GET_DEVICE_FUNC(CreateAccelerationStructureKHR);
@@ -2523,8 +2537,8 @@ Result DeviceVK::ReportDeviceLostInfo(DeviceLostDump& deviceLostDump) {
     if (vkResult < 0)
         return GetResultFromVkResult(vkResult);
 
-    Scratch<VkDeviceFaultAddressInfoEXT> addressInfos = NRI_ALLOCATE_SCRATCH(*this, VkDeviceFaultAddressInfoEXT, faultCounts.addressInfoCount);
-    Scratch<VkDeviceFaultVendorInfoEXT> vendorInfos = NRI_ALLOCATE_SCRATCH(*this, VkDeviceFaultVendorInfoEXT, faultCounts.vendorInfoCount);
+    Scratch<VkDeviceFaultAddressInfoEXT> addressInfos = OPENRHI_ALLOCATE_SCRATCH(*this, VkDeviceFaultAddressInfoEXT, faultCounts.addressInfoCount);
+    Scratch<VkDeviceFaultVendorInfoEXT> vendorInfos = OPENRHI_ALLOCATE_SCRATCH(*this, VkDeviceFaultVendorInfoEXT, faultCounts.vendorInfoCount);
     if ((faultCounts.addressInfoCount && !addressInfos) || (faultCounts.vendorInfoCount && !vendorInfos))
         return Result::OUT_OF_MEMORY;
 
@@ -2557,7 +2571,7 @@ Result DeviceVK::ReportDeviceLostInfo(DeviceLostDump& deviceLostDump) {
         if (deviceLostData)
             allocationCallbacks.Free(allocationCallbacks.userArg, deviceLostData);
 
-        NRI_REPORT_WARNING(this, "Device lost data is incomplete");
+        OPENRHI_REPORT_WARNING(this, "Device lost data is incomplete");
 
         return Result::FAILURE;
     }
@@ -2572,7 +2586,7 @@ Result DeviceVK::ReportDeviceLostInfo(DeviceLostDump& deviceLostDump) {
 
     deviceLostDump = m_DeviceLostDump;
 
-    NRI_REPORT_DEVICE_LOST_INFO(this,
+    OPENRHI_REPORT_DEVICE_LOST_INFO(this,
         "[DeviceLost] description=%s addressInfoCount=%u vendorInfoCount=%u",
         faultInfo.description,
         faultCounts.addressInfoCount,
@@ -2580,7 +2594,7 @@ Result DeviceVK::ReportDeviceLostInfo(DeviceLostDump& deviceLostDump) {
 
     for (uint32_t i = 0; i < faultCounts.addressInfoCount; i++) {
         const VkDeviceFaultAddressInfoEXT& addressInfo = addressInfos[i];
-        NRI_REPORT_DEVICE_LOST_INFO(this,
+        OPENRHI_REPORT_DEVICE_LOST_INFO(this,
             "[DeviceLost]   Address[%u]: type=%s address=0x%016" PRIX64 " precision=0x%016" PRIX64,
             i,
             GetDeviceLostAddressTypeName(addressInfo.addressType),
@@ -2590,7 +2604,7 @@ Result DeviceVK::ReportDeviceLostInfo(DeviceLostDump& deviceLostDump) {
 
     for (uint32_t i = 0; i < faultCounts.vendorInfoCount; i++) {
         const VkDeviceFaultVendorInfoEXT& vendorInfo = vendorInfos[i];
-        NRI_REPORT_DEVICE_LOST_INFO(this,
+        OPENRHI_REPORT_DEVICE_LOST_INFO(this,
             "[DeviceLost]   VendorInfo[%u]: code=0x%016" PRIX64 " data=0x%016" PRIX64 " description=%s",
             i,
             vendorInfo.vendorFaultCode,
@@ -2599,7 +2613,7 @@ Result DeviceVK::ReportDeviceLostInfo(DeviceLostDump& deviceLostDump) {
     }
 
     if (faultCounts.vendorBinarySize)
-        NRI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] vendorBinarySize=%" PRIu64, faultCounts.vendorBinarySize);
+        OPENRHI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] vendorBinarySize=%" PRIu64, faultCounts.vendorBinarySize);
 
     return Result::SUCCESS;
 }
@@ -2608,11 +2622,11 @@ void DeviceVK::Destruct() {
     Destroy(GetAllocationCallbacks(), this);
 }
 
-NRI_INLINE void DeviceVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void DeviceVK::SetDebugName(const char* name) {
     SetDebugNameToTrivialObject(VK_OBJECT_TYPE_DEVICE, (uint64_t)m_Device, name);
 }
 
-NRI_INLINE VkRenderPass DeviceVK::GetOrCreateRenderPass(const RenderPassDesc& desc) {
+OPENRHI_INLINE VkRenderPass DeviceVK::GetOrCreateRenderPass(const RenderPassDesc& desc) {
     ExclusiveScope lock(m_Lock);
 
     for (const RenderPassCacheEntry& entry : m_RenderPasses) {
@@ -2809,7 +2823,7 @@ NRI_INLINE VkRenderPass DeviceVK::GetOrCreateRenderPass(const RenderPassDesc& de
     return renderPass;
 }
 
-NRI_INLINE VkFramebuffer DeviceVK::GetOrCreateFramebuffer(const FramebufferDesc& desc) {
+OPENRHI_INLINE VkFramebuffer DeviceVK::GetOrCreateFramebuffer(const FramebufferDesc& desc) {
     ExclusiveScope lock(m_Lock);
 
     for (const FramebufferCacheEntry& entry : m_Framebuffers) {
@@ -2850,7 +2864,7 @@ NRI_INLINE VkFramebuffer DeviceVK::GetOrCreateFramebuffer(const FramebufferDesc&
     return framebuffer;
 }
 
-NRI_INLINE void DeviceVK::DestroyFramebuffers(VkImageView imageView) {
+OPENRHI_INLINE void DeviceVK::DestroyFramebuffers(VkImageView imageView) {
     ExclusiveScope lock(m_Lock);
 
     const auto& vk = GetDispatchTable();
@@ -2876,7 +2890,7 @@ NRI_INLINE void DeviceVK::DestroyFramebuffers(VkImageView imageView) {
     }
 }
 
-NRI_INLINE Result DeviceVK::GetQueue(QueueType queueType, uint32_t queueIndex, Queue*& queue) {
+OPENRHI_INLINE Result DeviceVK::GetQueue(QueueType queueType, uint32_t queueIndex, Queue*& queue) {
     const auto& queueFamily = m_QueueFamilies[(uint32_t)queueType];
     if (queueFamily.empty())
         return Result::UNSUPPORTED;
@@ -2904,7 +2918,7 @@ NRI_INLINE Result DeviceVK::GetQueue(QueueType queueType, uint32_t queueIndex, Q
     return Result::INVALID_ARGUMENT;
 }
 
-NRI_INLINE VkVideoCodecOperationFlagsKHR DeviceVK::GetVideoCodecOperations(bool decode, bool encode) const {
+OPENRHI_INLINE VkVideoCodecOperationFlagsKHR DeviceVK::GetVideoCodecOperations(bool decode, bool encode) const {
     VkVideoCodecOperationFlagsKHR operations = 0;
     operations |= decode ? m_VideoCodecOperations[(size_t)QueueType::VIDEO_DECODE] : 0;
     operations |= encode ? m_VideoCodecOperations[(size_t)QueueType::VIDEO_ENCODE] : 0;
@@ -2915,7 +2929,7 @@ NRI_INLINE VkVideoCodecOperationFlagsKHR DeviceVK::GetVideoCodecOperations(bool 
     return operations;
 }
 
-NRI_INLINE Result DeviceVK::WaitIdle() {
+OPENRHI_INLINE Result DeviceVK::WaitIdle() {
     // Don't use "vkDeviceWaitIdle" because it requires host access synchronization to all queues, better do it one by one instead
     for (auto& queueFamily : m_QueueFamilies) {
         for (auto queue : queueFamily) {
@@ -2962,8 +2976,8 @@ Result DeviceVK::UploadHostMemoryToTexture(QueueVK& queue, const UploadHostMemor
 
     const DispatchTable& vk = GetDispatchTable();
     if (m_IsSupported.hostImageCopy) {
-        Scratch<VkMemoryToImageCopy> regions = NRI_ALLOCATE_SCRATCH(*this, VkMemoryToImageCopy, copyDescNum);
-        Scratch<uint32_t> sortedIndices = NRI_ALLOCATE_SCRATCH(*this, uint32_t, copyDescNum);
+        Scratch<VkMemoryToImageCopy> regions = OPENRHI_ALLOCATE_SCRATCH(*this, VkMemoryToImageCopy, copyDescNum);
+        Scratch<uint32_t> sortedIndices = OPENRHI_ALLOCATE_SCRATCH(*this, uint32_t, copyDescNum);
         for (uint32_t i = 0; i < copyDescNum; i++)
             sortedIndices[i] = i;
         std::sort((uint32_t*)sortedIndices, (uint32_t*)sortedIndices + copyDescNum, [copyDescs](uint32_t a, uint32_t b) {
@@ -3026,7 +3040,7 @@ Result DeviceVK::UploadHostMemoryToTexture(QueueVK& queue, const UploadHostMemor
     if (result != Result::SUCCESS)
         return result;
 
-    Scratch<HostCopyLayoutVK> layouts = NRI_ALLOCATE_SCRATCH(*this, HostCopyLayoutVK, copyDescNum);
+    Scratch<HostCopyLayoutVK> layouts = OPENRHI_ALLOCATE_SCRATCH(*this, HostCopyLayoutVK, copyDescNum);
 
     uint64_t stagingSize = 0;
     for (uint32_t i = 0; i < copyDescNum; i++)
@@ -3053,10 +3067,10 @@ Result DeviceVK::UploadHostMemoryToTexture(QueueVK& queue, const UploadHostMemor
     if (result == Result::SUCCESS)
         result = commandBuffer.Begin(nullptr);
 
-    Scratch<TextureBarrierDesc> textureBarriers = NRI_ALLOCATE_SCRATCH(*this, TextureBarrierDesc, copyDescNum);
+    Scratch<TextureBarrierDesc> textureBarriers = OPENRHI_ALLOCATE_SCRATCH(*this, TextureBarrierDesc, copyDescNum);
     uint32_t textureBarrierNum = 0;
     if (result == Result::SUCCESS) {
-        Scratch<uint32_t> sortedIndices = NRI_ALLOCATE_SCRATCH(*this, uint32_t, copyDescNum);
+        Scratch<uint32_t> sortedIndices = OPENRHI_ALLOCATE_SCRATCH(*this, uint32_t, copyDescNum);
         for (uint32_t i = 0; i < copyDescNum; i++)
             sortedIndices[i] = i;
 
@@ -3103,8 +3117,8 @@ Result DeviceVK::UploadHostMemoryToTexture(QueueVK& queue, const UploadHostMemor
         barrierDesc.textureNum = textureBarrierNum;
         commandBuffer.Barrier(barrierDesc);
 
-        Scratch<VkBufferImageCopy2> regions = NRI_ALLOCATE_SCRATCH(*this, VkBufferImageCopy2, copyDescNum);
-        Scratch<VkBufferImageCopy> legacyRegions = NRI_ALLOCATE_SCRATCH(*this, VkBufferImageCopy, m_IsSupported.copyCommands2 ? 0 : copyDescNum);
+        Scratch<VkBufferImageCopy2> regions = OPENRHI_ALLOCATE_SCRATCH(*this, VkBufferImageCopy2, copyDescNum);
+        Scratch<VkBufferImageCopy> legacyRegions = OPENRHI_ALLOCATE_SCRATCH(*this, VkBufferImageCopy, m_IsSupported.copyCommands2 ? 0 : copyDescNum);
 
         VkCommandBuffer commandBufferHandle = commandBuffer;
         for (uint32_t begin = 0; begin < copyDescNum;) {
@@ -3161,7 +3175,7 @@ Result DeviceVK::ReadbackTextureToHostMemory(QueueVK& queue, const ReadbackTextu
 
     const DispatchTable& vk = GetDispatchTable();
     if (m_IsSupported.hostImageCopy) {
-        Scratch<VkImageToMemoryCopy> regions = NRI_ALLOCATE_SCRATCH(*this, VkImageToMemoryCopy, copyDescNum);
+        Scratch<VkImageToMemoryCopy> regions = OPENRHI_ALLOCATE_SCRATCH(*this, VkImageToMemoryCopy, copyDescNum);
 
         for (uint32_t i = 0; i < copyDescNum;) {
             const TextureVK& texture = *(TextureVK*)copyDescs[i].srcTexture;
@@ -3226,7 +3240,7 @@ Result DeviceVK::ReadbackTextureToHostMemory(QueueVK& queue, const ReadbackTextu
     if (result != Result::SUCCESS)
         return result;
 
-    Scratch<HostCopyLayoutVK> layouts = NRI_ALLOCATE_SCRATCH(*this, HostCopyLayoutVK, copyDescNum);
+    Scratch<HostCopyLayoutVK> layouts = OPENRHI_ALLOCATE_SCRATCH(*this, HostCopyLayoutVK, copyDescNum);
 
     uint64_t stagingSize = 0;
     for (uint32_t i = 0; i < copyDescNum; i++)
@@ -3238,10 +3252,10 @@ Result DeviceVK::ReadbackTextureToHostMemory(QueueVK& queue, const ReadbackTextu
     if (result == Result::SUCCESS)
         result = commandBuffer.Begin(nullptr);
 
-    Scratch<TextureBarrierDesc> textureBarriers = NRI_ALLOCATE_SCRATCH(*this, TextureBarrierDesc, copyDescNum);
+    Scratch<TextureBarrierDesc> textureBarriers = OPENRHI_ALLOCATE_SCRATCH(*this, TextureBarrierDesc, copyDescNum);
     uint32_t textureBarrierNum = 0;
     if (result == Result::SUCCESS) {
-        Scratch<uint32_t> sortedIndices = NRI_ALLOCATE_SCRATCH(*this, uint32_t, copyDescNum);
+        Scratch<uint32_t> sortedIndices = OPENRHI_ALLOCATE_SCRATCH(*this, uint32_t, copyDescNum);
         for (uint32_t i = 0; i < copyDescNum; i++)
             sortedIndices[i] = i;
 
@@ -3281,8 +3295,8 @@ Result DeviceVK::ReadbackTextureToHostMemory(QueueVK& queue, const ReadbackTextu
         barrierDesc.textureNum = textureBarrierNum;
         commandBuffer.Barrier(barrierDesc);
 
-        Scratch<VkBufferImageCopy2> regions = NRI_ALLOCATE_SCRATCH(*this, VkBufferImageCopy2, copyDescNum);
-        Scratch<VkBufferImageCopy> legacyRegions = NRI_ALLOCATE_SCRATCH(*this, VkBufferImageCopy, m_IsSupported.copyCommands2 ? 0 : copyDescNum);
+        Scratch<VkBufferImageCopy2> regions = OPENRHI_ALLOCATE_SCRATCH(*this, VkBufferImageCopy2, copyDescNum);
+        Scratch<VkBufferImageCopy> legacyRegions = OPENRHI_ALLOCATE_SCRATCH(*this, VkBufferImageCopy, m_IsSupported.copyCommands2 ? 0 : copyDescNum);
 
         VkCommandBuffer commandBufferHandle = commandBuffer;
         for (uint32_t begin = 0; begin < copyDescNum;) {
@@ -3392,8 +3406,8 @@ void DeviceVK::ReleaseTransferContext(TransferContextVK& context) {
     context.SetInUse(false);
 }
 
-NRI_INLINE void DeviceVK::CopyDescriptorRanges(const CopyDescriptorRangeDesc* copyDescriptorRangeDescs, uint32_t copyDescriptorRangeDescNum) {
-    Scratch<VkCopyDescriptorSet> copies = NRI_ALLOCATE_SCRATCH(*this, VkCopyDescriptorSet, copyDescriptorRangeDescNum);
+OPENRHI_INLINE void DeviceVK::CopyDescriptorRanges(const CopyDescriptorRangeDesc* copyDescriptorRangeDescs, uint32_t copyDescriptorRangeDescNum) {
+    Scratch<VkCopyDescriptorSet> copies = OPENRHI_ALLOCATE_SCRATCH(*this, VkCopyDescriptorSet, copyDescriptorRangeDescNum);
     for (uint32_t i = 0; i < copyDescriptorRangeDescNum; i++) {
         const CopyDescriptorRangeDesc& copyDescriptorSetDesc = copyDescriptorRangeDescs[i];
 
@@ -3427,7 +3441,7 @@ NRI_INLINE void DeviceVK::CopyDescriptorRanges(const CopyDescriptorRangeDesc* co
     m_VK.UpdateDescriptorSets(m_Device, 0, nullptr, copyDescriptorRangeDescNum, copies);
 }
 
-NRI_INLINE void DeviceVK::UpdateDescriptorRanges(const UpdateDescriptorRangeDesc* updateDescriptorRangeDescs, uint32_t updateDescriptorRangeDescNum) {
+OPENRHI_INLINE void DeviceVK::UpdateDescriptorRanges(const UpdateDescriptorRangeDesc* updateDescriptorRangeDescs, uint32_t updateDescriptorRangeDescNum) {
     // Count and allocate scratch memory
     size_t scratchOffset = updateDescriptorRangeDescNum * sizeof(VkWriteDescriptorSet);
     size_t scratchSize = scratchOffset;
@@ -3457,12 +3471,12 @@ NRI_INLINE void DeviceVK::UpdateDescriptorRanges(const UpdateDescriptorRangeDesc
                 scratchSize += sizeof(VkAccelerationStructureKHR) * updateDescriptorRangeDesc.descriptorNum + sizeof(VkWriteDescriptorSetAccelerationStructureKHR);
                 break;
             default:
-                NRI_CHECK(false, "Unexpected 'descriptorType'");
+                OPENRHI_CHECK(false, "Unexpected 'descriptorType'");
                 break;
         }
     }
 
-    Scratch<uint8_t> writes = NRI_ALLOCATE_SCRATCH(*this, uint8_t, scratchSize);
+    Scratch<uint8_t> writes = OPENRHI_ALLOCATE_SCRATCH(*this, uint8_t, scratchSize);
 
     // Update ranges
     for (uint32_t i = 0; i < updateDescriptorRangeDescNum; i++) {
@@ -3495,8 +3509,8 @@ NRI_INLINE void DeviceVK::UpdateDescriptorRanges(const UpdateDescriptorRangeDesc
     m_VK.UpdateDescriptorSets(m_Device, updateDescriptorRangeDescNum, (VkWriteDescriptorSet*)(writes + 0), 0, nullptr);
 }
 
-NRI_INLINE Result DeviceVK::BindBufferMemory(const BindBufferMemoryDesc* bindBufferMemoryDescs, uint32_t bindBufferMemoryDescNum) {
-    Scratch<VkBindBufferMemoryInfo> infos = NRI_ALLOCATE_SCRATCH(*this, VkBindBufferMemoryInfo, bindBufferMemoryDescNum);
+OPENRHI_INLINE Result DeviceVK::BindBufferMemory(const BindBufferMemoryDesc* bindBufferMemoryDescs, uint32_t bindBufferMemoryDescNum) {
+    Scratch<VkBindBufferMemoryInfo> infos = OPENRHI_ALLOCATE_SCRATCH(*this, VkBindBufferMemoryInfo, bindBufferMemoryDescNum);
     for (uint32_t i = 0; i < bindBufferMemoryDescNum; i++) {
         const BindBufferMemoryDesc& bindBufferMemoryDesc = bindBufferMemoryDescs[i];
 
@@ -3515,7 +3529,7 @@ NRI_INLINE Result DeviceVK::BindBufferMemory(const BindBufferMemoryDesc* bindBuf
     }
 
     VkResult vkResult = m_VK.BindBufferMemory2(m_Device, bindBufferMemoryDescNum, infos);
-    NRI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkBindBufferMemory2");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkBindBufferMemory2");
 
     for (uint32_t i = 0; i < bindBufferMemoryDescNum; i++) {
         const BindBufferMemoryDesc& bindBufferMemoryDesc = bindBufferMemoryDescs[i];
@@ -3529,8 +3543,8 @@ NRI_INLINE Result DeviceVK::BindBufferMemory(const BindBufferMemoryDesc* bindBuf
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result DeviceVK::BindTextureMemory(const BindTextureMemoryDesc* bindTextureMemoryDescs, uint32_t bindTextureMemoryDescNum) {
-    Scratch<VkBindImageMemoryInfo> infos = NRI_ALLOCATE_SCRATCH(*this, VkBindImageMemoryInfo, bindTextureMemoryDescNum);
+OPENRHI_INLINE Result DeviceVK::BindTextureMemory(const BindTextureMemoryDesc* bindTextureMemoryDescs, uint32_t bindTextureMemoryDescNum) {
+    Scratch<VkBindImageMemoryInfo> infos = OPENRHI_ALLOCATE_SCRATCH(*this, VkBindImageMemoryInfo, bindTextureMemoryDescNum);
     for (uint32_t i = 0; i < bindTextureMemoryDescNum; i++) {
         const BindTextureMemoryDesc& bindTextureMemoryDesc = bindTextureMemoryDescs[i];
 
@@ -3549,13 +3563,13 @@ NRI_INLINE Result DeviceVK::BindTextureMemory(const BindTextureMemoryDesc* bindT
     }
 
     VkResult vkResult = m_VK.BindImageMemory2(m_Device, bindTextureMemoryDescNum, infos);
-    NRI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkBindImageMemory2");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(this, vkResult, "vkBindImageMemory2");
 
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result DeviceVK::BindAccelerationStructureMemory(const BindAccelerationStructureMemoryDesc* bindAccelerationStructureMemoryDescs, uint32_t bindAccelerationStructureMemoryDescNum) {
-    Scratch<BindBufferMemoryDesc> bufferMemoryBindingDescs = NRI_ALLOCATE_SCRATCH(*this, BindBufferMemoryDesc, bindAccelerationStructureMemoryDescNum);
+OPENRHI_INLINE Result DeviceVK::BindAccelerationStructureMemory(const BindAccelerationStructureMemoryDesc* bindAccelerationStructureMemoryDescs, uint32_t bindAccelerationStructureMemoryDescNum) {
+    Scratch<BindBufferMemoryDesc> bufferMemoryBindingDescs = OPENRHI_ALLOCATE_SCRATCH(*this, BindBufferMemoryDesc, bindAccelerationStructureMemoryDescNum);
     for (uint32_t i = 0; i < bindAccelerationStructureMemoryDescNum; i++) {
         const BindAccelerationStructureMemoryDesc& bindAccelerationStructureMemoryDesc = bindAccelerationStructureMemoryDescs[i];
         AccelerationStructureVK& accelerationStructureVK = *(AccelerationStructureVK*)bindAccelerationStructureMemoryDesc.accelerationStructure;
@@ -3580,8 +3594,8 @@ NRI_INLINE Result DeviceVK::BindAccelerationStructureMemory(const BindAccelerati
     return result;
 }
 
-NRI_INLINE Result DeviceVK::BindMicromapMemory(const BindMicromapMemoryDesc* bindMicromapMemoryDescs, uint32_t bindMicromapMemoryDescNum) {
-    Scratch<BindBufferMemoryDesc> bindBufferMemoryDescs = NRI_ALLOCATE_SCRATCH(*this, BindBufferMemoryDesc, bindMicromapMemoryDescNum);
+OPENRHI_INLINE Result DeviceVK::BindMicromapMemory(const BindMicromapMemoryDesc* bindMicromapMemoryDescs, uint32_t bindMicromapMemoryDescNum) {
+    Scratch<BindBufferMemoryDesc> bindBufferMemoryDescs = OPENRHI_ALLOCATE_SCRATCH(*this, BindBufferMemoryDesc, bindMicromapMemoryDescNum);
     for (uint32_t i = 0; i < bindMicromapMemoryDescNum; i++) {
         const BindMicromapMemoryDesc& bindMicromapMemoryDesc = bindMicromapMemoryDescs[i];
         MicromapVK& micromapVK = *(MicromapVK*)bindMicromapMemoryDesc.micromap;
@@ -3614,7 +3628,7 @@ NRI_INLINE Result DeviceVK::BindMicromapMemory(const BindMicromapMemoryDesc* bin
     if ((props3.bufferFeatures & (required)) == (required)) \
         supportBits |= bit;
 
-NRI_INLINE FormatSupportBits DeviceVK::GetFormatSupport(Format format) const {
+OPENRHI_INLINE FormatSupportBits DeviceVK::GetFormatSupport(Format format) const {
     FormatSupportBits supportBits = FormatSupportBits::UNSUPPORTED;
     VkFormat vkFormat = GetVkFormat(format);
     if (vkFormat == VK_FORMAT_UNDEFINED)
@@ -3688,7 +3702,7 @@ NRI_INLINE FormatSupportBits DeviceVK::GetFormatSupport(Format format) const {
 #undef UPDATE_TEXTURE_SUPPORT_BITS
 #undef UPDATE_BUFFER_SUPPORT_BITS
 
-NRI_INLINE Result DeviceVK::QueryVideoMemoryInfo(MemoryLocation memoryLocation, VideoMemoryInfo& videoMemoryInfo) const {
+OPENRHI_INLINE Result DeviceVK::QueryVideoMemoryInfo(MemoryLocation memoryLocation, VideoMemoryInfo& videoMemoryInfo) const {
     videoMemoryInfo = {};
 
     if (!m_IsSupported.memoryBudget)

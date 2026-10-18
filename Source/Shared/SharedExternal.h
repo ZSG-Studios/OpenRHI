@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <vector>
 
-#if (NRI_ENABLE_D3D11_SUPPORT || NRI_ENABLE_D3D12_SUPPORT)
+#if (OPENRHI_ENABLE_D3D12_SUPPORT)
 #    include <dxgi1_6.h>
 #else
 typedef uint32_t DXGI_FORMAT;
@@ -25,85 +25,83 @@ typedef uint32_t DXGI_FORMAT;
 #endif
 
 // IMPORTANT: "SharedExternal.h" must be included after inclusion of "windows.h" (can be implicit) because ERROR gets undef-ed below
-#include "NRI.h"
-#include "NRI.hlsl"
+#include "OpenRHI.h"
 
-#include "Extensions/NRIDescriptorHeap.h"
-#include "Extensions/NRIDeviceCreation.h"
-#include "Extensions/NRIHelper.h"
-#include "Extensions/NRIImgui.h"
-#include "Extensions/NRILowLatency.h"
-#include "Extensions/NRIMeshShader.h"
-#include "Extensions/NRIRayTracing.h"
-#include "Extensions/NRIStreamer.h"
-#include "Extensions/NRISwapChain.h"
-#include "Extensions/NRIUpscaler.h"
-#include "Extensions/NRIVideo.h"
-#include "Extensions/NRIWrapperD3D11.h"
-#include "Extensions/NRIWrapperD3D12.h"
-#include "Extensions/NRIWrapperMetal.h"
-#include "Extensions/NRIWrapperVK.h"
+#include "Extensions/OpenRHIDescriptorHeap.h"
+#include "Extensions/OpenRHIDeviceCreation.h"
+#include "Extensions/OpenRHIHelper.h"
+#include "Extensions/OpenRHIImgui.h"
+#include "Extensions/OpenRHILowLatency.h"
+#include "Extensions/OpenRHIMeshShader.h"
+#include "Extensions/OpenRHIRayTracing.h"
+#include "Extensions/OpenRHIStreamer.h"
+#include "Extensions/OpenRHISwapChain.h"
+#include "Extensions/OpenRHIUpscaler.h"
+#include "Extensions/OpenRHIVideo.h"
+#include "Extensions/OpenRHIWrapperD3D12.h"
+#include "Extensions/OpenRHIWrapperMetal.h"
+#include "Extensions/OpenRHIWrapperVK.h"
 
 #include "Lock.h"
 #include "SharedVideo.h"
 
-// NRI default settings (if not provided in "NRIConfig.h")
-#ifdef NRI_USER_CONFIG
-#    include NRI_USER_CONFIG
+// OpenRHI default settings (if not provided in "OpenRHIConfig.h")
+#ifdef OPENRHI_USER_CONFIG
+#    include OPENRHI_USER_CONFIG
 #else
-#    include "../NRIConfig.h"
+#    include "../OpenRHIConfig.h"
 #endif
 
-#ifndef NRI_TIMEOUT_PRESENT
-#    define NRI_TIMEOUT_PRESENT 1000u // 1 sec
+#ifndef OPENRHI_TIMEOUT_PRESENT
+#    define OPENRHI_TIMEOUT_PRESENT 1000u // 1 sec
 #endif
 
-#ifndef NRI_TIMEOUT_FENCE
-#    define NRI_TIMEOUT_FENCE 5000u // 5 sec
+#ifndef OPENRHI_TIMEOUT_FENCE
+#    define OPENRHI_TIMEOUT_FENCE 5000u // 5 sec
 #endif
 
-#ifndef NRI_MAX_MESSAGE_LENGTH
-#    define NRI_MAX_MESSAGE_LENGTH 2048u // 2 Kb
+#ifndef OPENRHI_MAX_MESSAGE_LENGTH
+#    define OPENRHI_MAX_MESSAGE_LENGTH 2048u // 2 Kb
 #endif
 
-#ifndef NRI_ZERO_BUFFER_SIZE
-#    define NRI_ZERO_BUFFER_SIZE 4194304u // 4 Mb
+#ifndef OPENRHI_ZERO_BUFFER_SIZE
+#    define OPENRHI_ZERO_BUFFER_SIZE 4194304u // 4 Mb
 #endif
 
-#ifndef NRI_MAX_STACK_ALLOC_SIZE
-#    define NRI_MAX_STACK_ALLOC_SIZE 32768u // 32 Kb
+#ifndef OPENRHI_MAX_STACK_ALLOC_SIZE
+#    define OPENRHI_MAX_STACK_ALLOC_SIZE 32768u // 32 Kb
 #endif
 
-#ifndef NRI_FILE_SEPARATOR
+#ifndef OPENRHI_FILE_SEPARATOR
 #    ifdef _WIN32
-#        define NRI_FILE_SEPARATOR '\\'
+#        define OPENRHI_FILE_SEPARATOR '\\'
 #    else
-#        define NRI_FILE_SEPARATOR '/'
+#        define OPENRHI_FILE_SEPARATOR '/'
 #    endif
 #endif
 
-#ifndef NRI_CHECK
+#ifndef OPENRHI_CHECK
 #    ifdef NDEBUG
-#        define NRI_CHECK(condition, message)
+#        define OPENRHI_CHECK(condition, message)
 #    else
-#        define NRI_CHECK(condition, message) assert((condition) && message)
+#        define OPENRHI_CHECK(condition, message) assert((condition) && message)
 #    endif
 #endif
 
-#ifndef NRI_INLINE
-#    define NRI_INLINE inline
+#ifndef OPENRHI_INLINE
+#    define OPENRHI_INLINE inline
 #endif
 
-// FFX default settings (if not provided in "NRIConfig.h")
-#ifndef NRI_FFX_DEBUG_LOG
-#    define NRI_FFX_DEBUG_LOG(messageType, message) \
+// FFX default settings (if not provided in "OpenRHIConfig.h")
+#ifndef OPENRHI_FFX_DEBUG_LOG
+#    define OPENRHI_FFX_DEBUG_LOG(messageType, message) \
         do { \
             MaybeUnused(messageType); \
             wprintf(L"FFX: %ls\n", message); \
         } while (false)
 #endif
 
-// D3D12MA default settings (if not provided in "NRIConfig.h")
+// D3D12MA default settings (if not provided in "OpenRHIConfig.h")
 #ifndef D3D12MA_DEBUG_LOG
 #    define D3D12MA_DEBUG_LOG(format, ...) \
         do { \
@@ -117,14 +115,14 @@ typedef uint32_t DXGI_FORMAT;
 #endif
 
 #ifndef D3D12MA_ASSERT
-#    define D3D12MA_ASSERT(cond) NRI_CHECK(cond, "D3D12MA assert failed!")
+#    define D3D12MA_ASSERT(cond) OPENRHI_CHECK(cond, "D3D12MA assert failed!")
 #endif
 
 #ifndef D3D12MA_HEAVY_ASSERT
 #    define D3D12MA_HEAVY_ASSERT(expr)
 #endif
 
-// VMA default settings (if not provided in "NRIConfig.h")
+// VMA default settings (if not provided in "OpenRHIConfig.h")
 #ifndef VMA_DEBUG_LOG_FORMAT
 #    define VMA_DEBUG_LOG_FORMAT(format, ...) \
         do { \
@@ -138,7 +136,7 @@ typedef uint32_t DXGI_FORMAT;
 #endif
 
 #ifndef VMA_ASSERT
-#    define VMA_ASSERT(expr) NRI_CHECK(expr, "VMA assert failed!")
+#    define VMA_ASSERT(expr) OPENRHI_CHECK(expr, "VMA assert failed!")
 #endif
 
 #ifndef VMA_ASSERT_LEAK
@@ -158,7 +156,7 @@ typedef uint32_t DXGI_FORMAT;
 #endif
 
 // ComPtr
-#if (NRI_ENABLE_D3D11_SUPPORT || NRI_ENABLE_D3D12_SUPPORT)
+#if (OPENRHI_ENABLE_D3D12_SUPPORT)
 
 struct IUnknown;
 
@@ -263,79 +261,75 @@ protected:
 #endif
 
 // Macro stuff
-#define NRI_STRINGIFY_(token) #token
-#define NRI_STRINGIFY(token)  NRI_STRINGIFY_(token)
+#define OPENRHI_STRINGIFY_(token) #token
+#define OPENRHI_STRINGIFY(token)  OPENRHI_STRINGIFY_(token)
 
-#if defined(_WIN32)
-#    define NRI_VULKAN_LOADER_NAME "vulkan-1.dll"
-#elif defined(__APPLE__)
-#    define NRI_VULKAN_LOADER_NAME "libvulkan.1.dylib"
-#elif defined(__ANDROID__)
-#    define NRI_VULKAN_LOADER_NAME "libvulkan.so"
+#if defined(__ANDROID__)
+#    define OPENRHI_VULKAN_LOADER_NAME "libvulkan.so"
 #else
-#    define NRI_VULKAN_LOADER_NAME "libvulkan.so.1"
+#    define OPENRHI_VULKAN_LOADER_NAME "libvulkan.so.1"
 #endif
 
 // Message reporting
-#define NRI_RETURN_ON_BAD_HRESULT(deviceBase, hr, funcName) \
+#define OPENRHI_RETURN_ON_BAD_HRESULT(deviceBase, hr, funcName) \
     if (hr < 0) { \
         Result _result = GetResultFromHRESULT(hr); \
         (deviceBase)->ReportMessage(Message::ERROR, _result, __FILE__, __LINE__, funcName "(): failed, result = 0x%08X (%d)!", hr, hr); \
         return _result; \
     }
 
-#define NRI_RETURN_VOID_ON_BAD_HRESULT(deviceBase, hr, funcName) \
+#define OPENRHI_RETURN_VOID_ON_BAD_HRESULT(deviceBase, hr, funcName) \
     if (hr < 0) { \
         Result _result = GetResultFromHRESULT(hr); \
         (deviceBase)->ReportMessage(Message::ERROR, _result, __FILE__, __LINE__, funcName "(): failed, result = 0x%08X (%d)!", hr, hr); \
         return; \
     }
 
-#define NRI_RETURN_ON_BAD_VKRESULT(deviceBase, vkResult, funcName) \
+#define OPENRHI_RETURN_ON_BAD_VKRESULT(deviceBase, vkResult, funcName) \
     if (vkResult < 0) { \
         Result _result = GetResultFromVkResult(vkResult); \
         (deviceBase)->ReportMessage(Message::ERROR, _result, __FILE__, __LINE__, funcName "(): failed, result = 0x%08X (%d)!", vkResult, vkResult); \
         return _result; \
     }
 
-#define NRI_RETURN_VOID_ON_BAD_VKRESULT(deviceBase, vkResult, funcName) \
+#define OPENRHI_RETURN_VOID_ON_BAD_VKRESULT(deviceBase, vkResult, funcName) \
     if (vkResult < 0) { \
         Result _result = GetResultFromVkResult(vkResult); \
         (deviceBase)->ReportMessage(Message::ERROR, _result, __FILE__, __LINE__, funcName "(): failed, result = 0x%08X (%d)!", vkResult, vkResult); \
         return; \
     }
 
-#define NRI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(deviceBase, expression) \
+#define OPENRHI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(deviceBase, expression) \
     if ((expression) != 0) { \
-        (deviceBase)->ReportMessage(Message::ERROR, Result::FAILURE, __FILE__, __LINE__, "%s: " NRI_STRINGIFY(expression) " failed!", __FUNCTION__); \
+        (deviceBase)->ReportMessage(Message::ERROR, Result::FAILURE, __FILE__, __LINE__, "%s: " OPENRHI_STRINGIFY(expression) " failed!", __FUNCTION__); \
     }
 
-#define NRI_RETURN_ON_FAILURE(deviceBase, condition, returnCode, format, ...) \
+#define OPENRHI_RETURN_ON_FAILURE(deviceBase, condition, returnCode, format, ...) \
     if (!(condition)) { \
         (deviceBase)->ReportMessage(Message::ERROR, Result::FAILURE, __FILE__, __LINE__, "%s: " format, __FUNCTION__, ##__VA_ARGS__); \
         return returnCode; \
     }
 
-#define NRI_REPORT_INFO(deviceBase, format, ...)             (deviceBase)->ReportMessage(Message::INFO, Result::SUCCESS, __FILE__, __LINE__, format, ##__VA_ARGS__)
-#define NRI_REPORT_WARNING(deviceBase, format, ...)          (deviceBase)->ReportMessage(Message::WARNING, Result::SUCCESS, __FILE__, __LINE__, "%s(): " format, __FUNCTION__, ##__VA_ARGS__)
-#define NRI_REPORT_ERROR(deviceBase, format, ...)            (deviceBase)->ReportMessage(Message::ERROR, Result::FAILURE, __FILE__, __LINE__, "%s(): " format, __FUNCTION__, ##__VA_ARGS__)
-#define NRI_REPORT_DEVICE_LOST_INFO(deviceBase, format, ...) (deviceBase)->ReportMessage(Message::INFO, Result::DEVICE_LOST, __FILE__, __LINE__, format, ##__VA_ARGS__)
+#define OPENRHI_REPORT_INFO(deviceBase, format, ...)             (deviceBase)->ReportMessage(Message::INFO, Result::SUCCESS, __FILE__, __LINE__, format, ##__VA_ARGS__)
+#define OPENRHI_REPORT_WARNING(deviceBase, format, ...)          (deviceBase)->ReportMessage(Message::WARNING, Result::SUCCESS, __FILE__, __LINE__, "%s(): " format, __FUNCTION__, ##__VA_ARGS__)
+#define OPENRHI_REPORT_ERROR(deviceBase, format, ...)            (deviceBase)->ReportMessage(Message::ERROR, Result::FAILURE, __FILE__, __LINE__, "%s(): " format, __FUNCTION__, ##__VA_ARGS__)
+#define OPENRHI_REPORT_DEVICE_LOST_INFO(deviceBase, format, ...) (deviceBase)->ReportMessage(Message::INFO, Result::DEVICE_LOST, __FILE__, __LINE__, format, ##__VA_ARGS__)
 
 // Array validation
-#define NRI_VALIDATE_ARRAY(x)                 static_assert((size_t)x[x.size() - 1] != 0, "Some elements are missing in '" NRI_STRINGIFY(x) "'");
-#define NRI_VALIDATE_ARRAY_BY_PTR(x)          static_assert(x[x.size() - 1] != nullptr, "Some elements are missing in '" NRI_STRINGIFY(x) "'");
-#define NRI_VALIDATE_ARRAY_BY_FIELD(x, field) static_assert(x[x.size() - 1].field != decltype(x[x.size() - 1].field){}, "Some elements are missing in '" NRI_STRINGIFY(x) "'");
+#define OPENRHI_VALIDATE_ARRAY(x)                 static_assert((size_t)x[x.size() - 1] != 0, "Some elements are missing in '" OPENRHI_STRINGIFY(x) "'");
+#define OPENRHI_VALIDATE_ARRAY_BY_PTR(x)          static_assert(x[x.size() - 1] != nullptr, "Some elements are missing in '" OPENRHI_STRINGIFY(x) "'");
+#define OPENRHI_VALIDATE_ARRAY_BY_FIELD(x, field) static_assert(x[x.size() - 1].field != decltype(x[x.size() - 1].field){}, "Some elements are missing in '" OPENRHI_STRINGIFY(x) "'");
 
 // D3D
-#define NRI_SET_D3D_DEBUG_OBJECT_NAME(obj, name) \
+#define OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(obj, name) \
     if (obj) \
     obj->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)std::strlen(name), name)
 
 // clang-format off
-#define NRI_ALLOCATE_SCRATCH(device, T, elementNum) { \
+#define OPENRHI_ALLOCATE_SCRATCH(device, T, elementNum) { \
         (device).GetAllocationCallbacks(), \
         !(elementNum) ? nullptr : ( \
-            ((elementNum) * sizeof(T) + alignof(T)) > NRI_MAX_STACK_ALLOC_SIZE \
+            ((elementNum) * sizeof(T) + alignof(T)) > OPENRHI_MAX_STACK_ALLOC_SIZE \
                 ? (T*)(device).GetAllocationCallbacks().Allocate((device).GetAllocationCallbacks().userArg, (elementNum) * sizeof(T), alignof(T)) \
                 : (T*)Align((T*)alloca((elementNum) * sizeof(T) + alignof(T)), alignof(T)) \
         ), \
@@ -343,7 +337,7 @@ protected:
     }
 // clang-format on
 
-namespace nri {
+namespace openrhi {
 
 // Internal consts
 constexpr uint32_t NODE_MASK = 0x1;               // mGPU is not planned
@@ -358,7 +352,7 @@ public:
         : m_Allocator(allocator)
         , m_Mem(mem)
         , m_Num(num) {
-        m_IsHeap = (num * sizeof(T) + alignof(T)) > NRI_MAX_STACK_ALLOC_SIZE;
+        m_IsHeap = (num * sizeof(T) + alignof(T)) > OPENRHI_MAX_STACK_ALLOC_SIZE;
     }
 
     ~Scratch() {
@@ -560,11 +554,11 @@ struct DxgiFormat {
 const DxgiFormat& GetDxgiFormat(Format format);
 const FormatProps& GetFormatProps(Format format);
 
-Format DXGIFormatToNRIFormat(uint32_t dxgiFormat);
-Format VKFormatToNRIFormat(uint32_t vkFormat);
+Format DXGIFormatToOpenRHIFormat(uint32_t dxgiFormat);
+Format VKFormatToOpenRHIFormat(uint32_t vkFormat);
 
-uint32_t NRIFormatToDXGIFormat(Format format);
-uint32_t NRIFormatToVKFormat(Format format);
+uint32_t ConvertFormatToDXGI(Format format);
+uint32_t ConvertFormatToVK(Format format);
 
 // Misc
 Result GetResultFromHRESULT(long result);
@@ -624,7 +618,7 @@ void ConvertCharToWchar(const char* in, wchar_t* out, size_t outLen);
 void ConvertWcharToChar(const wchar_t* in, char* out, size_t outLen);
 
 // Windows/D3D specific
-#if (NRI_ENABLE_D3D11_SUPPORT || NRI_ENABLE_D3D12_SUPPORT)
+#if (OPENRHI_ENABLE_D3D12_SUPPORT)
 
 bool HasOutput();
 Result QueryVideoMemoryInfoDXGI(uint64_t luid, MemoryLocation memoryLocation, VideoMemoryInfo& videoMemoryInfo);
@@ -652,7 +646,7 @@ struct DisplayDescHelper {
 #endif
 
 // VK related
-#if NRI_ENABLE_VK_SUPPORT
+#if OPENRHI_ENABLE_VK_SUPPORT
 
 struct QueueFamilyProps {
     uint32_t queueCount;
@@ -785,6 +779,7 @@ inline Uid_t ConstructUid(uint8_t luid[8], uint8_t uuid[16], bool isLuidValid) {
 
 #endif
 
-} // namespace nri
+} // namespace openrhi
 
 #include "DeviceBase.h" // requires "StdAllocator"
+#include "DevicePolicy.h"

@@ -153,7 +153,7 @@ Result DescriptorVK::Create(const TextureViewDesc& textureViewDesc) {
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateImageView(m_Device, &createInfo, m_Device.GetVkAllocationCallbacks(), &m_View.image);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateImageView");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateImageView");
 
     // Handle mixed R/RW depth-stencil specific layouts
     VkImageLayout expectedLayout = GetImageViewLayout(textureViewDesc.type);
@@ -209,7 +209,7 @@ Result DescriptorVK::Create(const BufferViewDesc& bufferViewDesc) {
             m_Type = DescriptorType::CONSTANT_BUFFER;
             break;
         default:
-            NRI_CHECK(false, "Unexpected 'bufferViewDesc.type'");
+            OPENRHI_CHECK(false, "Unexpected 'bufferViewDesc.type'");
     }
 
     if (bufferViewDesc.type == BufferView::BUFFER || bufferViewDesc.type == BufferView::STORAGE_BUFFER)
@@ -232,7 +232,7 @@ Result DescriptorVK::Create(const BufferViewDesc& bufferViewDesc) {
 
         const auto& vk = m_Device.GetDispatchTable();
         VkResult vkResult = vk.CreateBufferView(m_Device, &createInfo, m_Device.GetVkAllocationCallbacks(), &m_View.buffer);
-        NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateBufferView");
+        OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateBufferView");
     }
 
     return Result::SUCCESS;
@@ -246,7 +246,7 @@ Result DescriptorVK::Create(const SamplerDesc& samplerDesc) {
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateSampler(m_Device, &info, m_Device.GetVkAllocationCallbacks(), &m_View.sampler);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateSampler");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateSampler");
 
     m_ViewDesc.sampler = {};
     m_ViewDesc.sampler.mipBias = samplerDesc.mipBias;
@@ -336,7 +336,7 @@ void DescriptorVK::FillSamplerDesc(SamplerDesc& samplerDesc) const {
     }
 }
 
-NRI_INLINE void DescriptorVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void DescriptorVK::SetDebugName(const char* name) {
     switch (m_Type) {
         case DescriptorType::SAMPLER:
             m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_SAMPLER, (uint64_t)m_View.sampler, name);

@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorMetal final : public DebugNameBase {
     DescriptorMetal(DeviceMetal& device);
@@ -23,7 +23,7 @@ struct DescriptorMetal final : public DebugNameBase {
     Format GetFormat() const; // texture or typed buffer view format
     void WriteEntry(void* dst) const;
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     DeviceMetal& m_Device;
@@ -41,4 +41,4 @@ private:
     bool m_TypedBuffer = false;
 };
 
-} // namespace nri
+} // namespace openrhi

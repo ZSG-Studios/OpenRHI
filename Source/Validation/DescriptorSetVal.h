@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorSetVal final : public ObjectVal {
     DescriptorSetVal(DeviceVal& device)
@@ -30,7 +30,7 @@ struct DescriptorSetVal final : public ObjectVal {
     void SetImpl(DescriptorSet* impl, const DescriptorSetDesc* desc, uint32_t variableDescriptorNum, bool isCopySource);
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     void GetOffsets(uint32_t& resourceHeapOffset, uint32_t& samplerHeapOffset) const;
@@ -41,4 +41,4 @@ private:
     bool m_IsCopySource = false;
 };
 
-} // namespace nri
+} // namespace openrhi

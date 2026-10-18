@@ -1,6 +1,6 @@
 // © 2026 NVIDIA Corporation
 
-NRI_INLINE Result VideoPictureD3D12::Create(const VideoPictureDesc& videoPictureDesc) {
+OPENRHI_INLINE Result VideoPictureD3D12::Create(const VideoPictureDesc& videoPictureDesc) {
     m_Texture = (TextureD3D12*)videoPictureDesc.texture;
 
     const TextureDesc& textureDesc = m_Texture->GetDesc();

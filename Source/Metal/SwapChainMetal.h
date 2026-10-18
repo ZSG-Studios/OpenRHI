@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct SwapChainMetal final : public DebugNameBase {
     inline SwapChainMetal(DeviceMetal& device)
@@ -42,4 +42,4 @@ private:
     bool m_IsWaitable = false;
 };
 
-} // namespace nri
+} // namespace openrhi

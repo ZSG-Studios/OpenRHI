@@ -2,7 +2,7 @@
 
 #pragma once
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 typedef ID3D12GraphicsCommandList10 ID3D12GraphicsCommandListBest;
 typedef ID3D12VideoDecodeCommandList3 ID3D12VideoDecodeCommandListBest;
 typedef ID3D12VideoEncodeCommandList4 ID3D12VideoEncodeCommandListBest;
@@ -12,7 +12,7 @@ typedef ID3D12VideoDecodeCommandList2 ID3D12VideoDecodeCommandListBest;
 typedef ID3D12VideoEncodeCommandList ID3D12VideoEncodeCommandListBest;
 #endif
 
-namespace nri {
+namespace openrhi {
 
 struct AttachmentDescD3D12 {
     DescriptorD3D12* attachment;
@@ -49,7 +49,7 @@ struct CommandBufferD3D12 final : public DebugNameBase {
     }
 
     inline ID3D12GraphicsCommandListBest* GetGraphicsCommandList() const {
-        NRI_CHECK(m_CommandListType == D3D12_COMMAND_LIST_TYPE_DIRECT
+        OPENRHI_CHECK(m_CommandListType == D3D12_COMMAND_LIST_TYPE_DIRECT
                 || m_CommandListType == D3D12_COMMAND_LIST_TYPE_COMPUTE
                 || m_CommandListType == D3D12_COMMAND_LIST_TYPE_COPY,
             "Unexpected");
@@ -58,13 +58,13 @@ struct CommandBufferD3D12 final : public DebugNameBase {
     }
 
     inline ID3D12VideoDecodeCommandListBest* GetVideoDecodeCommandList() const {
-        NRI_CHECK(m_CommandListType == D3D12_COMMAND_LIST_TYPE_VIDEO_DECODE, "Unexpected");
+        OPENRHI_CHECK(m_CommandListType == D3D12_COMMAND_LIST_TYPE_VIDEO_DECODE, "Unexpected");
 
         return static_cast<ID3D12VideoDecodeCommandListBest*>(m_CommandList.GetInterface());
     }
 
     inline ID3D12VideoEncodeCommandListBest* GetVideoEncodeCommandList() const {
-        NRI_CHECK(m_CommandListType == D3D12_COMMAND_LIST_TYPE_VIDEO_ENCODE, "Unexpected");
+        OPENRHI_CHECK(m_CommandListType == D3D12_COMMAND_LIST_TYPE_VIDEO_ENCODE, "Unexpected");
 
         return static_cast<ID3D12VideoEncodeCommandListBest*>(m_CommandList.GetInterface());
     }
@@ -76,10 +76,10 @@ struct CommandBufferD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result Begin(const DescriptorPool* descriptorPool);
@@ -154,4 +154,4 @@ private:
     bool m_RenderPass = false;
 };
 
-} // namespace nri
+} // namespace openrhi

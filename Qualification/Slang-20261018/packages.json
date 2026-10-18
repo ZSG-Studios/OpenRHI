@@ -1,0 +1,18 @@
+[
+  {
+    "archive": "OpenRHI-Windows-x64-SDK.zip",
+    "sha256": "b613eec45fbf1b7543603d8981c058de505fe79926896343b7deac3b3eb72109",
+    "entries": 73,
+    "slang_include": true,
+    "cmake_module": true,
+    "retired_or_compiler_files": []
+  },
+  {
+    "archive": "OpenRHI-macOS-arm64-SDK.zip",
+    "sha256": "ef17d64238d8096f32008d418ce9adbf77a0971a17a23de126af3090c43827a2",
+    "entries": 41,
+    "slang_include": true,
+    "cmake_module": true,
+    "retired_or_compiler_files": []
+  }
+]

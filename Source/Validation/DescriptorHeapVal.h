@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorHeapVal final : public ObjectVal {
     inline DescriptorHeapVal(DeviceVal& device, DescriptorHeap* descriptorHeap, const DescriptorHeapDesc& desc)
@@ -21,4 +21,4 @@ private:
     DescriptorHeapDesc m_Desc = {};
 };
 
-} // namespace nri
+} // namespace openrhi

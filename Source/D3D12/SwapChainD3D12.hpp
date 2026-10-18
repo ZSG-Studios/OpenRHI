@@ -6,7 +6,7 @@ constexpr std::array<DXGI_FORMAT, (size_t)SwapChainFormat::MAX_NUM> g_swapChainF
     DXGI_FORMAT_R10G10B10A2_UNORM,  // BT709_G22_10BIT
     DXGI_FORMAT_R10G10B10A2_UNORM,  // BT2020_G2084_10BIT
 };
-NRI_VALIDATE_ARRAY(g_swapChainFormat);
+OPENRHI_VALIDATE_ARRAY(g_swapChainFormat);
 
 constexpr std::array<DXGI_COLOR_SPACE_TYPE, (size_t)SwapChainFormat::MAX_NUM> g_colorSpace = {
     DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709,    // BT709_G10_16BIT
@@ -14,7 +14,7 @@ constexpr std::array<DXGI_COLOR_SPACE_TYPE, (size_t)SwapChainFormat::MAX_NUM> g_
     DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709,    // BT709_G22_10BIT
     DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020, // BT2020_G2084_10BIT
 };
-NRI_VALIDATE_ARRAY(g_colorSpace);
+OPENRHI_VALIDATE_ARRAY(g_colorSpace);
 
 static uint8_t QueryLatestInterface(ComPtr<IDXGISwapChainBest>& in, ComPtr<IDXGISwapChainBest>& out) {
     static const IID versions[] = {
@@ -33,7 +33,7 @@ static uint8_t QueryLatestInterface(ComPtr<IDXGISwapChainBest>& in, ComPtr<IDXGI
             break;
     }
 
-    NRI_CHECK(n > i, "Unexpected");
+    OPENRHI_CHECK(n > i, "Unexpected");
 
     return n - i - 1;
 }
@@ -55,7 +55,7 @@ Result SwapChainD3D12::Create(const SwapChainDesc& swapChainDesc) {
 
     // Query DXGIFactory2
     HRESULT hr = m_Device.GetAdapter()->GetParent(IID_PPV_ARGS(&m_DxgiFactory2));
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGIAdapter::GetParent");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGIAdapter::GetParent");
 
     // Allow tearing?
     bool allowTearing = false;
@@ -91,12 +91,12 @@ Result SwapChainD3D12::Create(const SwapChainDesc& swapChainDesc) {
 
     ComPtr<IDXGISwapChainBest> swapChain;
     hr = m_DxgiFactory2->CreateSwapChainForHwnd((ID3D12CommandQueue*)queue, hwnd, &desc, nullptr, nullptr, (IDXGISwapChain1**)&swapChain);
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGIFactory2::CreateSwapChainForHwnd");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGIFactory2::CreateSwapChainForHwnd");
 
     m_Version = QueryLatestInterface(swapChain, m_SwapChain);
 
     hr = m_DxgiFactory2->MakeWindowAssociation(hwnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER);
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGIFactory::MakeWindowAssociation");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGIFactory::MakeWindowAssociation");
 
     // Color space
     if (m_Version >= 3) {
@@ -110,16 +110,16 @@ Result SwapChainD3D12::Create(const SwapChainDesc& swapChainDesc) {
             hr = m_SwapChain->SetColorSpace1(colorSpace);
 
         if (FAILED(hr))
-            NRI_REPORT_WARNING(&m_Device, "IDXGISwapChain3::SetColorSpace1() failed!");
+            OPENRHI_REPORT_WARNING(&m_Device, "IDXGISwapChain3::SetColorSpace1() failed!");
     } else
-        NRI_REPORT_ERROR(&m_Device, "IDXGISwapChain3::SetColorSpace1() is not supported by the OS!");
+        OPENRHI_REPORT_ERROR(&m_Device, "IDXGISwapChain3::SetColorSpace1() is not supported by the OS!");
 
     // Background color
     if (m_Version >= 1) {
         DXGI_RGBA color = {0.0f, 0.0f, 0.0f, 1.0f};
         hr = m_SwapChain->SetBackgroundColor(&color);
         if (FAILED(hr))
-            NRI_REPORT_WARNING(&m_Device, "IDXGISwapChain1::SetBackgroundColor() failed!");
+            OPENRHI_REPORT_WARNING(&m_Device, "IDXGISwapChain1::SetBackgroundColor() failed!");
     }
 
     // Maximum frame latency
@@ -131,7 +131,7 @@ Result SwapChainD3D12::Create(const SwapChainDesc& swapChainDesc) {
         // https://docs.microsoft.com/en-us/windows/uwp/gaming/reduce-latency-with-dxgi-1-3-swap-chains#step-4-wait-before-rendering-each-frame
         // IMPORTANT: SetMaximumFrameLatency must be called BEFORE GetFrameLatencyWaitableObject!
         hr = m_SwapChain->SetMaximumFrameLatency(queuedFrameNum);
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGISwapChain2::SetMaximumFrameLatency");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGISwapChain2::SetMaximumFrameLatency");
 
         m_FrameLatencyWaitableObject = m_SwapChain->GetFrameLatencyWaitableObject();
     }
@@ -141,7 +141,7 @@ Result SwapChainD3D12::Create(const SwapChainDesc& swapChainDesc) {
     for (uint32_t i = 0; i < swapChainDesc.textureNum; i++) {
         ComPtr<ID3D12Resource> textureNative;
         hr = m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&textureNative));
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGISwapChain::GetBuffer");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGISwapChain::GetBuffer");
 
         TextureD3D12Desc textureDesc = {};
         textureDesc.d3d12Resource = textureNative;
@@ -167,31 +167,31 @@ Result SwapChainD3D12::Create(const SwapChainDesc& swapChainDesc) {
     return Result::SUCCESS;
 }
 
-NRI_INLINE Texture* const* SwapChainD3D12::GetTextures(uint32_t& textureNum) const {
+OPENRHI_INLINE Texture* const* SwapChainD3D12::GetTextures(uint32_t& textureNum) const {
     textureNum = (uint32_t)m_Textures.size();
 
     return (Texture**)m_Textures.data();
 }
 
-NRI_INLINE Result SwapChainD3D12::AcquireNextTexture(uint32_t& textureIndex) {
+OPENRHI_INLINE Result SwapChainD3D12::AcquireNextTexture(uint32_t& textureIndex) {
     textureIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
     // Is device lost?
     HRESULT hr = m_Device->GetDeviceRemovedReason() == S_OK ? S_OK : DXGI_ERROR_DEVICE_REMOVED;
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "AcquireNextTexture");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "AcquireNextTexture");
 
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result SwapChainD3D12::WaitForPresent(uint64_t presentId) {
+OPENRHI_INLINE Result SwapChainD3D12::WaitForPresent(uint64_t presentId) {
     MaybeUnused(presentId);
 
     if (m_FrameLatencyWaitableObject) {
         // Is device lost?
         HRESULT hr = m_Device->GetDeviceRemovedReason() == S_OK ? S_OK : DXGI_ERROR_DEVICE_REMOVED;
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "WaitForPresent");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "WaitForPresent");
 
-        uint32_t result = WaitForSingleObjectEx(m_FrameLatencyWaitableObject, NRI_TIMEOUT_PRESENT, TRUE);
+        uint32_t result = WaitForSingleObjectEx(m_FrameLatencyWaitableObject, OPENRHI_TIMEOUT_PRESENT, TRUE);
 
         return result == WAIT_OBJECT_0 ? Result::SUCCESS : Result::FAILURE;
     }
@@ -199,10 +199,10 @@ NRI_INLINE Result SwapChainD3D12::WaitForPresent(uint64_t presentId) {
     return Result::UNSUPPORTED;
 }
 
-NRI_INLINE Result SwapChainD3D12::Present(uint64_t presentId) {
+OPENRHI_INLINE Result SwapChainD3D12::Present(uint64_t presentId) {
     MaybeUnused(presentId);
 
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
     if ((m_Flags & SwapChainBits::ALLOW_LOW_LATENCY) && presentId != 0)
         SetLatencyMarker(presentId, (LatencyMarker)PRESENT_START);
 #endif
@@ -211,9 +211,9 @@ NRI_INLINE Result SwapChainD3D12::Present(uint64_t presentId) {
     bool allowTearing = (m_Flags & SwapChainBits::ALLOW_TEARING) != 0;
     uint32_t flags = (!vsync && allowTearing) ? DXGI_PRESENT_ALLOW_TEARING : 0;
     HRESULT hr = m_SwapChain->Present(vsync ? 1 : 0, flags);
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGISwapChain::Present");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "IDXGISwapChain::Present");
 
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
     if ((m_Flags & SwapChainBits::ALLOW_LOW_LATENCY) && presentId != 0)
         SetLatencyMarker(presentId, (LatencyMarker)PRESENT_END);
 #endif
@@ -221,8 +221,8 @@ NRI_INLINE Result SwapChainD3D12::Present(uint64_t presentId) {
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result SwapChainD3D12::SetLatencySleepMode(const LatencySleepMode& latencySleepMode) {
-#if NRI_ENABLE_NVAPI
+OPENRHI_INLINE Result SwapChainD3D12::SetLatencySleepMode(const LatencySleepMode& latencySleepMode) {
+#if OPENRHI_ENABLE_NVAPI
     NV_SET_SLEEP_MODE_PARAMS params = {NV_SET_SLEEP_MODE_PARAMS_VER};
     params.bLowLatencyMode = latencySleepMode.lowLatencyMode;
     params.bLowLatencyBoost = latencySleepMode.lowLatencyBoost;
@@ -239,8 +239,8 @@ NRI_INLINE Result SwapChainD3D12::SetLatencySleepMode(const LatencySleepMode& la
 #endif
 }
 
-NRI_INLINE Result SwapChainD3D12::SetLatencyMarker(uint64_t presentId, LatencyMarker latencyMarker) {
-#if NRI_ENABLE_NVAPI
+OPENRHI_INLINE Result SwapChainD3D12::SetLatencyMarker(uint64_t presentId, LatencyMarker latencyMarker) {
+#if OPENRHI_ENABLE_NVAPI
     NV_LATENCY_MARKER_PARAMS params = {NV_LATENCY_MARKER_PARAMS_VER};
     params.frameID = presentId;
     params.markerType = (NV_LATENCY_MARKER_TYPE)latencyMarker;
@@ -256,10 +256,10 @@ NRI_INLINE Result SwapChainD3D12::SetLatencyMarker(uint64_t presentId, LatencyMa
 #endif
 }
 
-NRI_INLINE Result SwapChainD3D12::LatencySleep(uint64_t presentId) {
+OPENRHI_INLINE Result SwapChainD3D12::LatencySleep(uint64_t presentId) {
     MaybeUnused(presentId);
 
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
     NvAPI_Status status = NvAPI_D3D_Sleep(m_Device.GetNativeObject());
 
     return status == NVAPI_OK ? Result::SUCCESS : Result::FAILURE;
@@ -268,9 +268,9 @@ NRI_INLINE Result SwapChainD3D12::LatencySleep(uint64_t presentId) {
 #endif
 }
 
-NRI_INLINE Result SwapChainD3D12::GetLatencyReport(LatencyReport& latencyReport) {
+OPENRHI_INLINE Result SwapChainD3D12::GetLatencyReport(LatencyReport& latencyReport) {
     latencyReport = {};
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
     NV_LATENCY_RESULT_PARAMS params = {NV_LATENCY_RESULT_PARAMS_VER};
     NvAPI_Status status = NvAPI_D3D_GetLatency(m_Device.GetNativeObject(), &params);
 

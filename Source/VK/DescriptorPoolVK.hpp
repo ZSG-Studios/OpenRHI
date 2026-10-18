@@ -39,7 +39,7 @@ Result DescriptorPoolVK::Create(const DescriptorPoolDesc& descriptorPoolDesc) {
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateDescriptorPool(m_Device, &info, m_Device.GetVkAllocationCallbacks(), &m_Handle);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateDescriptorPool");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateDescriptorPool");
 
     m_DescriptorSets.resize(descriptorPoolDesc.descriptorSetMaxNum);
 
@@ -54,11 +54,11 @@ Result DescriptorPoolVK::Create(const DescriptorPoolVKDesc& descriptorPoolVKDesc
     return Result::SUCCESS;
 }
 
-NRI_INLINE void DescriptorPoolVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void DescriptorPoolVK::SetDebugName(const char* name) {
     m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_DESCRIPTOR_POOL, (uint64_t)m_Handle, name);
 }
 
-NRI_INLINE Result DescriptorPoolVK::AllocateDescriptorSets(const PipelineLayout& pipelineLayout, uint32_t setIndex, DescriptorSet** descriptorSets, uint32_t instanceNum, uint32_t variableDescriptorNum) {
+OPENRHI_INLINE Result DescriptorPoolVK::AllocateDescriptorSets(const PipelineLayout& pipelineLayout, uint32_t setIndex, DescriptorSet** descriptorSets, uint32_t instanceNum, uint32_t variableDescriptorNum) {
     ExclusiveScope lock(m_Lock);
 
     const PipelineLayoutVK& pipelineLayoutVK = (PipelineLayoutVK&)pipelineLayout;
@@ -75,9 +75,9 @@ NRI_INLINE Result DescriptorPoolVK::AllocateDescriptorSets(const PipelineLayout&
         }
     }
 
-    Scratch<VkDescriptorSetLayout> setLayouts = NRI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetLayout, instanceNum);
-    Scratch<uint32_t> variableDescriptorNums = NRI_ALLOCATE_SCRATCH(m_Device, uint32_t, hasVariableDescriptorNum ? instanceNum : 0);
-    Scratch<VkDescriptorSet> handles = NRI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSet, instanceNum);
+    Scratch<VkDescriptorSetLayout> setLayouts = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetLayout, instanceNum);
+    Scratch<uint32_t> variableDescriptorNums = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint32_t, hasVariableDescriptorNum ? instanceNum : 0);
+    Scratch<VkDescriptorSet> handles = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSet, instanceNum);
 
     for (uint32_t i = 0; i < instanceNum; i++) {
         setLayouts[i] = setLayout;
@@ -99,7 +99,7 @@ NRI_INLINE Result DescriptorPoolVK::AllocateDescriptorSets(const PipelineLayout&
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.AllocateDescriptorSets(m_Device, &info, handles);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkAllocateDescriptorSets");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkAllocateDescriptorSets");
 
     for (uint32_t i = 0; i < instanceNum; i++) {
         DescriptorSetVK* descriptorSet = &m_DescriptorSets[m_DescriptorSetNum++];
@@ -111,12 +111,12 @@ NRI_INLINE Result DescriptorPoolVK::AllocateDescriptorSets(const PipelineLayout&
     return Result::SUCCESS;
 }
 
-NRI_INLINE void DescriptorPoolVK::Reset() {
+OPENRHI_INLINE void DescriptorPoolVK::Reset() {
     ExclusiveScope lock(m_Lock);
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.ResetDescriptorPool(m_Device, m_Handle, (VkDescriptorPoolResetFlags)0);
-    NRI_RETURN_VOID_ON_BAD_VKRESULT(&m_Device, vkResult, "vkResetDescriptorPool");
+    OPENRHI_RETURN_VOID_ON_BAD_VKRESULT(&m_Device, vkResult, "vkResetDescriptorPool");
 
     m_DescriptorSetNum = 0;
 }

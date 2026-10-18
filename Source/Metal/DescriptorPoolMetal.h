@@ -3,7 +3,7 @@
 
 #include "DescriptorSetMetal.h"
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorPoolMetal final : public DebugNameBase {
     DescriptorPoolMetal(DeviceMetal& device);
@@ -16,10 +16,10 @@ struct DescriptorPoolMetal final : public DebugNameBase {
     uint64_t GetResourceHeapAddress() const;
     uint64_t GetSamplerHeapAddress() const;
     uint8_t* GetEntry(bool sampler, uint32_t index) const;
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result AllocateDescriptorSets(const PipelineLayout& layout, uint32_t setIndex, DescriptorSet** sets, uint32_t instanceNum, uint32_t variableNum);
@@ -42,4 +42,4 @@ private:
     Lock m_Lock;
 };
 
-} // namespace nri
+} // namespace openrhi

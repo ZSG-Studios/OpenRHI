@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct AttachmentResolveMetal {
     MTL::Texture* src = nullptr;
@@ -87,7 +87,7 @@ struct CommandBufferMetal final : public DebugNameBase {
     void CmdBeginAnnotation(const char* name, uint32_t);
     void CmdEndAnnotation();
     void CmdAnnotation(const char* name, uint32_t);
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     struct State {
@@ -125,19 +125,11 @@ private:
     void BindArguments(BindPoint bindPoint);
     State& GetState(BindPoint bindPoint);
     void ApplyRasterState();
-    void SetDrawArguments(const void* data, uint64_t size, bool indexed);
+    void SetDrawArguments(const void* data, bool indexed);
     bool PrepareIndirectDrawRoots(MTL::GPUAddress arguments, uint32_t drawNum, uint32_t stride, MTL::GPUAddress& roots); // "roots = 0" if not needed
     void DrawIndirect(MTL::GPUAddress arguments, MTL::GPUAddress roots, uint32_t drawNum, uint32_t stride, bool indexed);
-#if NRI_ENABLE_METAL_SHADER_CONVERTER
-    IRRuntimeDrawInfo PrepareEmulationDraw(bool indexed, MTL::Size& objectThreads, MTL::Size& meshThreads);
-    void DrawEmulated(const void* arguments, uint64_t size, bool indexed, uint32_t vertexNum, uint32_t instanceNum);
-    void DrawEmulatedIndirect(MTL::GPUAddress arguments, MTL::GPUAddress roots, uint32_t drawNum, uint32_t stride, bool indexed);
-#endif
     MTL::ComputePipelineState* GetInternalKernel(InternalKernelMetal kernel); // records a failure if unavailable
-#if NRI_ENABLE_METAL_SHADER_CONVERTER
-    MTL::GPUAddress SetRayDispatchArguments(const IRDispatchRaysDescriptor& desc);
-#endif
-    MTL::GPUAddress Upload(const void* data, uint64_t size); // records "OUT_OF_MEMORY" on failure
+    MTL::GPUAddress Upload(const void* data, uint64_t size);                  // records "OUT_OF_MEMORY" on failure
     void ResolveColor(MTL::Texture* dst, const TextureRegionDesc& dstRegion, MTL::Texture* src, const TextureRegionDesc& srcRegion, ResolveOp op, Format format, bool attachmentResolve = false);
 
     DeviceMetal& m_Device;
@@ -161,9 +153,6 @@ private:
     bool m_AreHeapsDirty = true;
     MTL4::ArgumentTable* m_ComputeTable = nullptr;
     MTL::ComputePipelineState* m_ComputePipeline = nullptr;
-    uint8_t m_DrawArguments[sizeof(DrawIndexedDesc)] = {}; // last uploaded draw arguments
-    uint32_t m_DrawArgumentsSize = 0;
-    MTL::GPUAddress m_DrawArgumentsAddress = 0;
 
     // Barriers recorded without an open encoder are emitted at the beginning of the next encoder
     MTL::Stages m_PendingBefore = 0, m_PendingAfter = 0;
@@ -185,9 +174,6 @@ private:
     MTL::GPUAddress m_DrawRootAddress = 0;
     uint64_t m_IndexLength = 0;
     MTL::IndexType m_IndexType = MTL::IndexTypeUInt16;
-#if NRI_ENABLE_METAL_SHADER_CONVERTER
-    IRRuntimeVertexBuffers m_EmulationVertexBuffers = {};
-#endif
     AttachmentResolveMetal m_AttachmentResolves[8] = {};
     uint8_t m_AttachmentResolveNum = 0;
     MTL::PixelFormat m_RenderColors[8] = {};
@@ -206,4 +192,4 @@ private:
     Result m_Result = Result::SUCCESS;
 };
 
-} // namespace nri
+} // namespace openrhi

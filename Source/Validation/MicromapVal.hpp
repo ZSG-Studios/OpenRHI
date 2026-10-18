@@ -7,18 +7,18 @@ MicromapVal::~MicromapVal() {
     Destroy(m_Buffer);
 }
 
-NRI_INLINE uint64_t MicromapVal::GetBuildScratchBufferSize() const {
+OPENRHI_INLINE uint64_t MicromapVal::GetBuildScratchBufferSize() const {
     return GetRayTracingInterfaceImpl().GetMicromapBuildScratchBufferSize(*GetImpl());
 }
 
-NRI_INLINE uint64_t MicromapVal::GetNativeObject() const {
-    NRI_RETURN_ON_FAILURE(&m_Device, IsBoundToMemory(), 0, "Micromap is not bound to memory");
+OPENRHI_INLINE uint64_t MicromapVal::GetNativeObject() const {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, IsBoundToMemory(), 0, "Micromap is not bound to memory");
 
     return GetRayTracingInterfaceImpl().GetMicromapNativeObject(GetImpl());
 }
 
-NRI_INLINE Buffer* MicromapVal::GetBuffer() {
-    NRI_RETURN_ON_FAILURE(&m_Device, IsBoundToMemory(), 0, "Micromap is not bound to memory");
+OPENRHI_INLINE Buffer* MicromapVal::GetBuffer() {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, IsBoundToMemory(), 0, "Micromap is not bound to memory");
 
     if (!m_Buffer) {
         Buffer* buffer = GetRayTracingInterfaceImpl().GetMicromapBuffer(*GetImpl());

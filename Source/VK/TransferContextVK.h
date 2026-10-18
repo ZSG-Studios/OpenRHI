@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct TransferContextVK {
     inline TransferContextVK(DeviceVK& device)
@@ -63,4 +63,4 @@ private:
     bool m_IsReusable = true;
 };
 
-} // namespace nri
+} // namespace openrhi

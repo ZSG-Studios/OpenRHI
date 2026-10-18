@@ -4,7 +4,7 @@
 
 #include "DescriptorSetVK.h"
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorPoolVK final : public DebugNameBase {
     inline DescriptorPoolVK(DeviceVK& device)
@@ -29,10 +29,10 @@ struct DescriptorPoolVK final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     void Reset();
@@ -47,4 +47,4 @@ private:
     Lock m_Lock;
 };
 
-} // namespace nri
+} // namespace openrhi

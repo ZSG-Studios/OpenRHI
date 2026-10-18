@@ -5,7 +5,7 @@ MicromapD3D12::~MicromapD3D12() {
 }
 
 Result MicromapD3D12::Create(const MicromapDesc& micromapDesc) {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     static_assert((uint32_t)MicromapFormat::OPACITY_2_STATE == D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_2_STATE, "Type mismatch");
     static_assert((uint32_t)MicromapFormat::OPACITY_4_STATE == D3D12_RAYTRACING_OPACITY_MICROMAP_FORMAT_OC1_4_STATE, "Type mismatch");
 
@@ -59,14 +59,14 @@ void MicromapD3D12::GetMemoryDesc(MemoryLocation memoryLocation, MemoryDesc& mem
     m_Device.GetMemoryDesc(memoryLocation, resourceDesc, memoryDesc);
 }
 
-NRI_INLINE void MicromapD3D12::SetDebugName(const char* name) {
+OPENRHI_INLINE void MicromapD3D12::SetDebugName(const char* name) {
     m_Buffer->SetDebugName(name);
 }
 
-NRI_INLINE uint64_t MicromapD3D12::GetHandle() const {
+OPENRHI_INLINE uint64_t MicromapD3D12::GetHandle() const {
     return m_Buffer->GetDeviceAddress();
 }
 
-NRI_INLINE MicromapD3D12::operator ID3D12Resource*() const {
+OPENRHI_INLINE MicromapD3D12::operator ID3D12Resource*() const {
     return (ID3D12Resource*)(*m_Buffer);
 }

@@ -27,7 +27,7 @@ Result FenceMetal::Create(const FenceMetalDesc& desc) {
     return Result::SUCCESS;
 }
 
-NRI_INLINE uint64_t FenceMetal::GetValue() const {
+OPENRHI_INLINE uint64_t FenceMetal::GetValue() const {
     return m_Event ? m_Event->signaledValue() : 0;
 }
 
@@ -35,17 +35,17 @@ uint64_t FenceMetal::NextSignalValue() {
     return m_NextValue.fetch_add(1, std::memory_order_acq_rel) + 1;
 }
 
-NRI_INLINE Result FenceMetal::Wait(uint64_t value) {
+OPENRHI_INLINE Result FenceMetal::Wait(uint64_t value) {
     if (!m_Event || m_IsSwapChainSemaphore)
         return Result::SUCCESS;
 
-    bool isSignaled = m_Event->waitUntilSignaledValue(value, NRI_TIMEOUT_FENCE);
-    NRI_RETURN_ON_FAILURE(&m_Device, isSignaled, Result::FAILURE, "waitUntilSignaledValue() timed out!");
+    bool isSignaled = m_Event->waitUntilSignaledValue(value, OPENRHI_TIMEOUT_FENCE);
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, isSignaled, Result::FAILURE, "waitUntilSignaledValue() timed out!");
 
     return Result::SUCCESS;
 }
 
-NRI_INLINE void FenceMetal::SetDebugName(const char* name) {
+OPENRHI_INLINE void FenceMetal::SetDebugName(const char* name) {
     if (!m_Event)
         return;
 

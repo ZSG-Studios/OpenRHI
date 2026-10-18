@@ -1,7 +1,7 @@
 // © 2026 NVIDIA Corporation
 
-NRI_INLINE Result VideoSessionParametersD3D12::Create(const VideoSessionParametersDesc& videoSessionParametersDesc) {
-    NRI_CHECK(videoSessionParametersDesc.session, "Unexpected");
+OPENRHI_INLINE Result VideoSessionParametersD3D12::Create(const VideoSessionParametersDesc& videoSessionParametersDesc) {
+    OPENRHI_CHECK(videoSessionParametersDesc.session, "Unexpected");
 
     m_Session = (VideoSessionD3D12*)videoSessionParametersDesc.session;
     m_H264Parameters = videoSessionParametersDesc.h264Parameters;
@@ -9,8 +9,8 @@ NRI_INLINE Result VideoSessionParametersD3D12::Create(const VideoSessionParamete
     m_AV1Parameters = videoSessionParametersDesc.av1Parameters;
 
     if (m_H264Parameters) {
-        NRI_CHECK(!m_H264Parameters->sequenceParameterSetNum || m_H264Parameters->sequenceParameterSets, "Unexpected");
-        NRI_CHECK(!m_H264Parameters->pictureParameterSetNum || m_H264Parameters->pictureParameterSets, "Unexpected");
+        OPENRHI_CHECK(!m_H264Parameters->sequenceParameterSetNum || m_H264Parameters->sequenceParameterSets, "Unexpected");
+        OPENRHI_CHECK(!m_H264Parameters->pictureParameterSetNum || m_H264Parameters->pictureParameterSets, "Unexpected");
 
         m_H264SequenceParameterSets.clear();
         m_H264PictureParameterSets.clear();
@@ -28,9 +28,9 @@ NRI_INLINE Result VideoSessionParametersD3D12::Create(const VideoSessionParamete
     }
 
     if (m_H265Parameters) {
-        NRI_CHECK(!m_H265Parameters->videoParameterSetNum || m_H265Parameters->videoParameterSets, "Unexpected");
-        NRI_CHECK(!m_H265Parameters->sequenceParameterSetNum || m_H265Parameters->sequenceParameterSets, "Unexpected");
-        NRI_CHECK(!m_H265Parameters->pictureParameterSetNum || m_H265Parameters->pictureParameterSets, "Unexpected");
+        OPENRHI_CHECK(!m_H265Parameters->videoParameterSetNum || m_H265Parameters->videoParameterSets, "Unexpected");
+        OPENRHI_CHECK(!m_H265Parameters->sequenceParameterSetNum || m_H265Parameters->sequenceParameterSets, "Unexpected");
+        OPENRHI_CHECK(!m_H265Parameters->pictureParameterSetNum || m_H265Parameters->pictureParameterSets, "Unexpected");
 
         m_H265VideoParameterSets.clear();
         m_H265SequenceParameterSets.clear();

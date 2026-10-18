@@ -2,13 +2,13 @@
 
 #pragma once
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 typedef ID3D12Device15 ID3D12DeviceBest;
 #else
 typedef ID3D12Device8 ID3D12DeviceBest;
 #endif
 
-namespace nri {
+namespace openrhi {
 
 struct HostCopyLayoutD3D12 {
     TextureDataLayoutDesc dataLayout;
@@ -67,7 +67,7 @@ struct DeviceD3D12 final : public DeviceBase {
     }
 
     inline bool HasNvExt() const {
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
         return m_NvExt.available;
 #else
         return false;
@@ -75,7 +75,7 @@ struct DeviceD3D12 final : public DeviceBase {
     }
 
     inline bool HasAmdExt() const {
-#if NRI_ENABLE_AMDAGS
+#if OPENRHI_ENABLE_AMDAGS
         return m_AmdExt.context != nullptr;
 #else
         return false;
@@ -117,8 +117,8 @@ struct DeviceD3D12 final : public DeviceBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(m_Device, name);
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(m_Device, name);
     }
 
     //================================================================================================================
@@ -143,12 +143,12 @@ struct DeviceD3D12 final : public DeviceBase {
     Result FillFunctionTable(UpscalerInterface& table) const override;
     Result FillFunctionTable(WrapperD3D12Interface& table) const override;
 
-#if NRI_ENABLE_IMGUI_EXTENSION
+#if OPENRHI_ENABLE_IMGUI_EXTENSION
     Result FillFunctionTable(ImguiInterface& table) const override;
 #endif
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result GetQueue(QueueType queueType, uint32_t queueIndex, Queue*& queue);
@@ -174,11 +174,11 @@ private:
     // Order of destructors is important
     PixExt m_Pix = {};
 
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
     NvExt m_NvExt = {};
 #endif
 
-#if NRI_ENABLE_AMDAGS
+#if OPENRHI_ENABLE_AMDAGS
     AmdExtD3D12 m_AmdExt = {};
 #endif
 
@@ -210,4 +210,4 @@ private:
     Lock m_TransferContextLock;
 };
 
-} // namespace nri
+} // namespace openrhi

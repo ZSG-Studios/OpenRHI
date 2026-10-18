@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 namespace video {
 
@@ -2239,4 +2239,4 @@ static inline Result WriteAnnexBEndOfStream(VideoAnnexBEndOfStreamDesc& desc) {
 
 } // namespace video
 
-} // namespace nri
+} // namespace openrhi

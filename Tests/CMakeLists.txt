@@ -1,0 +1,95 @@
+enable_language(C)
+add_library(OpenRHICFacade OBJECT PublicFacade.c)
+target_include_directories(OpenRHICFacade PRIVATE ../Include)
+set_target_properties(OpenRHICFacade PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
+
+add_executable(OpenRHIPublicAPI PublicApiTests.cpp $<TARGET_OBJECTS:OpenRHICFacade>)
+target_link_libraries(OpenRHIPublicAPI PRIVATE OpenRHI)
+target_compile_features(OpenRHIPublicAPI PRIVATE cxx_std_17)
+target_compile_definitions(OpenRHIPublicAPI PRIVATE OPENRHI_TEST_NONE=$<BOOL:${OPENRHI_ENABLE_NONE_SUPPORT}>)
+set_target_properties(OpenRHIPublicAPI PROPERTIES RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenRHI>")
+add_test(NAME OpenRHI.PublicAPI COMMAND OpenRHIPublicAPI)
+
+add_executable(OpenRHISmoke BackendSmoke.cpp)
+target_link_libraries(OpenRHISmoke PRIVATE OpenRHI)
+target_compile_features(OpenRHISmoke PRIVATE cxx_std_17)
+set_target_properties(OpenRHISmoke PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenRHI>"
+)
+
+foreach(backend IN ITEMS NONE D3D12 VK METAL)
+    if(OPENRHI_ENABLE_${backend}_SUPPORT)
+        add_test(NAME OpenRHI.${backend} COMMAND OpenRHISmoke ${backend})
+        set_tests_properties(OpenRHI.${backend} PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60)
+    endif()
+endforeach()
+
+add_test(NAME OpenRHI.SourceBoundary COMMAND ${CMAKE_COMMAND}
+    -DROOT=${PROJECT_SOURCE_DIR} -P ${CMAKE_CURRENT_SOURCE_DIR}/SourceBoundary.cmake)
+
+add_executable(OpenRHIDevicePolicy DevicePolicyTests.cpp)
+target_include_directories(OpenRHIDevicePolicy PRIVATE ../Include ../Source/Shared)
+target_compile_features(OpenRHIDevicePolicy PRIVATE cxx_std_17)
+add_test(NAME OpenRHI.DevicePolicy COMMAND OpenRHIDevicePolicy)
+
+add_executable(OpenRHIQualification DeviceQualification.cpp)
+target_link_libraries(OpenRHIQualification PRIVATE OpenRHI)
+target_compile_features(OpenRHIQualification PRIVATE cxx_std_17)
+set_target_properties(OpenRHIQualification PROPERTIES RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenRHI>")
+if(OPENRHI_ENABLE_D3D12_SUPPORT OR OPENRHI_ENABLE_VK_SUPPORT OR OPENRHI_ENABLE_METAL_SUPPORT)
+    openrhi_compile_shader(NAME DescriptorCompute SOURCE DescriptorCompute.slang ENTRY descriptorMain STAGE compute
+        INCLUDES "${PROJECT_SOURCE_DIR}/Include" OUTPUT QUALIFICATION_SHADER)
+    openrhi_compile_shader(NAME IndirectDraw.vs SOURCE IndirectDraw.slang ENTRY vsMain STAGE vertex OUTPUT QUALIFICATION_VS)
+    openrhi_compile_shader(NAME IndirectDraw.ps SOURCE IndirectDraw.slang ENTRY psMain STAGE fragment OUTPUT QUALIFICATION_PS)
+    openrhi_compile_shader(NAME MeshDraw SOURCE MeshDraw.slang ENTRY meshMain STAGE mesh OUTPUT QUALIFICATION_MESH)
+    openrhi_compile_shader(NAME TaskDraw SOURCE MeshDraw.slang ENTRY taskMain STAGE amplification OUTPUT QUALIFICATION_TASK)
+    add_custom_target(OpenRHIQualificationShader DEPENDS "${QUALIFICATION_MESH}" "${QUALIFICATION_TASK}" "${QUALIFICATION_SHADER}" "${QUALIFICATION_VS}" "${QUALIFICATION_PS}")
+    add_dependencies(OpenRHIQualification OpenRHIQualificationShader)
+    if(WIN32)
+        set(native_backend D3D12)
+        set(presentation --present)
+    elseif(APPLE)
+        set(native_backend METAL)
+    else()
+        set(native_backend VK)
+    endif()
+    if(OPENRHI_ENABLE_NIS_SDK)
+        set(nis_test --nis)
+    endif()
+    if(NOT ANDROID AND NOT IOS)
+        add_test(NAME OpenRHI.${native_backend}.Resources COMMAND OpenRHIQualification --api ${native_backend}
+            --iterations 8 --native-validation --shader "${QUALIFICATION_SHADER}" --vs "${QUALIFICATION_VS}" --ps "${QUALIFICATION_PS}" ${presentation} ${nis_test})
+        set_tests_properties(OpenRHI.${native_backend}.Resources PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+        add_test(NAME OpenRHI.${native_backend}.Mesh COMMAND OpenRHIQualification --api ${native_backend} --iterations 2
+            --native-validation --mesh --vs "${QUALIFICATION_MESH}" --task "${QUALIFICATION_TASK}" --ps "${QUALIFICATION_PS}")
+        set_tests_properties(OpenRHI.${native_backend}.Mesh PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+        if(APPLE)
+            set_tests_properties(OpenRHI.${native_backend}.Resources OpenRHI.${native_backend}.Mesh PROPERTIES ENVIRONMENT "MTL_DEBUG_LAYER=1;MTL_SHADER_VALIDATION=1")
+        endif()
+    endif()
+endif()
+
+add_executable(OpenRHIAdapterSelection AdapterSelection.cpp)
+target_link_libraries(OpenRHIAdapterSelection PRIVATE OpenRHI)
+set_target_properties(OpenRHIAdapterSelection PROPERTIES RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenRHI>")
+add_test(NAME OpenRHI.AdapterSelection COMMAND OpenRHIAdapterSelection)
+set_tests_properties(OpenRHI.AdapterSelection PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+
+if(WIN32 AND NOT OPENRHI_STATIC_LIBRARY)
+    get_filename_component(OPENRHI_LINKER_DIR "${CMAKE_LINKER}" DIRECTORY)
+    find_program(OPENRHI_DUMPBIN NAMES dumpbin HINTS "${OPENRHI_LINKER_DIR}")
+    if(OPENRHI_DUMPBIN)
+        add_test(NAME OpenRHI.WindowsBinaryBoundary COMMAND ${CMAKE_COMMAND}
+            -DDUMPBIN=${OPENRHI_DUMPBIN} -DLIBRARY=$<TARGET_FILE:OpenRHI>
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/WindowsBinaryBoundary.cmake)
+    endif()
+endif()
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME OpenRHI.PromotionGate COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_qualification.py)
+endif()
+
+if(Python3_Interpreter_FOUND AND (OPENRHI_ENABLE_D3D12_SUPPORT OR OPENRHI_ENABLE_VK_SUPPORT OR OPENRHI_ENABLE_METAL_SUPPORT))
+    add_test(NAME OpenRHI.SlangContract COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_shaders.py "${PROJECT_BINARY_DIR}")
+endif()

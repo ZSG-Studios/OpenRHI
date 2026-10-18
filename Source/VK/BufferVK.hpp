@@ -22,7 +22,7 @@ Result BufferVK::Create(const BufferDesc& bufferDesc) {
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateBuffer(m_Device, &info, m_Device.GetVkAllocationCallbacks(), &m_Handle);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateBuffer");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateBuffer");
 
     return Result::SUCCESS;
 }
@@ -51,13 +51,13 @@ Result BufferVK::CreateDescriptorHeap(uint64_t size, uint64_t alignment) {
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateBuffer(m_Device, &info, m_Device.GetVkAllocationCallbacks(), &m_Handle);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateBuffer");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateBuffer");
 
     return AllocateAndBindMemory(MemoryLocation::DEVICE_UPLOAD, 1.0f, true);
 }
 
 Result BufferVK::AllocateAndBindMemory(MemoryLocation memoryLocation, float priority, bool committed) {
-    NRI_CHECK(m_Handle, "Unexpected");
+    OPENRHI_CHECK(m_Handle, "Unexpected");
 
     MemoryDesc memoryDesc = {};
     GetMemoryDesc(memoryLocation, memoryDesc);
@@ -93,7 +93,7 @@ Result BufferVK::AllocateAndBindMemory(MemoryLocation memoryLocation, float prio
         VmaAllocationInfo allocationInfo = {};
 
         VkResult vkResult = vmaCreateBuffer(m_Device.GetVma(), &info, &allocationCreateInfo, &m_Handle, &m_VmaAllocation, &allocationInfo);
-        NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vmaCreateBuffer");
+        OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vmaCreateBuffer");
 
         if (IsHostVisibleMemory(memoryTypeInfo.location)) {
             m_MappedMemory = (uint8_t*)allocationInfo.pMappedData;
@@ -117,10 +117,10 @@ Result BufferVK::AllocateAndBindMemory(MemoryLocation memoryLocation, float prio
     VmaAllocationInfo allocationInfo = {};
 
     VkResult vkResult = vmaAllocateMemory(m_Device.GetVma(), &memoryRequirements, &allocationCreateInfo, &m_VmaAllocation, &allocationInfo);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vmaAllocateMemory");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vmaAllocateMemory");
 
     vkResult = vmaBindBufferMemory(m_Device.GetVma(), m_VmaAllocation, m_Handle);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vmaBindBufferMemory");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vmaBindBufferMemory");
 
     // Assign mapped memory
     if (IsHostVisibleMemory(memoryTypeInfo.location)) {
@@ -145,8 +145,8 @@ Result BufferVK::AllocateAndBindMemory(MemoryLocation memoryLocation, float prio
 }
 
 Result BufferVK::BindMemory(MemoryVK& memory, uint64_t offset, bool bindMemory) {
-    NRI_CHECK(m_Handle, "Unexpected");
-    NRI_CHECK(m_OwnsNativeObjects, "Not for wrapped objects");
+    OPENRHI_CHECK(m_Handle, "Unexpected");
+    OPENRHI_CHECK(m_OwnsNativeObjects, "Not for wrapped objects");
 
     // Bind memory
     if (bindMemory) {
@@ -161,7 +161,7 @@ Result BufferVK::BindMemory(MemoryVK& memory, uint64_t offset, bool bindMemory) 
 
         const auto& vk = m_Device.GetDispatchTable();
         VkResult vkResult = vk.BindBufferMemory2(m_Device, 1, &bindBufferMemoryInfo);
-        NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkBindBufferMemory2");
+        OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkBindBufferMemory2");
     }
 
     // Assign mapped memory
@@ -236,7 +236,7 @@ Result BufferVK::FlushMappedRange(uint64_t offset, uint64_t size) {
         vkResult = vk.FlushMappedMemoryRanges(m_Device, 1, &memoryRange);
     }
 
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkFlushMappedMemoryRanges");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkFlushMappedMemoryRanges");
 
     return Result::SUCCESS;
 }
@@ -255,12 +255,12 @@ VkMappedMemoryRange BufferVK::GetNonCoherentMappedMemoryRange(uint64_t offset, u
     return memoryRange;
 }
 
-NRI_INLINE void BufferVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void BufferVK::SetDebugName(const char* name) {
     m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_BUFFER, (uint64_t)m_Handle, name);
 }
 
-NRI_INLINE void* BufferVK::Map(uint64_t offset, uint64_t size) {
-    NRI_CHECK(m_MappedMemory, "No CPU access");
+OPENRHI_INLINE void* BufferVK::Map(uint64_t offset, uint64_t size) {
+    OPENRHI_CHECK(m_MappedMemory, "No CPU access");
 
     if (size == WHOLE_SIZE)
         size = m_Desc.size;
@@ -289,7 +289,7 @@ NRI_INLINE void* BufferVK::Map(uint64_t offset, uint64_t size) {
     return m_MappedMemory + offset;
 }
 
-NRI_INLINE void BufferVK::Unmap() {
+OPENRHI_INLINE void BufferVK::Unmap() {
     if (m_NonCoherentDeviceMemory)
         FlushMappedRange(m_MappedMemoryRangeOffset, m_MappedMemoryRangeSize);
 }

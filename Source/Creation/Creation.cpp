@@ -7,40 +7,29 @@
 #    include <cstdlib> // malloc
 #endif
 
-#if NRI_ENABLE_NVTX_SUPPORT
+#if OPENRHI_ENABLE_NVTX_SUPPORT
 #    include "nvtx3/nvToolsExt.h"
 #endif
 
-#if (NRI_ENABLE_D3D11_SUPPORT)
-#    include <d3d11.h>
-#    include <dxgidebug.h>
-#endif
-
-#if NRI_ENABLE_D3D12_SUPPORT
+#if OPENRHI_ENABLE_D3D12_SUPPORT
 #    include <d3d12.h>
 #    include <d3d12video.h>
 #    include <dxgidebug.h>
 #endif
 
-#if NRI_ENABLE_VK_SUPPORT
+#if OPENRHI_ENABLE_VK_SUPPORT
 #    include <vulkan/vulkan.h>
-#endif
-
-#if NRI_ENABLE_WGPU_SUPPORT
-#    include <webgpu/wgpu.h>
 #endif
 
 #include "SharedExternal.h"
 
 #define ADAPTER_MAX_NUM 32u
 
-using namespace nri;
+using namespace openrhi;
 
 Result CreateDeviceNONE(const DeviceCreationDesc& deviceCreationDesc, DeviceBase*& device);
-Result CreateDeviceD3D11(const DeviceCreationDesc& deviceCreationDesc, const DeviceCreationD3D11Desc& deviceCreationDescD3D11, DeviceBase*& device);
 Result CreateDeviceD3D12(const DeviceCreationDesc& deviceCreationDesc, const DeviceCreationD3D12Desc& deviceCreationDescD3D12, DeviceBase*& device);
 Result CreateDeviceVK(const DeviceCreationDesc& deviceCreationDesc, const DeviceCreationVKDesc& deviceCreationDescVK, DeviceBase*& device);
-Result CreateDeviceWGPU(const DeviceCreationDesc& deviceCreationDesc, DeviceBase*& device);
 Result CreateDeviceMetal(const DeviceCreationDesc& deviceCreationDesc, const DeviceCreationMetalDesc& deviceCreationMetalDesc, DeviceBase*& device);
 void UpdateAdaptersMetal(AdapterDesc* adapterDescs, uint32_t& adapterDescNum, uint32_t adapterDescMaxNum);
 bool GetAdapterDescMetal(AdapterDesc& adapterDesc, void* device);
@@ -55,12 +44,12 @@ constexpr std::array<const char*, (size_t)Message::MAX_NUM> g_messageTypes = {
     "WARNING", // WARNING,
     "ERROR",   // ERROR
 };
-NRI_VALIDATE_ARRAY_BY_PTR(g_messageTypes);
+OPENRHI_VALIDATE_ARRAY_BY_PTR(g_messageTypes);
 
-static void NRI_CALL MessageCallback(Message messageType, const char* file, uint32_t line, const char* message, void*) {
+static void OPENRHI_CALL MessageCallback(Message messageType, const char* file, uint32_t line, const char* message, void*) {
     const char* messageTypeName = g_messageTypes[(size_t)messageType];
 
-    char buf[NRI_MAX_MESSAGE_LENGTH];
+    char buf[OPENRHI_MAX_MESSAGE_LENGTH];
     snprintf(buf, sizeof(buf), "%s (%s:%u) - %s\n", messageTypeName, file, line, message);
 
     fprintf(stderr, "%s", buf);
@@ -69,7 +58,7 @@ static void NRI_CALL MessageCallback(Message messageType, const char* file, uint
 #endif
 }
 
-static void NRI_CALL AbortExecution(void*) {
+static void OPENRHI_CALL AbortExecution(void*) {
 #ifdef _WIN32
     DebugBreak();
 #else
@@ -79,15 +68,15 @@ static void NRI_CALL AbortExecution(void*) {
 
 #ifdef _WIN32
 
-static void* NRI_CALL AlignedMalloc(void*, size_t size, size_t alignment) {
+static void* OPENRHI_CALL AlignedMalloc(void*, size_t size, size_t alignment) {
     return _aligned_malloc(size, alignment);
 }
 
-static void* NRI_CALL AlignedRealloc(void*, void* memory, size_t size, size_t alignment) {
+static void* OPENRHI_CALL AlignedRealloc(void*, void* memory, size_t size, size_t alignment) {
     return _aligned_realloc(memory, size, alignment);
 }
 
-static void NRI_CALL AlignedFree(void*, void* memory) {
+static void OPENRHI_CALL AlignedFree(void*, void* memory) {
     _aligned_free(memory);
 }
 
@@ -99,7 +88,7 @@ struct AllocationHeader {
     size_t size;
 };
 
-static void* NRI_CALL AlignedMalloc(void*, size_t size, size_t alignment) {
+static void* OPENRHI_CALL AlignedMalloc(void*, size_t size, size_t alignment) {
     const size_t effectiveAlignment = std::max(alignment, alignof(AllocationHeader));
 
     if ((effectiveAlignment & (effectiveAlignment - 1)) || effectiveAlignment > std::numeric_limits<size_t>::max() - sizeof(AllocationHeader) + 1)
@@ -123,7 +112,7 @@ static void* NRI_CALL AlignedMalloc(void*, size_t size, size_t alignment) {
     return alignedMemory;
 }
 
-static void* NRI_CALL AlignedRealloc(void* userArg, void* memory, size_t size, size_t alignment) {
+static void* OPENRHI_CALL AlignedRealloc(void* userArg, void* memory, size_t size, size_t alignment) {
     if (!memory)
         return AlignedMalloc(userArg, size, alignment);
 
@@ -139,7 +128,7 @@ static void* NRI_CALL AlignedRealloc(void* userArg, void* memory, size_t size, s
     return newMemory;
 }
 
-static void NRI_CALL AlignedFree(void*, void* memory) {
+static void OPENRHI_CALL AlignedFree(void*, void* memory) {
     if (!memory)
         return;
 
@@ -163,27 +152,12 @@ static void CheckAndSetDefaultCallbacks(DeviceCreationDesc& deviceCreationDesc) 
 }
 
 static int SortAdapters(const void* pa, const void* pb) {
-    constexpr uint64_t SHIFT = 60ull;
-    static_assert((uint64_t)Architecture::MAX_NUM <= 1ull << (64ull - SHIFT), "Adjust SHIFT");
-
-    const AdapterDesc* a = (AdapterDesc*)pa;
-    uint64_t sa = a->videoMemorySize + a->sharedSystemMemorySize;
-    sa |= (uint64_t)(a->architecture) << SHIFT;
-
-    const AdapterDesc* b = (AdapterDesc*)pb;
-    uint64_t sb = b->videoMemorySize + b->sharedSystemMemorySize;
-    sb |= (uint64_t)(b->architecture) << SHIFT;
-
-    if (sa > sb)
-        return -1;
-
-    if (sa < sb)
-        return 1;
-
-    return 0;
+    const AdapterDesc& a = *(const AdapterDesc*)pa;
+    const AdapterDesc& b = *(const AdapterDesc*)pb;
+    return IsAdapterPreferred(a, b) ? -1 : (IsAdapterPreferred(b, a) ? 1 : 0);
 }
 
-#if (NRI_ENABLE_D3D11_SUPPORT || NRI_ENABLE_D3D12_SUPPORT)
+#if OPENRHI_ENABLE_D3D12_SUPPORT
 
 static void UpdateAdaptersD3D(AdapterDesc* adapterDescs, uint32_t& adapterDescNum, LUID* precreatedLuid) {
     ComPtr<IDXGIFactory4> dxgifactory;
@@ -221,20 +195,10 @@ static void UpdateAdaptersD3D(AdapterDesc* adapterDescs, uint32_t& adapterDescNu
         AdapterDesc& adapterDesc = adapterDescs[n];
 
         // Update GAPI support
-#    if (NRI_ENABLE_D3D11_SUPPORT)
-        D3D_FEATURE_LEVEL levels[2] = {D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0};
-        uint32_t levelNum = GetCountOf(levels);
-        ComPtr<ID3D11Device> deviceD3D11;
-        hr = D3D11CreateDevice(adapter, D3D_DRIVER_TYPE_UNKNOWN, nullptr, 0, levels, levelNum, D3D11_SDK_VERSION, &deviceD3D11, nullptr, nullptr);
-        if (SUCCEEDED(hr))
-            adapterDesc.supportedGraphicsAPIs |= GraphicsAPI::D3D11;
-#    endif
-
-#    if (NRI_ENABLE_D3D12_SUPPORT)
-        hr = D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr);
+        ComPtr<ID3D12Device> enumerationDevice;
+        hr = D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&enumerationDevice));
         if (SUCCEEDED(hr))
             adapterDesc.supportedGraphicsAPIs |= GraphicsAPI::D3D12;
-#    endif
 
         // Logic: advance or skip
         if (n != adapterDescNum)
@@ -243,31 +207,20 @@ static void UpdateAdaptersD3D(AdapterDesc* adapterDescs, uint32_t& adapterDescNu
         adapterDescNum++;
 
         { // Driver version
-            LARGE_INTEGER driverVersion;
+            LARGE_INTEGER driverVersion = {};
             if (SUCCEEDED(adapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &driverVersion)))
                 adapterDesc.driverVersion = driverVersion.LowPart;
+            adapterDesc.nativeDriverVersion = uint64_t(driverVersion.QuadPart);
         }
 
         // Architecture
         if (desc.Flags == DXGI_ADAPTER_FLAG_NONE) {
-#    if (NRI_ENABLE_D3D11_SUPPORT)
-            // Simpler and faster
-            if (deviceD3D11) {
-                D3D11_FEATURE_DATA_D3D11_OPTIONS2 options2 = {};
-                hr = deviceD3D11->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS2, &options2, sizeof(options2));
-                if (SUCCEEDED(hr))
-                    adapterDesc.architecture = options2.UnifiedMemoryArchitecture ? Architecture::INTEGRATED : Architecture::DISCRETE;
-            }
-#    else
-            ComPtr<ID3D12Device> deviceD3D12;
-            hr = D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), (void**)&deviceD3D12);
-            if (SUCCEEDED(hr)) {
+            if (enumerationDevice) {
                 D3D12_FEATURE_DATA_ARCHITECTURE architecture = {};
-                hr = deviceD3D12->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &architecture, sizeof(architecture));
+                hr = enumerationDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &architecture, sizeof(architecture));
                 if (SUCCEEDED(hr))
                     adapterDesc.architecture = architecture.UMA ? Architecture::INTEGRATED : Architecture::DISCRETE;
             }
-#    endif
         } else if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
             adapterDesc.architecture = Architecture::SOFTWARE;
         else if (desc.Flags & DXGI_ADAPTER_FLAG_REMOTE)
@@ -278,12 +231,10 @@ static void UpdateAdaptersD3D(AdapterDesc* adapterDescs, uint32_t& adapterDescNu
         adapterDesc.queueNum[(uint32_t)QueueType::COMPUTE] = 4;
         adapterDesc.queueNum[(uint32_t)QueueType::COPY] = 4;
 
-#    if NRI_ENABLE_D3D12_SUPPORT
-        ComPtr<ID3D12Device> deviceD3D12;
-        HRESULT hrD3D12 = D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), (void**)&deviceD3D12);
-        if (SUCCEEDED(hrD3D12)) {
+#    if OPENRHI_ENABLE_D3D12_SUPPORT
+        if (enumerationDevice) {
             ComPtr<ID3D12VideoDevice> videoDevice;
-            hrD3D12 = deviceD3D12->QueryInterface(IID_PPV_ARGS(&videoDevice));
+            HRESULT hrD3D12 = enumerationDevice->QueryInterface(IID_PPV_ARGS(&videoDevice));
             if (SUCCEEDED(hrD3D12)) {
                 adapterDesc.queueNum[(uint32_t)QueueType::VIDEO_DECODE] = 4;
                 adapterDesc.queueNum[(uint32_t)QueueType::VIDEO_ENCODE] = 4;
@@ -293,10 +244,18 @@ static void UpdateAdaptersD3D(AdapterDesc* adapterDescs, uint32_t& adapterDescNu
 
         // Other fields
         adapterDesc.uid = uid;
+        adapterDesc.vendorId = desc.VendorId;
+        adapterDesc.revisionId = desc.Revision;
+        adapterDesc.revisionIdKnown = true;
         adapterDesc.deviceId = desc.DeviceId;
         adapterDesc.vendor = GetVendorFromID(desc.VendorId);
         adapterDesc.videoMemorySize = desc.DedicatedVideoMemory + desc.DedicatedSystemMemory;
         adapterDesc.sharedSystemMemorySize = desc.SharedSystemMemory;
+        VideoMemoryInfo budget = {};
+        if (QueryVideoMemoryInfoDXGI(adapterDesc.uid.low, MemoryLocation::DEVICE, budget) == Result::SUCCESS) {
+            adapterDesc.memoryBudget = budget.budgetSize > budget.usageSize ? budget.budgetSize - budget.usageSize : 0;
+            adapterDesc.memoryBudgetKnown = true;
+        }
 
         wcstombs(adapterDesc.name, desc.Description, GetCountOf(adapterDesc.name) - 1);
 
@@ -308,7 +267,7 @@ static void UpdateAdaptersD3D(AdapterDesc* adapterDescs, uint32_t& adapterDescNu
 
 #endif
 
-#if NRI_ENABLE_VK_SUPPORT
+#if OPENRHI_ENABLE_VK_SUPPORT
 
 static uint32_t GetVideoCodecNumVK(VkVideoCodecOperationFlagsKHR videoCodecOperations, bool decode) {
     constexpr VkVideoCodecOperationFlagsKHR VIDEO_DECODE_CODEC_OPERATION_MASK_CREATION = 0x0000FFFF;
@@ -329,7 +288,7 @@ static uint32_t GetVideoCodecNumVK(VkVideoCodecOperationFlagsKHR videoCodecOpera
 static void UpdateAdaptersVK(AdapterDesc* adapterDescs, uint32_t& adapterDescNum, VkPhysicalDevice precreatedPhysicalDevice) {
     // Variables first
     VkApplicationInfo applicationInfo = {};
-    applicationInfo.apiVersion = VK_API_VERSION_1_2; // 1.3 not needed here
+    applicationInfo.apiVersion = VK_API_VERSION_1_3;
 
     VkInstanceCreateInfo instanceCreateInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     instanceCreateInfo.pApplicationInfo = &applicationInfo;
@@ -349,18 +308,12 @@ static void UpdateAdaptersVK(AdapterDesc* adapterDescs, uint32_t& adapterDescNum
     PFN_vkEnumeratePhysicalDeviceGroups vkEnumeratePhysicalDeviceGroups = nullptr;
     PFN_vkGetPhysicalDeviceProperties2 vkGetPhysicalDeviceProperties2 = nullptr;
     PFN_vkGetPhysicalDeviceMemoryProperties vkGetPhysicalDeviceMemoryProperties = nullptr;
+    PFN_vkGetPhysicalDeviceMemoryProperties2 vkGetPhysicalDeviceMemoryProperties2 = nullptr;
+    PFN_vkEnumerateDeviceExtensionProperties vkEnumerateDeviceExtensionProperties = nullptr;
     PFN_vkGetPhysicalDeviceQueueFamilyProperties2 vkGetPhysicalDeviceQueueFamilyProperties2 = nullptr;
 
-#    ifdef __APPLE__
-    std::array<const char*, 2> instanceExtensions = {"VK_KHR_get_physical_device_properties2", VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME};
-
-    instanceCreateInfo.enabledExtensionCount = (uint32_t)instanceExtensions.size();
-    instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.data();
-    instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-#    endif
-
     // Get loader
-    Library* loader = LoadSharedLibrary(NRI_VULKAN_LOADER_NAME);
+    Library* loader = LoadSharedLibrary(OPENRHI_VULKAN_LOADER_NAME);
     if (!loader)
         goto CLEANUP;
 
@@ -382,6 +335,8 @@ static void UpdateAdaptersVK(AdapterDesc* adapterDescs, uint32_t& adapterDescNum
     vkDestroyInstance = (PFN_vkDestroyInstance)vkGetInstanceProcAddr(instance, "vkDestroyInstance");
     vkEnumeratePhysicalDeviceGroups = (PFN_vkEnumeratePhysicalDeviceGroups)vkGetInstanceProcAddr(instance, "vkEnumeratePhysicalDeviceGroups");
     vkGetPhysicalDeviceProperties2 = (PFN_vkGetPhysicalDeviceProperties2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2");
+    vkGetPhysicalDeviceMemoryProperties2 = (PFN_vkGetPhysicalDeviceMemoryProperties2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceMemoryProperties2");
+    vkEnumerateDeviceExtensionProperties = (PFN_vkEnumerateDeviceExtensionProperties)vkGetInstanceProcAddr(instance, "vkEnumerateDeviceExtensionProperties");
     vkGetPhysicalDeviceMemoryProperties = (PFN_vkGetPhysicalDeviceMemoryProperties)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceMemoryProperties");
     vkGetPhysicalDeviceQueueFamilyProperties2 = (PFN_vkGetPhysicalDeviceQueueFamilyProperties2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceQueueFamilyProperties2");
 
@@ -425,6 +380,8 @@ static void UpdateAdaptersVK(AdapterDesc* adapterDescs, uint32_t& adapterDescNum
         VkPhysicalDeviceProperties2 deviceProps2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
 
         VkPhysicalDeviceIDProperties deviceIDProperties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES};
+        VkPhysicalDeviceDriverProperties driverProperties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES};
+        deviceIDProperties.pNext = &driverProperties;
         deviceProps2.pNext = &deviceIDProperties;
 
         vkGetPhysicalDeviceProperties2(precreatedPhysicalDevice, &deviceProps2);
@@ -439,6 +396,8 @@ static void UpdateAdaptersVK(AdapterDesc* adapterDescs, uint32_t& adapterDescNum
         VkPhysicalDeviceProperties2 deviceProps2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
 
         VkPhysicalDeviceIDProperties deviceIDProperties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES};
+        VkPhysicalDeviceDriverProperties driverProperties = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES};
+        deviceIDProperties.pNext = &driverProperties;
         deviceProps2.pNext = &deviceIDProperties;
 
         vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProps2);
@@ -528,7 +487,34 @@ static void UpdateAdaptersVK(AdapterDesc* adapterDescs, uint32_t& adapterDescNum
 
         // Other fields
         adapterDesc.uid = uid;
+        adapterDesc.vendorId = deviceProps.vendorID;
         adapterDesc.deviceId = deviceProps.deviceID;
+        adapterDesc.nativeDriverVersion = deviceProps.driverVersion;
+        adapterDesc.nativeDriverId = uint32_t(driverProperties.driverID);
+        memcpy(adapterDesc.deviceUuid, deviceIDProperties.deviceUUID, 16);
+        memcpy(adapterDesc.driverUuid, deviceIDProperties.driverUUID, 16);
+        snprintf(adapterDesc.driverDescription, sizeof(adapterDesc.driverDescription), "%.120s %.120s", driverProperties.driverName, driverProperties.driverInfo);
+        adapterDesc.memoryBudget = 0;
+        adapterDesc.memoryBudgetKnown = false;
+        if (vkEnumerateDeviceExtensionProperties && vkGetPhysicalDeviceMemoryProperties2) {
+            uint32_t extensionCount = 0;
+            if (vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr) == VK_SUCCESS) {
+                std::vector<VkExtensionProperties> extensions(extensionCount);
+                if (vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, extensions.data()) == VK_SUCCESS) {
+                    for (const VkExtensionProperties& extension : extensions) {
+                        if (strcmp(extension.extensionName, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME) != 0) continue;
+                        VkPhysicalDeviceMemoryBudgetPropertiesEXT budget = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT};
+                        VkPhysicalDeviceMemoryProperties2 memory = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2, &budget};
+                        vkGetPhysicalDeviceMemoryProperties2(physicalDevice, &memory);
+                        adapterDesc.memoryBudgetKnown = true;
+                        for (uint32_t heap = 0; heap < memory.memoryProperties.memoryHeapCount; heap++)
+                            if (memory.memoryProperties.memoryHeaps[heap].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+                                adapterDesc.memoryBudget += budget.heapBudget[heap] > budget.heapUsage[heap] ? budget.heapBudget[heap] - budget.heapUsage[heap] : 0;
+                        break;
+                    }
+                }
+            }
+        }
         adapterDesc.driverVersion = deviceProps.driverVersion;
         adapterDesc.vendor = GetVendorFromID(deviceProps.vendorID);
 
@@ -549,139 +535,43 @@ CLEANUP:
 
 #endif
 
-#if NRI_ENABLE_WGPU_SUPPORT
-
-static Architecture GetArchitecture(WGPUAdapterType adapterType) {
-    switch (adapterType) {
-        case WGPUAdapterType_DiscreteGPU:
-            return Architecture::DISCRETE;
-        case WGPUAdapterType_IntegratedGPU:
-            return Architecture::INTEGRATED;
-        case WGPUAdapterType_CPU:
-            return Architecture::SOFTWARE;
-        default:
-            return Architecture::UNKNOWN;
-    }
-}
-
-static void CopyString(char* dst, size_t dstSize, WGPUStringView src) {
-    if (!dstSize)
-        return;
-
-    size_t n = src.data ? std::min(src.length, dstSize - 1) : 0;
-    if (n)
-        memcpy(dst, src.data, n);
-
-    dst[n] = 0;
-}
-
-static void UpdateAdaptersWGPU(AdapterDesc* adapterDescs, uint32_t& adapterDescNum) {
-    WGPUInstanceExtras instanceExtras = {};
-    instanceExtras.chain.sType = (WGPUSType)WGPUSType_InstanceExtras;
-    instanceExtras.backends = WGPUInstanceBackend_Primary;
-
-    WGPUInstanceDescriptor instanceDesc = WGPU_INSTANCE_DESCRIPTOR_INIT;
-    instanceDesc.nextInChain = &instanceExtras.chain;
-
-    WGPUInstance instance = wgpuCreateInstance(&instanceDesc);
-    if (!instance)
-        return;
-
-    WGPUInstanceEnumerateAdapterOptions options = {};
-    options.backends = WGPUInstanceBackend_Primary;
-
-    size_t wgpuAdapterNum = wgpuInstanceEnumerateAdapters(instance, &options, nullptr);
-    WGPUAdapter* wgpuAdapters = (WGPUAdapter*)alloca(sizeof(WGPUAdapter) * wgpuAdapterNum);
-    wgpuAdapterNum = wgpuInstanceEnumerateAdapters(instance, &options, wgpuAdapters);
-
-    for (size_t i = 0; i < wgpuAdapterNum; i++) {
-        WGPUAdapterInfo adapterInfo = WGPU_ADAPTER_INFO_INIT;
-        if (wgpuAdapterGetInfo(wgpuAdapters[i], &adapterInfo) != WGPUStatus_Success) {
-            wgpuAdapterRelease(wgpuAdapters[i]);
-            continue;
-        }
-
-        if (wgpuAdapterHasFeature(wgpuAdapters[i], (WGPUFeatureName)WGPUNativeFeature_Immediates) != WGPU_TRUE) {
-            wgpuAdapterInfoFreeMembers(adapterInfo);
-            wgpuAdapterRelease(wgpuAdapters[i]);
-            continue;
-        }
-
-        WGPULimits limits = WGPU_LIMITS_INIT;
-        if (wgpuAdapterGetLimits(wgpuAdapters[i], &limits) != WGPUStatus_Success || limits.maxImmediateSize < 256) {
-            wgpuAdapterInfoFreeMembers(adapterInfo);
-            wgpuAdapterRelease(wgpuAdapters[i]);
-            continue;
-        }
-
-        Vendor vendor = GetVendorFromID(adapterInfo.vendorID);
-
-        uint32_t n = 0;
-        for (; n < adapterDescNum; n++) {
-            bool isSameDevice = adapterInfo.vendorID != 0 && adapterInfo.deviceID != 0 && adapterDescs[n].vendor == vendor && adapterDescs[n].deviceId == adapterInfo.deviceID;
-            if (isSameDevice)
-                break;
-        }
-
-        if (n == adapterDescNum) {
-            if (adapterDescNum == ADAPTER_MAX_NUM) {
-                wgpuAdapterInfoFreeMembers(adapterInfo);
-                wgpuAdapterRelease(wgpuAdapters[i]);
-                continue;
-            }
-
-            AdapterDesc& adapterDesc = adapterDescs[adapterDescNum++];
-            adapterDesc.sharedSystemMemorySize = 128ull << 30;
-            adapterDesc.queueNum[(uint32_t)QueueType::GRAPHICS] = 1;
-            adapterDesc.queueNum[(uint32_t)QueueType::COMPUTE] = 0;
-            adapterDesc.queueNum[(uint32_t)QueueType::COPY] = 0;
-            adapterDesc.vendor = vendor;
-            adapterDesc.architecture = GetArchitecture(adapterInfo.adapterType);
-            adapterDesc.deviceId = adapterInfo.deviceID;
-
-            CopyString(adapterDesc.name, sizeof(adapterDesc.name), adapterInfo.device);
-            if (!adapterDesc.name[0])
-                strncpy(adapterDesc.name, "WGPU", sizeof(adapterDesc.name));
-        }
-
-        adapterDescs[n].supportedGraphicsAPIs |= GraphicsAPI::WGPU;
-
-        wgpuAdapterInfoFreeMembers(adapterInfo);
-        wgpuAdapterRelease(wgpuAdapters[i]);
-    }
-
-    wgpuInstanceRelease(instance);
-}
-
-#endif
-
 static Result FinalizeDeviceCreation(const DeviceCreationDesc& deviceCreationDesc, DeviceBase& deviceImpl, Device*& device) {
-    MaybeUnused(deviceCreationDesc);
-#if NRI_ENABLE_VALIDATION_SUPPORT
-    if (deviceCreationDesc.enableNRIValidation && deviceCreationDesc.graphicsAPI != GraphicsAPI::NONE) {
+    Result compatible = CheckDeviceRequirements(deviceCreationDesc, deviceImpl.GetDesc());
+    if (compatible != Result::SUCCESS) {
+        deviceImpl.Destruct();
+        device = nullptr;
+        return compatible;
+    }
+    deviceImpl.InitializeDeviceProfile(ResolveDeviceProfile(deviceImpl.GetDesc(), deviceCreationDesc.profilePolicy));
+#if OPENRHI_ENABLE_VALIDATION_SUPPORT
+    if (deviceCreationDesc.enableOpenRHIValidation && deviceCreationDesc.graphicsAPI != GraphicsAPI::NONE) {
         Device* deviceVal = (Device*)CreateDeviceValidation(deviceCreationDesc, deviceImpl);
         if (!deviceVal) {
-            nriDestroyDevice((Device*)&deviceImpl);
+            openrhiDestroyDevice((Device*)&deviceImpl);
+            device = nullptr;
+            if (deviceCreationDesc.compatibilityReport)
+                deviceCreationDesc.compatibilityReport->result = Result::FAILURE;
             return Result::FAILURE;
         }
 
+        ((DeviceBase*)deviceVal)->InitializeDeviceProfile(deviceImpl.GetDeviceProfile());
         device = deviceVal;
     } else
 #endif
         device = (Device*)&deviceImpl;
 
-#if NRI_ENABLE_NVTX_SUPPORT
+#if OPENRHI_ENABLE_NVTX_SUPPORT
     nvtxInitialize(nullptr); // needed only to avoid stalls on the first use
 #endif
 
     return Result::SUCCESS;
 }
 
-NRI_API Result NRI_CALL nriGetInterface(const Device& device, const char* interfaceName, size_t interfaceSize, void* interfacePtr) {
-    if (strstr(interfaceName, "nri::") == interfaceName)
-        interfaceName += 5;
-    else if (strstr(interfaceName, "Nri") == interfaceName)
-        interfaceName += 3;
+OPENRHI_API Result OPENRHI_CALL openrhiGetInterface(const Device& device, const char* interfaceName, size_t interfaceSize, void* interfacePtr) {
+    if (strstr(interfaceName, "openrhi::") == interfaceName)
+        interfaceName += sizeof("openrhi::") - 1;
+    else if (strstr(interfaceName, "OpenRhi") == interfaceName)
+        interfaceName += sizeof("OpenRhi") - 1;
 
     uint64_t hash = Hash(interfaceName);
     size_t realInterfaceSize = size_t(-1);
@@ -690,81 +580,77 @@ NRI_API Result NRI_CALL nriGetInterface(const Device& device, const char* interf
 
     memset(interfacePtr, 0, interfaceSize);
 
-    if (hash == Hash(NRI_STRINGIFY(CoreInterface))) {
+    if (hash == Hash(OPENRHI_STRINGIFY(CoreInterface))) {
         realInterfaceSize = sizeof(CoreInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(CoreInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(DescriptorHeapInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(DescriptorHeapInterface))) {
         realInterfaceSize = sizeof(DescriptorHeapInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(DescriptorHeapInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(ImguiInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(ImguiInterface))) {
         realInterfaceSize = sizeof(ImguiInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(ImguiInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(HelperInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(HelperInterface))) {
         realInterfaceSize = sizeof(HelperInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(HelperInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(LowLatencyInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(LowLatencyInterface))) {
         realInterfaceSize = sizeof(LowLatencyInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(LowLatencyInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(MeshShaderInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(MeshShaderInterface))) {
         realInterfaceSize = sizeof(MeshShaderInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(MeshShaderInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(RayTracingInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(RayTracingInterface))) {
         realInterfaceSize = sizeof(RayTracingInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(RayTracingInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(VideoInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(VideoInterface))) {
         realInterfaceSize = sizeof(VideoInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(VideoInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(StreamerInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(StreamerInterface))) {
         realInterfaceSize = sizeof(StreamerInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(StreamerInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(SwapChainInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(SwapChainInterface))) {
         realInterfaceSize = sizeof(SwapChainInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(SwapChainInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(UpscalerInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(UpscalerInterface))) {
         realInterfaceSize = sizeof(UpscalerInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(UpscalerInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(WrapperD3D11Interface))) {
-        realInterfaceSize = sizeof(WrapperD3D11Interface);
-        if (realInterfaceSize == interfaceSize)
-            result = deviceBase.FillFunctionTable(*(WrapperD3D11Interface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(WrapperD3D12Interface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(WrapperD3D12Interface))) {
         realInterfaceSize = sizeof(WrapperD3D12Interface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(WrapperD3D12Interface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(WrapperMetalInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(WrapperMetalInterface))) {
         realInterfaceSize = sizeof(WrapperMetalInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(WrapperMetalInterface*)interfacePtr);
-    } else if (hash == Hash(NRI_STRINGIFY(WrapperVKInterface))) {
+    } else if (hash == Hash(OPENRHI_STRINGIFY(WrapperVKInterface))) {
         realInterfaceSize = sizeof(WrapperVKInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(WrapperVKInterface*)interfacePtr);
     }
 
     if (result == Result::INVALID_ARGUMENT)
-        NRI_REPORT_ERROR(&deviceBase, "Unknown interface '%s'!", interfaceName);
+        OPENRHI_REPORT_ERROR(&deviceBase, "Unknown interface '%s'!", interfaceName);
     else if (interfaceSize != realInterfaceSize)
-        NRI_REPORT_ERROR(&deviceBase, "Interface '%s' has invalid size=%u bytes, while %u bytes expected by the implementation", interfaceName, interfaceSize, realInterfaceSize);
+        OPENRHI_REPORT_ERROR(&deviceBase, "Interface '%s' has invalid size=%u bytes, while %u bytes expected by the implementation", interfaceName, interfaceSize, realInterfaceSize);
     else if (result == Result::UNSUPPORTED)
-        NRI_REPORT_WARNING(&deviceBase, "Interface '%s' is not supported by the device!", interfaceName);
+        OPENRHI_REPORT_WARNING(&deviceBase, "Interface '%s' is not supported by the device!", interfaceName);
     else {
         const void* const* const begin = (void**)interfacePtr;
         const void* const* const end = begin + realInterfaceSize / sizeof(void*);
 
         for (const void* const* current = begin; current != end; current++) {
             if (!(*current)) {
-                NRI_REPORT_ERROR(&deviceBase, "Invalid function table: function #%u is NULL!", uint32_t(current - begin));
+                OPENRHI_REPORT_ERROR(&deviceBase, "Invalid function table: function #%u is NULL!", uint32_t(current - begin));
                 return Result::FAILURE;
             }
         }
@@ -773,11 +659,11 @@ NRI_API Result NRI_CALL nriGetInterface(const Device& device, const char* interf
     return result;
 }
 
-NRI_API void NRI_CALL nriBeginAnnotation(const char* name, uint32_t bgra) {
+OPENRHI_API void OPENRHI_CALL openrhiBeginAnnotation(const char* name, uint32_t bgra) {
     MaybeUnused(name, bgra);
 
-#if NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS
-#    if NRI_ENABLE_NVTX_SUPPORT
+#if OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS
+#    if OPENRHI_ENABLE_NVTX_SUPPORT
 
     nvtxEventAttributes_t eventAttrib = {};
     eventAttrib.version = NVTX_VERSION;
@@ -797,9 +683,9 @@ NRI_API void NRI_CALL nriBeginAnnotation(const char* name, uint32_t bgra) {
 #endif
 }
 
-NRI_API void NRI_CALL nriEndAnnotation() {
-#if NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS
-#    if NRI_ENABLE_NVTX_SUPPORT
+OPENRHI_API void OPENRHI_CALL openrhiEndAnnotation() {
+#if OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS
+#    if OPENRHI_ENABLE_NVTX_SUPPORT
 
     nvtxRangePop();
 
@@ -811,11 +697,11 @@ NRI_API void NRI_CALL nriEndAnnotation() {
 #endif
 }
 
-NRI_API void NRI_CALL nriAnnotation(const char* name, uint32_t bgra) {
+OPENRHI_API void OPENRHI_CALL openrhiAnnotation(const char* name, uint32_t bgra) {
     MaybeUnused(name, bgra);
 
-#if NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS
-#    if NRI_ENABLE_NVTX_SUPPORT
+#if OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS
+#    if OPENRHI_ENABLE_NVTX_SUPPORT
 
     nvtxEventAttributes_t eventAttrib = {};
     eventAttrib.version = NVTX_VERSION;
@@ -835,7 +721,7 @@ NRI_API void NRI_CALL nriAnnotation(const char* name, uint32_t bgra) {
 #endif
 }
 
-#if NRI_ENABLE_NVTX_SUPPORT
+#if OPENRHI_ENABLE_NVTX_SUPPORT
 #    if (defined __linux__)
 #        include <sys/syscall.h>
 #    elif (defined __APPLE__)
@@ -846,7 +732,7 @@ NRI_API void NRI_CALL nriAnnotation(const char* name, uint32_t bgra) {
 #        include <processthreadsapi.h>
 #    endif
 
-NRI_API void NRI_CALL nriSetThreadName(const char* name) {
+OPENRHI_API void OPENRHI_CALL openrhiSetThreadName(const char* name) {
     uint64_t tid = 0;
 #    if (defined __linux__)
     tid = syscall(SYS_gettid);
@@ -863,35 +749,102 @@ NRI_API void NRI_CALL nriSetThreadName(const char* name) {
 
 #else
 
-NRI_API void NRI_CALL nriSetThreadName(const char*) {
+OPENRHI_API void OPENRHI_CALL openrhiSetThreadName(const char*) {
 }
 
 #endif
 
-NRI_API Result NRI_CALL nriCreateDevice(const DeviceCreationDesc& deviceCreationDesc, Device*& device) {
+static bool IsBackendAvailable(GraphicsAPI api) {
+    switch (api) {
+#if OPENRHI_ENABLE_D3D12_SUPPORT
+        case GraphicsAPI::D3D12: {
+            using QueryVersion = LONG (WINAPI*)(OSVERSIONINFOW*);
+            auto query = (QueryVersion)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion");
+            OSVERSIONINFOW version = {};
+            version.dwOSVersionInfoSize = sizeof(version);
+            return query && query(&version) == 0 && version.dwMajorVersion >= 10 && version.dwBuildNumber >= 22000;
+        }
+#endif
+#if OPENRHI_ENABLE_VK_SUPPORT
+        case GraphicsAPI::VK: return true;
+#endif
+#if OPENRHI_ENABLE_METAL_SUPPORT
+        case GraphicsAPI::METAL: return true;
+#endif
+#if OPENRHI_ENABLE_NONE_SUPPORT
+        case GraphicsAPI::NONE: return true;
+#endif
+        default: return false;
+    }
+}
+
+static Result ReportCreationFailure(const DeviceCreationDesc& desc, Result result) {
+    if (desc.compatibilityReport) desc.compatibilityReport->result = result;
+    return result;
+}
+
+OPENRHI_API Result OPENRHI_CALL openrhiCreateDevice(const DeviceCreationDesc& deviceCreationDesc, Device*& device) {
     Result result = Result::UNSUPPORTED;
     DeviceBase* deviceImpl = nullptr;
 
     DeviceCreationDesc modifiedDeviceCreationDesc = deviceCreationDesc;
     CheckAndSetDefaultCallbacks(modifiedDeviceCreationDesc);
 
-    // Valid adapter expected (take 1st compatible)
+    device = nullptr;
+    InitializeCompatibilityReport(deviceCreationDesc);
+    if (!IsBackendAvailable(deviceCreationDesc.graphicsAPI))
+        return ReportCreationFailure(deviceCreationDesc, Result::UNSUPPORTED);
+    if (deviceCreationDesc.compatibilityReport)
+        deviceCreationDesc.compatibilityReport->backendAvailable = true;
+    if (uint32_t(deviceCreationDesc.profilePolicy) >= uint32_t(ProfilePolicy::MAX_NUM))
+        return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
+
+    // Evaluate compatible candidates in deterministic preference order
     uint32_t adapterDescNum = ADAPTER_MAX_NUM;
     std::array<AdapterDesc, ADAPTER_MAX_NUM> adapterDescs = {};
     AdapterDesc adapterDesc = {};
     if (!modifiedDeviceCreationDesc.adapterDesc) {
-        nriEnumerateAdapters(adapterDescs.data(), adapterDescNum);
-        for (uint32_t i = 0; i < adapterDescNum; i++) {
-            if (adapterDescs[i].supportedGraphicsAPIs & modifiedDeviceCreationDesc.graphicsAPI) {
-                adapterDesc = adapterDescs[i];
-                break;
+        if (modifiedDeviceCreationDesc.graphicsAPI != GraphicsAPI::NONE) {
+            Result enumeration = openrhiEnumerateAdapters(adapterDescs.data(), adapterDescNum);
+            if (enumeration != Result::SUCCESS) return ReportCreationFailure(deviceCreationDesc, enumeration);
+            DeviceCompatibilityReport firstFailure = {};
+            bool failedCandidate = false;
+            for (uint32_t i = 0; i < adapterDescNum; i++) {
+                if (adapterDescs[i].architecture == Architecture::SOFTWARE)
+                    continue;
+                if (!(adapterDescs[i].supportedGraphicsAPIs & modifiedDeviceCreationDesc.graphicsAPI))
+                    continue;
+                DeviceCompatibilityReport candidateReport = {};
+                DeviceCreationDesc attempt = modifiedDeviceCreationDesc;
+                attempt.adapterDesc = &adapterDescs[i];
+                attempt.compatibilityReport = &candidateReport;
+                result = openrhiCreateDevice(attempt, device);
+                candidateReport.result = result;
+                if (result == Result::SUCCESS) {
+                    if (modifiedDeviceCreationDesc.compatibilityReport)
+                        *modifiedDeviceCreationDesc.compatibilityReport = candidateReport;
+                    return result;
+                }
+                if (!failedCandidate) {
+                    firstFailure = candidateReport;
+                    failedCandidate = true;
+                }
             }
+            if (failedCandidate && modifiedDeviceCreationDesc.compatibilityReport)
+                *modifiedDeviceCreationDesc.compatibilityReport = firstFailure;
+            return failedCandidate ? firstFailure.result : Result::UNSUPPORTED;
         }
+        adapterDesc.supportedGraphicsAPIs = GraphicsAPI::NONE;
+        for (uint32_t i = 0; i < uint32_t(QueueType::MAX_NUM); i++)
+            adapterDesc.queueNum[i] = 1;
         modifiedDeviceCreationDesc.adapterDesc = &adapterDesc;
     }
 
     if ((modifiedDeviceCreationDesc.adapterDesc->supportedGraphicsAPIs & modifiedDeviceCreationDesc.graphicsAPI) == 0)
-        return Result::UNSUPPORTED;
+        return ReportCreationFailure(deviceCreationDesc, Result::UNSUPPORTED);
+
+    if (modifiedDeviceCreationDesc.queueFamilyNum && !modifiedDeviceCreationDesc.queueFamilies)
+        return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
 
     // Valid queue families expected
     Vector<QueueFamilyDesc> queueFamilies(modifiedDeviceCreationDesc.allocationCallbacks);
@@ -913,51 +866,50 @@ NRI_API Result NRI_CALL nriCreateDevice(const DeviceCreationDesc& deviceCreation
 
         uint32_t queueType = (uint32_t)queueFamily.queueType;
         if (queueType >= (uint32_t)QueueType::MAX_NUM)
-            return Result::INVALID_ARGUMENT;
+            return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
 
         uint32_t supportedQueueNum = modifiedDeviceCreationDesc.adapterDesc->queueNum[queueType];
         if (queueFamily.queueNum > supportedQueueNum)
             queueFamily.queueNum = supportedQueueNum;
     }
 
-#if NRI_ENABLE_NONE_SUPPORT
+#if OPENRHI_ENABLE_NONE_SUPPORT
     if (modifiedDeviceCreationDesc.graphicsAPI == GraphicsAPI::NONE)
         result = CreateDeviceNONE(modifiedDeviceCreationDesc, deviceImpl);
 #endif
 
-#if NRI_ENABLE_D3D11_SUPPORT
-    if (modifiedDeviceCreationDesc.graphicsAPI == GraphicsAPI::D3D11)
-        result = CreateDeviceD3D11(modifiedDeviceCreationDesc, {}, deviceImpl);
-#endif
-
-#if NRI_ENABLE_D3D12_SUPPORT
+#if OPENRHI_ENABLE_D3D12_SUPPORT
     if (modifiedDeviceCreationDesc.graphicsAPI == GraphicsAPI::D3D12)
         result = CreateDeviceD3D12(modifiedDeviceCreationDesc, {}, deviceImpl);
 #endif
 
-#if NRI_ENABLE_VK_SUPPORT
+#if OPENRHI_ENABLE_VK_SUPPORT
     if (modifiedDeviceCreationDesc.graphicsAPI == GraphicsAPI::VK)
         result = CreateDeviceVK(modifiedDeviceCreationDesc, {}, deviceImpl);
 #endif
 
-#if NRI_ENABLE_WGPU_SUPPORT
-    if (modifiedDeviceCreationDesc.graphicsAPI == GraphicsAPI::WGPU)
-        result = CreateDeviceWGPU(modifiedDeviceCreationDesc, deviceImpl);
-#endif
-
-#if NRI_ENABLE_METAL_SUPPORT
+#if OPENRHI_ENABLE_METAL_SUPPORT
     if (modifiedDeviceCreationDesc.graphicsAPI == GraphicsAPI::METAL)
         result = CreateDeviceMetal(modifiedDeviceCreationDesc, {}, deviceImpl);
 #endif
 
-    if (result != Result::SUCCESS)
+    if (result != Result::SUCCESS) {
+        if (deviceCreationDesc.compatibilityReport)
+            deviceCreationDesc.compatibilityReport->result = result;
+        device = nullptr;
         return result;
+    }
 
     return FinalizeDeviceCreation(modifiedDeviceCreationDesc, *deviceImpl, device);
 }
 
-NRI_API Result NRI_CALL nriCreateDeviceFromMetalDevice(const DeviceCreationMetalDesc& deviceCreationMetalDesc, Device*& device) {
+#if OPENRHI_ENABLE_METAL_SUPPORT
+OPENRHI_API Result OPENRHI_CALL openrhiCreateDeviceFromMetalDevice(const DeviceCreationMetalDesc& deviceCreationMetalDesc, Device*& device) {
     DeviceCreationDesc deviceCreationDesc = {};
+    device = nullptr;
+    deviceCreationDesc.requirements = deviceCreationMetalDesc.requirements;
+    deviceCreationDesc.compatibilityReport = deviceCreationMetalDesc.compatibilityReport;
+    deviceCreationDesc.profilePolicy = deviceCreationMetalDesc.profilePolicy;
     deviceCreationDesc.graphicsAPI = GraphicsAPI::METAL;
 
     AdapterDesc adapterDesc = {};
@@ -966,21 +918,28 @@ NRI_API Result NRI_CALL nriCreateDeviceFromMetalDevice(const DeviceCreationMetal
     // Copy what is possible to the main "desc"
     deviceCreationDesc.callbackInterface = deviceCreationMetalDesc.callbackInterface;
     deviceCreationDesc.allocationCallbacks = deviceCreationMetalDesc.allocationCallbacks;
-    deviceCreationDesc.enableNRIValidation = deviceCreationMetalDesc.enableNRIValidation;
+    deviceCreationDesc.enableOpenRHIValidation = deviceCreationMetalDesc.enableOpenRHIValidation;
     deviceCreationDesc.enableMemoryZeroInitialization = deviceCreationMetalDesc.enableMemoryZeroInitialization;
 
     CheckAndSetDefaultCallbacks(deviceCreationDesc);
+    InitializeCompatibilityReport(deviceCreationDesc);
+    if (!IsBackendAvailable(deviceCreationDesc.graphicsAPI))
+        return ReportCreationFailure(deviceCreationDesc, Result::UNSUPPORTED);
+    if (deviceCreationDesc.compatibilityReport)
+        deviceCreationDesc.compatibilityReport->backendAvailable = true;
+    if (uint32_t(deviceCreationDesc.profilePolicy) >= uint32_t(ProfilePolicy::MAX_NUM))
+        return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
 
     Result result = Result::UNSUPPORTED;
     DeviceBase* deviceImpl = nullptr;
 
-#if NRI_ENABLE_METAL_SUPPORT
+#if OPENRHI_ENABLE_METAL_SUPPORT
     // Valid adapter expected
     if (!deviceCreationMetalDesc.mtlDevice)
-        return Result::INVALID_ARGUMENT;
+        return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
 
     if (!GetAdapterDescMetal(adapterDesc, deviceCreationMetalDesc.mtlDevice))
-        return Result::UNSUPPORTED;
+        return ReportCreationFailure(deviceCreationDesc, Result::UNSUPPORTED);
 
     // Valid queue families expected (native queues are matched by family index)
     Vector<QueueFamilyDesc> queueFamilies(deviceCreationDesc.allocationCallbacks);
@@ -991,7 +950,7 @@ NRI_API Result NRI_CALL nriCreateDeviceFromMetalDevice(const DeviceCreationMetal
         uint32_t queueType = (uint32_t)queueFamilyMetalDesc.queueType;
 
         if (queueType >= (uint32_t)QueueType::MAX_NUM)
-            return Result::INVALID_ARGUMENT;
+            return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
 
         QueueFamilyDesc queueFamily = {};
         queueFamily.queueType = queueFamilyMetalDesc.queueType;
@@ -1005,76 +964,27 @@ NRI_API Result NRI_CALL nriCreateDeviceFromMetalDevice(const DeviceCreationMetal
     result = CreateDeviceMetal(deviceCreationDesc, deviceCreationMetalDesc, deviceImpl);
 #endif
 
-    if (result != Result::SUCCESS)
+    if (result != Result::SUCCESS) {
+        if (deviceCreationDesc.compatibilityReport)
+            deviceCreationDesc.compatibilityReport->result = result;
+        device = nullptr;
         return result;
+    }
 
     return FinalizeDeviceCreation(deviceCreationDesc, *deviceImpl, device);
 }
 
-NRI_API Result NRI_CALL nriCreateDeviceFromD3D11Device(const DeviceCreationD3D11Desc& deviceCreationD3D11Desc, Device*& device) {
-    DeviceCreationDesc deviceCreationDesc = {};
-    deviceCreationDesc.graphicsAPI = GraphicsAPI::D3D11;
-
-    AdapterDesc adapterDesc = {};
-    deviceCreationDesc.adapterDesc = &adapterDesc;
-
-    // Copy what is possible to the main "desc"
-    deviceCreationDesc.callbackInterface = deviceCreationD3D11Desc.callbackInterface;
-    deviceCreationDesc.allocationCallbacks = deviceCreationD3D11Desc.allocationCallbacks;
-    deviceCreationDesc.d3dShaderExtRegister = deviceCreationD3D11Desc.d3dShaderExtRegister;
-    deviceCreationDesc.d3dZeroBufferSize = deviceCreationD3D11Desc.d3dZeroBufferSize;
-    deviceCreationDesc.enableNRIValidation = deviceCreationD3D11Desc.enableNRIValidation;
-    deviceCreationDesc.enableD3D11CommandBufferEmulation = deviceCreationD3D11Desc.enableD3D11CommandBufferEmulation;
-
-    CheckAndSetDefaultCallbacks(deviceCreationDesc);
-
-    Result result = Result::UNSUPPORTED;
-    DeviceBase* deviceImpl = nullptr;
-
-#if NRI_ENABLE_D3D11_SUPPORT
-    { // Valid adapter expected
-        if (!deviceCreationD3D11Desc.d3d11Device)
-            return Result::INVALID_ARGUMENT;
-
-        ComPtr<IDXGIDevice> dxgiDevice;
-        HRESULT hr = deviceCreationD3D11Desc.d3d11Device->QueryInterface(IID_PPV_ARGS(&dxgiDevice));
-        if (SUCCEEDED(hr)) {
-            ComPtr<IDXGIAdapter> adapter;
-            hr = dxgiDevice->GetAdapter(&adapter);
-            if (SUCCEEDED(hr)) {
-                DXGI_ADAPTER_DESC desc = {};
-                hr = adapter->GetDesc(&desc);
-                if (SUCCEEDED(hr)) {
-                    uint32_t unused = 0;
-                    UpdateAdaptersD3D(&adapterDesc, unused, &desc.AdapterLuid);
-                }
-            }
-        }
-    }
-
-    // Valid queue families expected
-    QueueFamilyDesc qraphicsQueue = {};
-    qraphicsQueue.queueNum = 1;
-    qraphicsQueue.queueType = QueueType::GRAPHICS;
-
-    if (!deviceCreationDesc.queueFamilyNum) {
-        deviceCreationDesc.queueFamilyNum = 1;
-        deviceCreationDesc.queueFamilies = &qraphicsQueue;
-    }
-
-    result = CreateDeviceD3D11(deviceCreationDesc, deviceCreationD3D11Desc, deviceImpl);
 #endif
 
-    if (result != Result::SUCCESS)
-        return result;
-
-    return FinalizeDeviceCreation(deviceCreationDesc, *deviceImpl, device);
-}
-
-NRI_API Result NRI_CALL nriCreateDeviceFromD3D12Device(const DeviceCreationD3D12Desc& deviceCreationD3D12Desc, Device*& device) {
+#if OPENRHI_ENABLE_D3D12_SUPPORT
+OPENRHI_API Result OPENRHI_CALL openrhiCreateDeviceFromD3D12Device(const DeviceCreationD3D12Desc& deviceCreationD3D12Desc, Device*& device) {
     DeviceCreationD3D12Desc modifiedDeviceCreationD3D12Desc = deviceCreationD3D12Desc;
 
     DeviceCreationDesc deviceCreationDesc = {};
+    device = nullptr;
+    deviceCreationDesc.requirements = deviceCreationD3D12Desc.requirements;
+    deviceCreationDesc.compatibilityReport = deviceCreationD3D12Desc.compatibilityReport;
+    deviceCreationDesc.profilePolicy = deviceCreationD3D12Desc.profilePolicy;
     deviceCreationDesc.graphicsAPI = GraphicsAPI::D3D12;
 
     AdapterDesc adapterDesc = {};
@@ -1085,19 +995,26 @@ NRI_API Result NRI_CALL nriCreateDeviceFromD3D12Device(const DeviceCreationD3D12
     deviceCreationDesc.allocationCallbacks = deviceCreationD3D12Desc.allocationCallbacks;
     deviceCreationDesc.d3dShaderExtRegister = deviceCreationD3D12Desc.d3dShaderExtRegister;
     deviceCreationDesc.d3dZeroBufferSize = deviceCreationD3D12Desc.d3dZeroBufferSize;
-    deviceCreationDesc.enableNRIValidation = deviceCreationD3D12Desc.enableNRIValidation;
+    deviceCreationDesc.enableOpenRHIValidation = deviceCreationD3D12Desc.enableOpenRHIValidation;
     deviceCreationDesc.enableMemoryZeroInitialization = deviceCreationD3D12Desc.enableMemoryZeroInitialization;
     deviceCreationDesc.disableD3D12EnhancedBarriers = deviceCreationD3D12Desc.disableD3D12EnhancedBarriers;
 
     CheckAndSetDefaultCallbacks(deviceCreationDesc);
+    InitializeCompatibilityReport(deviceCreationDesc);
+    if (!IsBackendAvailable(deviceCreationDesc.graphicsAPI))
+        return ReportCreationFailure(deviceCreationDesc, Result::UNSUPPORTED);
+    if (deviceCreationDesc.compatibilityReport)
+        deviceCreationDesc.compatibilityReport->backendAvailable = true;
+    if (uint32_t(deviceCreationDesc.profilePolicy) >= uint32_t(ProfilePolicy::MAX_NUM))
+        return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
 
     Result result = Result::UNSUPPORTED;
     DeviceBase* deviceImpl = nullptr;
 
-#if NRI_ENABLE_D3D12_SUPPORT
+#if OPENRHI_ENABLE_D3D12_SUPPORT
     // Valid adapter expected
     if (!deviceCreationD3D12Desc.d3d12Device)
-        return Result::INVALID_ARGUMENT;
+        return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
 
     LUID luid = deviceCreationD3D12Desc.d3d12Device->GetAdapterLuid();
     uint32_t unused = 0;
@@ -1115,7 +1032,7 @@ NRI_API Result NRI_CALL nriCreateDeviceFromD3D12Device(const DeviceCreationD3D12
 
         uint32_t queueType = (uint32_t)queueFamilyD3D12Desc.queueType;
         if (queueType >= (uint32_t)QueueType::MAX_NUM)
-            return Result::INVALID_ARGUMENT;
+            return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
 
         uint32_t supportedQueueNum = deviceCreationDesc.adapterDesc->queueNum[queueType];
         if (queueFamilyD3D12Desc.queueNum > supportedQueueNum)
@@ -1125,16 +1042,27 @@ NRI_API Result NRI_CALL nriCreateDeviceFromD3D12Device(const DeviceCreationD3D12
     result = CreateDeviceD3D12(deviceCreationDesc, modifiedDeviceCreationD3D12Desc, deviceImpl);
 #endif
 
-    if (result != Result::SUCCESS)
+    if (result != Result::SUCCESS) {
+        if (deviceCreationDesc.compatibilityReport)
+            deviceCreationDesc.compatibilityReport->result = result;
+        device = nullptr;
         return result;
+    }
 
     return FinalizeDeviceCreation(deviceCreationDesc, *deviceImpl, device);
 }
 
-NRI_API Result NRI_CALL nriCreateDeviceFromVKDevice(const DeviceCreationVKDesc& deviceCreationVKDesc, Device*& device) {
+#endif
+
+#if OPENRHI_ENABLE_VK_SUPPORT
+OPENRHI_API Result OPENRHI_CALL openrhiCreateDeviceFromVKDevice(const DeviceCreationVKDesc& deviceCreationVKDesc, Device*& device) {
     DeviceCreationVKDesc modifiedDeviceCreationVKDesc = deviceCreationVKDesc;
 
     DeviceCreationDesc deviceCreationDesc = {};
+    device = nullptr;
+    deviceCreationDesc.requirements = deviceCreationVKDesc.requirements;
+    deviceCreationDesc.compatibilityReport = deviceCreationVKDesc.compatibilityReport;
+    deviceCreationDesc.profilePolicy = deviceCreationVKDesc.profilePolicy;
     deviceCreationDesc.graphicsAPI = GraphicsAPI::VK;
 
     AdapterDesc adapterDesc = {};
@@ -1143,20 +1071,27 @@ NRI_API Result NRI_CALL nriCreateDeviceFromVKDevice(const DeviceCreationVKDesc& 
     // Copy what is possible to the main "desc"
     deviceCreationDesc.callbackInterface = deviceCreationVKDesc.callbackInterface;
     deviceCreationDesc.allocationCallbacks = deviceCreationVKDesc.allocationCallbacks;
-    deviceCreationDesc.enableNRIValidation = deviceCreationVKDesc.enableNRIValidation;
+    deviceCreationDesc.enableOpenRHIValidation = deviceCreationVKDesc.enableOpenRHIValidation;
     deviceCreationDesc.enableMemoryZeroInitialization = deviceCreationVKDesc.enableMemoryZeroInitialization;
     deviceCreationDesc.vkBindingOffsets = deviceCreationVKDesc.vkBindingOffsets;
     deviceCreationDesc.vkExtensions = deviceCreationVKDesc.vkExtensions;
 
     CheckAndSetDefaultCallbacks(deviceCreationDesc);
+    InitializeCompatibilityReport(deviceCreationDesc);
+    if (!IsBackendAvailable(deviceCreationDesc.graphicsAPI))
+        return ReportCreationFailure(deviceCreationDesc, Result::UNSUPPORTED);
+    if (deviceCreationDesc.compatibilityReport)
+        deviceCreationDesc.compatibilityReport->backendAvailable = true;
+    if (uint32_t(deviceCreationDesc.profilePolicy) >= uint32_t(ProfilePolicy::MAX_NUM))
+        return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
 
     Result result = Result::UNSUPPORTED;
     DeviceBase* deviceImpl = nullptr;
 
-#if NRI_ENABLE_VK_SUPPORT
+#if OPENRHI_ENABLE_VK_SUPPORT
     // Valid adapter expected
     if (!deviceCreationVKDesc.vkPhysicalDevice)
-        return Result::INVALID_ARGUMENT;
+        return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
 
     uint32_t unused = 0;
     UpdateAdaptersVK(&adapterDesc, unused, (VkPhysicalDevice)deviceCreationVKDesc.vkPhysicalDevice);
@@ -1173,7 +1108,7 @@ NRI_API Result NRI_CALL nriCreateDeviceFromVKDevice(const DeviceCreationVKDesc& 
 
         uint32_t queueType = (uint32_t)queueFamilyVKDesc.queueType;
         if (queueType >= (uint32_t)QueueType::MAX_NUM)
-            return Result::INVALID_ARGUMENT;
+            return ReportCreationFailure(deviceCreationDesc, Result::INVALID_ARGUMENT);
 
         uint32_t supportedQueueNum = deviceCreationDesc.adapterDesc->queueNum[queueType];
         if (queueFamilyVKDesc.queueNum > supportedQueueNum)
@@ -1183,61 +1118,63 @@ NRI_API Result NRI_CALL nriCreateDeviceFromVKDevice(const DeviceCreationVKDesc& 
     result = CreateDeviceVK(deviceCreationDesc, modifiedDeviceCreationVKDesc, deviceImpl);
 #endif
 
-    if (result != Result::SUCCESS)
+    if (result != Result::SUCCESS) {
+        if (deviceCreationDesc.compatibilityReport)
+            deviceCreationDesc.compatibilityReport->result = result;
+        device = nullptr;
         return result;
+    }
 
     return FinalizeDeviceCreation(deviceCreationDesc, *deviceImpl, device);
 }
 
-NRI_API void NRI_CALL nriDestroyDevice(Device* device) {
+#endif
+
+OPENRHI_API void OPENRHI_CALL openrhiDestroyDevice(Device* device) {
     if (device)
         ((DeviceBase*)device)->Destruct();
 }
 
-NRI_API Format NRI_CALL nriConvertVKFormatToNRI(uint32_t vkFormat) {
-    return VKFormatToNRIFormat(vkFormat);
+OPENRHI_API Format OPENRHI_CALL openrhiConvertVKFormatToOpenRHI(uint32_t vkFormat) {
+    return VKFormatToOpenRHIFormat(vkFormat);
 }
 
-NRI_API Format NRI_CALL nriConvertDXGIFormatToNRI(uint32_t dxgiFormat) {
-    return DXGIFormatToNRIFormat(dxgiFormat);
+OPENRHI_API Format OPENRHI_CALL openrhiConvertDXGIFormatToOpenRHI(uint32_t dxgiFormat) {
+    return DXGIFormatToOpenRHIFormat(dxgiFormat);
 }
 
-NRI_API uint32_t NRI_CALL nriConvertNRIFormatToVK(Format format) {
+OPENRHI_API uint32_t OPENRHI_CALL openrhiConvertOpenRHIFormatToVK(Format format) {
     MaybeUnused(format);
 
-#if NRI_ENABLE_VK_SUPPORT
-    return NRIFormatToVKFormat(format);
+#if OPENRHI_ENABLE_VK_SUPPORT
+    return ConvertFormatToVK(format);
 #else
     return 0;
 #endif
 }
 
-NRI_API uint32_t NRI_CALL nriConvertNRIFormatToDXGI(Format format) {
+OPENRHI_API uint32_t OPENRHI_CALL openrhiConvertOpenRHIFormatToDXGI(Format format) {
     MaybeUnused(format);
 
-#if (NRI_ENABLE_D3D11_SUPPORT || NRI_ENABLE_D3D12_SUPPORT)
-    return NRIFormatToDXGIFormat(format);
+#if OPENRHI_ENABLE_D3D12_SUPPORT
+    return ConvertFormatToDXGI(format);
 #else
     return 0;
 #endif
 }
 
-NRI_API const FormatProps* NRI_CALL nriGetFormatProps(Format format) {
+OPENRHI_API const FormatProps* OPENRHI_CALL openrhiGetFormatProps(Format format) {
     return &GetFormatProps(format);
 }
 
-NRI_API const char* NRI_CALL nriGetGraphicsAPIString(GraphicsAPI graphicsAPI) {
+OPENRHI_API const char* OPENRHI_CALL openrhiGetGraphicsAPIString(GraphicsAPI graphicsAPI) {
     switch (graphicsAPI) {
         case GraphicsAPI::NONE:
             return "NONE";
-        case GraphicsAPI::D3D11:
-            return "D3D11";
         case GraphicsAPI::D3D12:
             return "D3D12";
         case GraphicsAPI::VK:
             return "VK";
-        case GraphicsAPI::WGPU:
-            return "WGPU";
         case GraphicsAPI::METAL:
             return "METAL";
         default:
@@ -1245,27 +1182,23 @@ NRI_API const char* NRI_CALL nriGetGraphicsAPIString(GraphicsAPI graphicsAPI) {
     }
 }
 
-NRI_API Result NRI_CALL nriEnumerateAdapters(AdapterDesc* outAdapterDescs, uint32_t& outAdapterDescNum) {
+OPENRHI_API Result OPENRHI_CALL openrhiEnumerateAdapters(AdapterDesc* outAdapterDescs, uint32_t& outAdapterDescNum) {
     std::array<AdapterDesc, ADAPTER_MAX_NUM> adapterDescs = {};
     uint32_t adapterDescNum = 0;
 
-#if NRI_ENABLE_VK_SUPPORT
+#if OPENRHI_ENABLE_VK_SUPPORT
     UpdateAdaptersVK(adapterDescs.data(), adapterDescNum, nullptr);
 #endif
 
-#if (NRI_ENABLE_D3D11_SUPPORT || NRI_ENABLE_D3D12_SUPPORT)
+#if OPENRHI_ENABLE_D3D12_SUPPORT
     UpdateAdaptersD3D(adapterDescs.data(), adapterDescNum, nullptr);
 #endif
 
-#if NRI_ENABLE_WGPU_SUPPORT
-    UpdateAdaptersWGPU(adapterDescs.data(), adapterDescNum);
-#endif
-
-#if NRI_ENABLE_METAL_SUPPORT
+#if OPENRHI_ENABLE_METAL_SUPPORT
     UpdateAdaptersMetal(adapterDescs.data(), adapterDescNum, ADAPTER_MAX_NUM);
 #endif
 
-#if NRI_ENABLE_NONE_SUPPORT
+#if OPENRHI_ENABLE_NONE_SUPPORT
     if (!adapterDescNum) {
         AdapterDesc& adapterDesc = adapterDescs[adapterDescNum++];
 
@@ -1287,7 +1220,7 @@ NRI_API Result NRI_CALL nriEnumerateAdapters(AdapterDesc* outAdapterDescs, uint3
         outAdapterDescNum = std::min(outAdapterDescNum, adapterDescNum);
         for (uint32_t i = 0; i < outAdapterDescNum; i++) {
             outAdapterDescs[i] = adapterDescs[i];
-#if NRI_ENABLE_NONE_SUPPORT
+#if OPENRHI_ENABLE_NONE_SUPPORT
             outAdapterDescs[i].supportedGraphicsAPIs |= GraphicsAPI::NONE;
 #endif
         }
@@ -1297,8 +1230,8 @@ NRI_API Result NRI_CALL nriEnumerateAdapters(AdapterDesc* outAdapterDescs, uint3
     return outAdapterDescNum == 0 ? Result::UNSUPPORTED : Result::SUCCESS;
 }
 
-NRI_API void NRI_CALL nriReportLiveObjects() {
-#if (NRI_ENABLE_D3D11_SUPPORT || NRI_ENABLE_D3D12_SUPPORT)
+OPENRHI_API void OPENRHI_CALL openrhiReportLiveObjects() {
+#if OPENRHI_ENABLE_D3D12_SUPPORT
     ComPtr<IDXGIDebug1> pDebug;
     HRESULT hr = DXGIGetDebugInterface1(0, IID_PPV_ARGS(&pDebug));
     if (SUCCEEDED(hr))
@@ -1306,11 +1239,11 @@ NRI_API void NRI_CALL nriReportLiveObjects() {
 #endif
 }
 
-NRI_API Result NRI_CALL nriReportDeviceLostInfo(Device& device, DeviceLostDump& deviceLostDump) {
+OPENRHI_API Result OPENRHI_CALL openrhiReportDeviceLostInfo(Device& device, DeviceLostDump& deviceLostDump) {
     return ((DeviceBase&)device).ReportDeviceLostInfo(deviceLostDump);
 }
 
-NRI_API PipelineLayoutSettingsDesc NRI_CALL nriFitPipelineLayoutSettingsIntoDeviceLimits(const DeviceDesc& deviceDesc, const PipelineLayoutSettingsDesc& pipelineLayoutSettingsDesc) {
+OPENRHI_API PipelineLayoutSettingsDesc OPENRHI_CALL openrhiFitPipelineLayoutSettingsIntoDeviceLimits(const DeviceDesc& deviceDesc, const PipelineLayoutSettingsDesc& pipelineLayoutSettingsDesc) {
     // D3D12 root signature costs and the cross-API root descriptor size, in bytes
     const uint32_t rootConstantCost = 4;
     const uint32_t descriptorTableCost = 4;
@@ -1440,4 +1373,30 @@ NRI_API PipelineLayoutSettingsDesc NRI_CALL nriFitPipelineLayoutSettingsIntoDevi
     modifiedPipelineLayoutLimitsDesc.rootSamplerNum = rootSamplerNum;
 
     return modifiedPipelineLayoutLimitsDesc;
+}
+
+OPENRHI_API Result OPENRHI_CALL openrhiEvaluateDeviceSupport(const DeviceDesc& desc, const DeviceRequirements& requirements, DeviceCompatibilityReport& report) {
+    return EvaluateDeviceSupport(desc, requirements, report);
+}
+
+OPENRHI_API const DeviceProfileDesc* OPENRHI_CALL openrhiGetDeviceProfile(const Device& device) {
+    return &((const DeviceBase&)device).GetDeviceProfile();
+}
+
+OPENRHI_API Result OPENRHI_CALL openrhiQueryAdapterSupport(const DeviceCreationDesc& desc, DeviceCompatibilityReport& report) {
+    DeviceCreationDesc probe = desc;
+    probe.compatibilityReport = &report;
+    probe.enableOpenRHIValidation = false;
+    Device* device = nullptr;
+    Result result = openrhiCreateDevice(probe, device);
+    openrhiDestroyDevice(device);
+    report.result = result;
+    return result;
+}
+
+OPENRHI_API DeviceRequirements OPENRHI_CALL openrhiGetPlatformRequirements(GraphicsAPI api) {
+    DeviceRequirements requirements = {};
+    requirements.requiredCapabilities = GetPlatformRequirements(api);
+    requirements.minShaderModel = api == GraphicsAPI::D3D12 ? OpenRhiShaderModel(6, 6) : 0;
+    return requirements;
 }

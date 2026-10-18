@@ -2,13 +2,13 @@
 
 #pragma once
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 typedef ID3D12Resource2 ID3D12ResourceBest;
 #else
 typedef ID3D12Resource ID3D12ResourceBest;
 #endif
 
-namespace nri {
+namespace openrhi {
 
 struct TextureD3D12 final : public DebugNameBase {
     inline TextureD3D12(DeviceD3D12& device)
@@ -43,8 +43,8 @@ struct TextureD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(m_Texture, name);
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(m_Texture, name);
     }
 
 private:
@@ -54,4 +54,4 @@ private:
     TextureDesc m_Desc = {};
 };
 
-} // namespace nri
+} // namespace openrhi

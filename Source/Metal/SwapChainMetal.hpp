@@ -30,7 +30,7 @@ Result SwapChainMetal::Create(const SwapChainDesc& desc) {
     // from any queue, not only from the presenting one
     m_DrawableResidency = m_Layer->residencySet();
     if (!m_DrawableResidency) {
-        NRI_REPORT_ERROR(&m_Device, "'CAMetalLayer' has no residency set (is the screen locked or the display asleep?)");
+        OPENRHI_REPORT_ERROR(&m_Device, "'CAMetalLayer' has no residency set (is the screen locked or the display asleep?)");
         return Result::FAILURE;
     }
 
@@ -100,7 +100,7 @@ Result SwapChainMetal::Create(const SwapChainDesc& desc) {
     return Result::SUCCESS;
 }
 
-NRI_INLINE Texture* const* SwapChainMetal::GetTextures(uint32_t& textureNum) const {
+OPENRHI_INLINE Texture* const* SwapChainMetal::GetTextures(uint32_t& textureNum) const {
     textureNum = (uint32_t)m_Textures.size();
 
     return (Texture* const*)m_Textures.data();
@@ -114,7 +114,7 @@ void SwapChainMetal::ReleaseDrawable() {
     m_Drawable = nullptr;
 }
 
-NRI_INLINE Result SwapChainMetal::AcquireNextTexture(FenceMetal& fence, uint32_t& textureIndex) {
+OPENRHI_INLINE Result SwapChainMetal::AcquireNextTexture(FenceMetal& fence, uint32_t& textureIndex) {
     // "resizableSwapChain": drawables keep the swap chain size, the content gets scaled to the layer bounds. Restore the size if someone else has changed it
     const CGSize size = m_Layer->drawableSize();
 
@@ -160,8 +160,8 @@ NRI_INLINE Result SwapChainMetal::AcquireNextTexture(FenceMetal& fence, uint32_t
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result SwapChainMetal::Present(FenceMetal& fence, uint64_t presentId) {
-    NRI_CHECK(m_Drawable, "No texture has been acquired");
+OPENRHI_INLINE Result SwapChainMetal::Present(FenceMetal& fence, uint64_t presentId) {
+    OPENRHI_CHECK(m_Drawable, "No texture has been acquired");
 
     if (!m_Drawable)
         return Result::FAILURE;
@@ -188,16 +188,16 @@ NRI_INLINE Result SwapChainMetal::Present(FenceMetal& fence, uint64_t presentId)
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result SwapChainMetal::WaitForPresent(uint64_t presentId) {
+OPENRHI_INLINE Result SwapChainMetal::WaitForPresent(uint64_t presentId) {
     if (!m_IsWaitable || !presentId)
         return Result::UNSUPPORTED;
 
-    bool isPresented = m_PresentEvent->waitUntilSignaledValue(presentId, NRI_TIMEOUT_PRESENT);
+    bool isPresented = m_PresentEvent->waitUntilSignaledValue(presentId, OPENRHI_TIMEOUT_PRESENT);
 
     return isPresented ? Result::SUCCESS : Result::FAILURE;
 }
 
-NRI_INLINE Result SwapChainMetal::GetDisplayDesc(DisplayDesc& desc) {
+OPENRHI_INLINE Result SwapChainMetal::GetDisplayDesc(DisplayDesc& desc) {
     // Only a "CAMetalLayer" is provided, the "NSScreen" is not reachable from it without Objective-C
     MaybeUnused(desc);
 

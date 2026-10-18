@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct CommandAllocatorVal final : public ObjectVal {
     CommandAllocatorVal(DeviceVal& device, CommandAllocator* commandAllocator, QueueType queueType)
@@ -15,7 +15,7 @@ struct CommandAllocatorVal final : public ObjectVal {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result CreateCommandBuffer(CommandBuffer*& commandBuffer);
@@ -25,4 +25,4 @@ private:
     QueueType m_QueueType = QueueType::MAX_NUM;
 };
 
-} // namespace nri
+} // namespace openrhi

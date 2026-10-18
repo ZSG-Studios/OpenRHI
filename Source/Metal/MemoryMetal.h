@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct MemoryMetal final : public DebugNameBase {
     inline MemoryMetal(DeviceMetal& device) : m_Device(device) {
@@ -23,7 +23,7 @@ struct MemoryMetal final : public DebugNameBase {
     }
 
     Result Create(const AllocateMemoryDesc& desc);
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     DeviceMetal& m_Device;
@@ -31,4 +31,4 @@ private:
     MemoryLocation m_Location = MemoryLocation::DEVICE;
 };
 
-} // namespace nri
+} // namespace openrhi

@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct QueueVal final : public ObjectVal {
     inline QueueVal(DeviceVal& device, Queue* queue, QueueType queueType)
@@ -23,7 +23,7 @@ struct QueueVal final : public ObjectVal {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     void BeginAnnotation(const char* name, uint32_t bgra);
@@ -37,4 +37,4 @@ private:
     QueueType m_QueueType = QueueType::MAX_NUM;
 };
 
-} // namespace nri
+} // namespace openrhi

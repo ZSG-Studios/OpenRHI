@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct VideoPictureVal final : public ObjectVal {
     VideoPictureVal(DeviceVal& device, VideoPicture* impl, const VideoPictureDesc& desc, const TextureDesc& textureDesc);
@@ -24,4 +24,4 @@ private:
     VideoCodec m_Codec = VideoCodec::NONE;
     VideoPictureUsage m_Usage = VideoPictureUsage::MAX_NUM;
 };
-} // namespace nri
+} // namespace openrhi

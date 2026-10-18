@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct BufferUpdateRequest {
     Buffer* dstBuffer;
@@ -37,9 +37,9 @@ struct GarbageInFlight {
 };
 
 struct StreamerImpl final : public DebugNameBase {
-    inline StreamerImpl(Device& device, const CoreInterface& NRI)
+    inline StreamerImpl(Device& device, const CoreInterface& OpenRHI)
         : m_Device(device)
-        , m_iCore(NRI)
+        , m_iCore(OpenRHI)
         , m_CopyBatches(((DeviceBase&)device).GetStdAllocator())
         , m_GarbageInFlight(((DeviceBase&)device).GetStdAllocator())
         , m_HostData(((DeviceBase&)device).GetStdAllocator()) {
@@ -68,7 +68,7 @@ struct StreamerImpl final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
         m_iCore.SetDebugName(m_ConstantBuffer, name);
         m_iCore.SetDebugName(m_DynamicBuffer, name);
     }
@@ -91,7 +91,7 @@ private:
     uint32_t m_ConstantBufferOffset = 0;
     uint32_t m_FrameIndex = 0;
 
-#if NRI_STREAMER_THREAD_SAFE
+#if OPENRHI_STREAMER_THREAD_SAFE
     Lock m_Lock;
 #endif
 };

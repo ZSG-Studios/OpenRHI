@@ -7,7 +7,37 @@ namespace NIS {
 
 typedef uint32_t uint;
 
-#include "../Shaders/NIS.cs.hlsl"
+struct Constants { // see NIS.h
+    float detectRatio;
+    float detectThres;
+    float minContrastRatio;
+    float ratioNorm;
+
+    float sharpStartY;
+    float sharpScaleY;
+    float sharpStrengthMin;
+    float sharpStrengthScale;
+
+    float sharpLimitMin;
+    float sharpLimitScale;
+    float scaleX;
+    float scaleY;
+
+    float dstNormX;
+    float dstNormY;
+    float srcNormX;
+    float srcNormY;
+
+    uint inputViewportW;
+    uint inputViewportH;
+    uint outputViewportW;
+    uint outputViewportH;
+};
+
+static_assert(sizeof(Constants) == 80, "NIS Slang constant layout mismatch");
+
+constexpr uint32_t OPENRHI_NIS_SET_STATIC = 0;
+constexpr uint32_t OPENRHI_NIS_SET_DYNAMIC = 1;
 
 enum class HDRMode {
     None,
@@ -93,12 +123,10 @@ inline bool UpdateConstants(Constants& constants, float sharpness,
     constants.sharpLimitMin = kSharpLimitMin;
     constants.sharpLimitScale = kSharpLimitScale;
 
-#if (NIS_VIEWPORT_SUPPORT == 1)
     constants.inputViewportW = kInputViewportWidth;
     constants.inputViewportH = kInputViewportHeight;
     constants.outputViewportW = kOutputViewportWidth;
     constants.outputViewportH = kOutputViewportHeight;
-#endif
 
     if (constants.scaleX < 0.5f || constants.scaleX > 1.f || constants.scaleY < 0.5f || constants.scaleY > 1.f || kOutputViewportWidth == 0 || kOutputViewportHeight == 0)
         return false;

@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+<!-- search for .natvis in the code -->
+<!-- C -->
+    <Type Name="OpenRhiAccelerationStructure">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiBuffer">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(OpenRhiBufferDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="OpenRhiCommandAllocator">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiCommandBuffer">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiQueue">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiDescriptorPool">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(OpenRhiDescriptorPoolDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="OpenRhiDescriptorSet">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">**(OpenRhiDescriptorSetDesc**)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="OpenRhiDescriptor">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiDevice">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={((openrhi::DeviceVal*)this)->m_Name,s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">((openrhi::DeviceVal*)this)->m_Desc</Item>
+        </Expand>
+    </Type>
+    <Type Name="OpenRhiFence">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiMemory">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiPipelineLayout">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(OpenRhiPipelineLayoutDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="OpenRhiPipeline">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiPipelineCache">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiQueryPool">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiStreamer">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(OpenRhiStreamerDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="OpenRhiSwapChain">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(OpenRhiSwapChainDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="OpenRhiTexture">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(OpenRhiTextureDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="OpenRhiVideoSession">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiVideoSessionParameters">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiVideoPicture">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="OpenRhiUpscaler">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(OpenRhiUpscalerDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+<!-- C++ -->
+    <Type Name="openrhi::AccelerationStructure">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::Buffer">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(openrhi::BufferDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="openrhi::CommandAllocator">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::CommandBuffer">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::Queue">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::DescriptorPool">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(openrhi::DescriptorPoolDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="openrhi::DescriptorSet">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">**(openrhi::DescriptorSetDesc**)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="openrhi::Descriptor">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::Device">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={((openrhi::DeviceVal*)this)->m_Name,s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">((openrhi::DeviceVal*)this)->m_Desc</Item>
+        </Expand>
+    </Type>
+    <Type Name="openrhi::Fence">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::Memory">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::PipelineLayout">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(openrhi::PipelineLayoutDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="openrhi::Pipeline">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::PipelineCache">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::QueryPool">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::Streamer">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(openrhi::StreamerDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="openrhi::SwapChain">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(openrhi::SwapChainDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="openrhi::Texture">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(openrhi::TextureDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+    <Type Name="openrhi::VideoSession">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::VideoSessionParameters">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::VideoPicture">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::VideoSessionD3D12">
+        <DisplayString>{{ codec={m_Desc.codec} size={m_Desc.width}x{m_Desc.height} format={m_Desc.format} }}</DisplayString>
+        <Expand>
+            <Item Name="desc">m_Desc</Item>
+        </Expand>
+    </Type>
+    <Type Name="openrhi::VideoSessionParametersD3D12">
+        <DisplayString>{{ session={m_Session} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::VideoPictureD3D12">
+        <DisplayString>{{ texture={m_Texture} subresource={m_Subresource} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::VideoSessionVK">
+        <DisplayString>{{ codec={m_Desc.codec} size={m_Desc.width}x{m_Desc.height} format={m_Desc.format} }}</DisplayString>
+        <Expand>
+            <Item Name="desc">m_Desc</Item>
+            <Item Name="pictureAccessGranularity">m_PictureAccessGranularity</Item>
+        </Expand>
+    </Type>
+    <Type Name="openrhi::VideoSessionParametersVK">
+        <DisplayString>{{ session={m_Session} handle={m_Handle} }}</DisplayString>
+    </Type>
+    <Type Name="openrhi::VideoPictureVK">
+        <DisplayString>{{ imageView={m_ImageView} }}</DisplayString>
+        <Expand>
+            <Item Name="resource">m_Resource</Item>
+        </Expand>
+    </Type>
+    <Type Name="openrhi::Upscaler">
+        <DisplayString Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">{{ name={*(char**)((uint8_t*)this + 16),s} }}</DisplayString>
+        <Expand>
+            <Item Name="desc" Condition = "((uint64_t*)this)[1] == 0x1234567887654321ull">*(openrhi::UpscalerDesc*)((uint8_t*)this + 40)</Item>
+        </Expand>
+    </Type>
+</AutoVisualizer>

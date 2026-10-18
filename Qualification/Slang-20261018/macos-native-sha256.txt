@@ -1,0 +1,6 @@
+7b2551436dbee0e5feec1ae52e4f2bafde28ae4e60eb8f440773ed0beb28638b  /Users/rentamac/openrhi-20261018/source/_Bin/libOpenRHI.dylib
+e6f0f59b1fc0e6a7ab4040233a64fea70e70ae870ce46800fbac9511f231b941  /Users/rentamac/openrhi-20261018/build-release/Tests/DescriptorCompute.metallib
+ef01c98e457f322128b005b714766b9aa8b09d7a424698225f7bad48d0bf207c  /Users/rentamac/openrhi-20261018/build-release/Tests/IndirectDraw.ps.metallib
+014518a97870cc9179e32a8fb67b51b0edbb6968a66e555d249798697db07dce  /Users/rentamac/openrhi-20261018/build-release/Tests/IndirectDraw.vs.metallib
+f11bbdd8536e98dd83d3a3c9c8d7994a5a97372ee22c9008f6953a495c731a31  /Users/rentamac/openrhi-20261018/build-release/Tests/MeshDraw.metallib
+1b87a2f7e3796a8b8a8edb27cc3459d04841d5a12b8d20a16cfc911565c20922  /Users/rentamac/openrhi-20261018/build-release/Tests/TaskDraw.metallib

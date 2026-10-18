@@ -2,7 +2,7 @@
 
 static uint8_t QueryLatestInterface(ComPtr<ID3D12GraphicsCommandList>& in, ComPtr<ID3D12GraphicsCommandListBest>& out) {
     static const IID versions[] = {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         __uuidof(ID3D12GraphicsCommandList10),
         __uuidof(ID3D12GraphicsCommandList9),
         __uuidof(ID3D12GraphicsCommandList8),
@@ -26,14 +26,14 @@ static uint8_t QueryLatestInterface(ComPtr<ID3D12GraphicsCommandList>& in, ComPt
             break;
     }
 
-    NRI_CHECK(n > i, "Unexpected");
+    OPENRHI_CHECK(n > i, "Unexpected");
 
     return n - i - 1;
 }
 
 static uint8_t QueryLatestInterface(ComPtr<ID3D12VideoDecodeCommandList>& in, ComPtr<ID3D12VideoDecodeCommandListBest>& out) {
     static const IID versions[] = {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         __uuidof(ID3D12VideoDecodeCommandList3),
 #endif
         // D3D12 Ultimate initial release
@@ -50,14 +50,14 @@ static uint8_t QueryLatestInterface(ComPtr<ID3D12VideoDecodeCommandList>& in, Co
             break;
     }
 
-    NRI_CHECK(n > i, "Unexpected");
+    OPENRHI_CHECK(n > i, "Unexpected");
 
     return n - i - 1;
 }
 
 static uint8_t QueryLatestInterface(ComPtr<ID3D12VideoEncodeCommandList>& in, ComPtr<ID3D12VideoEncodeCommandListBest>& out) {
     static const IID versions[] = {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         __uuidof(ID3D12VideoEncodeCommandList4),
         __uuidof(ID3D12VideoEncodeCommandList3),
         __uuidof(ID3D12VideoEncodeCommandList2),
@@ -75,12 +75,12 @@ static uint8_t QueryLatestInterface(ComPtr<ID3D12VideoEncodeCommandList>& in, Co
             break;
     }
 
-    NRI_CHECK(n > i, "Unexpected");
+    OPENRHI_CHECK(n > i, "Unexpected");
 
     return n - i - 1;
 }
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 static inline D3D12_BARRIER_SYNC GetBarrierSyncFlags(StageBits stageBits, AccessBits accessBits) {
     // Check non-mask values first
     if (stageBits == StageBits::ALL)
@@ -239,7 +239,7 @@ constexpr std::array<D3D12_BARRIER_LAYOUT, (size_t)Layout::MAX_NUM> g_BarrierLay
     D3D12_BARRIER_LAYOUT_VIDEO_ENCODE_READ,   // VIDEO_ENCODE_SRC
     D3D12_BARRIER_LAYOUT_VIDEO_ENCODE_WRITE,  // VIDEO_ENCODE_DPB
 };
-NRI_VALIDATE_ARRAY(g_BarrierLayouts);
+OPENRHI_VALIDATE_ARRAY(g_BarrierLayouts);
 
 static constexpr D3D12_BARRIER_LAYOUT GetBarrierLayout(Layout layout, AccessBits accessBits) {
     // Special case
@@ -383,7 +383,7 @@ static inline void ConvertRects(const Rect* in, uint32_t rectNum, D3D12_RECT* ou
     }
 }
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 static inline void FillResolveBarrier(bool isSource, DescriptorD3D12& descriptor, PlaneBits planeBits, D3D12_TEXTURE_BARRIER& textureBarrier) {
     const TexViewDesc& srcDesc = descriptor.GetTexViewDesc();
 
@@ -419,7 +419,7 @@ constexpr std::array<D3D12_RESOLVE_MODE, (size_t)ResolveOp::MAX_NUM> g_ResolveOp
     D3D12_RESOLVE_MODE_MAX,     // MAX
     D3D12_RESOLVE_MODE_AVERAGE, // SAMPLE_ZERO (unsupported, rejected by validation)
 };
-NRI_VALIDATE_ARRAY(g_ResolveOps);
+OPENRHI_VALIDATE_ARRAY(g_ResolveOps);
 
 static constexpr D3D12_RESOLVE_MODE GetResolveOp(ResolveOp resolveOp) {
     return g_ResolveOps[(size_t)resolveOp];
@@ -735,7 +735,7 @@ static bool BuildVideoDecodeH265Arguments(const VideoH265SessionParametersDesc& 
     return true;
 }
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 static inline D3D12_VIDEO_ENCODER_AV1_FRAME_TYPE GetVideoEncodeAV1FrameType(VideoFrameType frameType) {
     switch (frameType) {
         case VideoFrameType::IDR:
@@ -756,44 +756,44 @@ static_assert(offsetof(VideoEncodeFeedback, writtenSubregionNum) == offsetof(D3D
 #endif
 
 void CommandBufferD3D12::SetDebugName(const char* name) {
-    NRI_SET_D3D_DEBUG_OBJECT_NAME(m_CommandList.GetInterface(), name);
+    OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(m_CommandList.GetInterface(), name);
 }
 
 Result CommandBufferD3D12::Create(D3D12_COMMAND_LIST_TYPE commandListType, ID3D12CommandAllocator* commandAllocator) {
     if (commandListType == D3D12_COMMAND_LIST_TYPE_VIDEO_DECODE) {
         ComPtr<ID3D12VideoDecodeCommandList> commandList;
         HRESULT hr = m_Device->CreateCommandList(NODE_MASK, commandListType, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateCommandList");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateCommandList");
 
         ComPtr<ID3D12VideoDecodeCommandListBest> commandListBest;
         m_Version = QueryLatestInterface(commandList, commandListBest);
 
         hr = commandListBest->Close();
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoDecodeCommandList::Close");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoDecodeCommandList::Close");
 
         m_CommandList = commandListBest;
     } else if (commandListType == D3D12_COMMAND_LIST_TYPE_VIDEO_ENCODE) {
         ComPtr<ID3D12VideoEncodeCommandList> commandList;
         HRESULT hr = m_Device->CreateCommandList(NODE_MASK, commandListType, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateCommandList");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateCommandList");
 
         ComPtr<ID3D12VideoEncodeCommandListBest> commandListBest;
         m_Version = QueryLatestInterface(commandList, commandListBest);
 
         hr = commandListBest->Close();
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoEncodeCommandList::Close");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoEncodeCommandList::Close");
 
         m_CommandList = commandListBest;
     } else {
         ComPtr<ID3D12GraphicsCommandList> commandList;
         HRESULT hr = m_Device->CreateCommandList(NODE_MASK, commandListType, commandAllocator, nullptr, IID_PPV_ARGS(&commandList));
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateCommandList");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateCommandList");
 
         ComPtr<ID3D12GraphicsCommandListBest> commandListBest;
         m_Version = QueryLatestInterface(commandList, commandListBest);
 
         hr = commandListBest->Close();
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12GraphicsCommandList::Close");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12GraphicsCommandList::Close");
 
         m_CommandList = commandListBest;
     }
@@ -838,23 +838,23 @@ Result CommandBufferD3D12::Create(const CommandBufferD3D12Desc& commandBufferD3D
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result CommandBufferD3D12::Begin(const DescriptorPool* descriptorPool) {
+OPENRHI_INLINE Result CommandBufferD3D12::Begin(const DescriptorPool* descriptorPool) {
     if (m_CommandListType == D3D12_COMMAND_LIST_TYPE_VIDEO_DECODE) {
         HRESULT hr = GetVideoDecodeCommandList()->Reset(m_CommandAllocator);
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoDecodeCommandList::Reset");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoDecodeCommandList::Reset");
 
         return Result::SUCCESS;
     }
 
     if (m_CommandListType == D3D12_COMMAND_LIST_TYPE_VIDEO_ENCODE) {
         HRESULT hr = GetVideoEncodeCommandList()->Reset(m_CommandAllocator);
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoEncodeCommandList::Reset");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoEncodeCommandList::Reset");
 
         return Result::SUCCESS;
     }
 
     HRESULT hr = GetGraphicsCommandList()->Reset(m_CommandAllocator, nullptr);
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12GraphicsCommandList::Reset");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12GraphicsCommandList::Reset");
 
     if (descriptorPool)
         SetDescriptorPool(*descriptorPool);
@@ -867,23 +867,23 @@ NRI_INLINE Result CommandBufferD3D12::Begin(const DescriptorPool* descriptorPool
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result CommandBufferD3D12::End() {
+OPENRHI_INLINE Result CommandBufferD3D12::End() {
     HRESULT hr = S_OK;
     if (m_CommandListType == D3D12_COMMAND_LIST_TYPE_VIDEO_DECODE) {
         hr = GetVideoDecodeCommandList()->Close();
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoDecodeCommandList::Close");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoDecodeCommandList::Close");
     } else if (m_CommandListType == D3D12_COMMAND_LIST_TYPE_VIDEO_ENCODE) {
         hr = GetVideoEncodeCommandList()->Close();
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoEncodeCommandList::Close");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12VideoEncodeCommandList::Close");
     } else {
         hr = GetGraphicsCommandList()->Close();
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12GraphicsCommandList::Close");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12GraphicsCommandList::Close");
     }
 
     return Result::SUCCESS;
 }
 
-NRI_INLINE void CommandBufferD3D12::DecodeVideo(const VideoDecodeDesc& videoDecodeDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::DecodeVideo(const VideoDecodeDesc& videoDecodeDesc) {
     const VideoSessionD3D12& session = *(VideoSessionD3D12*)videoDecodeDesc.session;
     const VideoSessionDesc& sessionDesc = session.GetDesc();
     const VideoSessionParametersD3D12* parameters = (VideoSessionParametersD3D12*)videoDecodeDesc.parameters;
@@ -893,22 +893,22 @@ NRI_INLINE void CommandBufferD3D12::DecodeVideo(const VideoDecodeDesc& videoDeco
     D3D12_VIDEO_DECODE_INPUT_STREAM_ARGUMENTS input = {};
     DXVA_PicParams_H264 h264PictureParameters = {};
     DXVA_Qmatrix_H264 h264InverseQuantizationMatrix = {};
-    Scratch<DXVA_Slice_H264_Short> h264Slices = NRI_ALLOCATE_SCRATCH(m_Device, DXVA_Slice_H264_Short, videoDecodeDesc.h264PictureDesc ? std::max(videoDecodeDesc.h264PictureDesc->sliceOffsetNum, 1u) : 0);
+    Scratch<DXVA_Slice_H264_Short> h264Slices = OPENRHI_ALLOCATE_SCRATCH(m_Device, DXVA_Slice_H264_Short, videoDecodeDesc.h264PictureDesc ? std::max(videoDecodeDesc.h264PictureDesc->sliceOffsetNum, 1u) : 0);
     DXVA_PicParams_HEVC h265PictureParameters = {};
     DXVA_Qmatrix_HEVC h265InverseQuantizationMatrix = {};
-    Scratch<DXVA_Slice_HEVC_Short> h265Slices = NRI_ALLOCATE_SCRATCH(m_Device, DXVA_Slice_HEVC_Short, videoDecodeDesc.h265PictureDesc ? std::max(videoDecodeDesc.h265PictureDesc->sliceSegmentOffsetNum, 1u) : 0);
+    Scratch<DXVA_Slice_HEVC_Short> h265Slices = OPENRHI_ALLOCATE_SCRATCH(m_Device, DXVA_Slice_HEVC_Short, videoDecodeDesc.h265PictureDesc ? std::max(videoDecodeDesc.h265PictureDesc->sliceSegmentOffsetNum, 1u) : 0);
     DXVA_PicParams_AV1 av1PictureParameters = {};
-    Scratch<DXVA_Tile_AV1> av1Tiles = NRI_ALLOCATE_SCRATCH(m_Device, DXVA_Tile_AV1, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum, 1u) : 0);
+    Scratch<DXVA_Tile_AV1> av1Tiles = OPENRHI_ALLOCATE_SCRATCH(m_Device, DXVA_Tile_AV1, videoDecodeDesc.av1PictureDesc ? std::max(videoDecodeDesc.av1PictureDesc->tileNum, 1u) : 0);
     if (videoDecodeDesc.h264PictureDesc) {
         const VideoH264SessionParametersDesc* h264Parameters = parameters->GetH264Parameters();
-        NRI_CHECK(h264Parameters, "Validated neutral H.264 decode requires session parameters");
+        OPENRHI_CHECK(h264Parameters, "Validated neutral H.264 decode requires session parameters");
         if (!h264Parameters)
             return;
 
         const uint32_t h264DstSlot = video::GetDecodeSetupSlot(videoDecodeDesc);
         const bool areH264ArgumentsBuilt = BuildVideoDecodeH264Arguments(*h264Parameters, *videoDecodeDesc.h264PictureDesc, videoDecodeDesc.bitstream.size, h264DstSlot,
             h264PictureParameters, h264InverseQuantizationMatrix, h264Slices, videoDecodeDesc.h264PictureDesc->sliceOffsetNum);
-        NRI_CHECK(areH264ArgumentsBuilt, "Failed to build D3D12 H.264 decode arguments from validated neutral descriptors");
+        OPENRHI_CHECK(areH264ArgumentsBuilt, "Failed to build D3D12 H.264 decode arguments from validated neutral descriptors");
         if (!areH264ArgumentsBuilt)
             return;
 
@@ -925,13 +925,13 @@ NRI_INLINE void CommandBufferD3D12::DecodeVideo(const VideoDecodeDesc& videoDeco
     } else if (videoDecodeDesc.h265PictureDesc) {
         const VideoH265DecodePictureDesc& desc = *videoDecodeDesc.h265PictureDesc;
         const VideoH265SessionParametersDesc* h265Parameters = parameters->GetH265Parameters();
-        NRI_CHECK(h265Parameters, "Validated neutral H.265 decode requires session parameters");
+        OPENRHI_CHECK(h265Parameters, "Validated neutral H.265 decode requires session parameters");
         if (!h265Parameters)
             return;
 
         const bool areH265ArgumentsBuilt = BuildVideoDecodeH265Arguments(*h265Parameters, desc, videoDecodeDesc.bitstream.size, videoDecodeDesc.dstSlot,
             h265PictureParameters, h265InverseQuantizationMatrix, h265Slices, desc.sliceSegmentOffsetNum);
-        NRI_CHECK(areH265ArgumentsBuilt, "Failed to build D3D12 H.265 decode arguments from validated neutral descriptors");
+        OPENRHI_CHECK(areH265ArgumentsBuilt, "Failed to build D3D12 H.265 decode arguments from validated neutral descriptors");
         if (!areH265ArgumentsBuilt)
             return;
 
@@ -1169,14 +1169,14 @@ NRI_INLINE void CommandBufferD3D12::DecodeVideo(const VideoDecodeDesc& videoDeco
 
     uint32_t referenceSlotCount = 0;
     const bool isReferenceSlotCountValid = GetVideoDecodeReferenceSlotCount(videoDecodeDesc.references, videoDecodeDesc.referenceNum, referenceSlotCount);
-    NRI_CHECK(isReferenceSlotCountValid, "D3D12 decode reference slot exceeds the native range after NRI validation");
+    OPENRHI_CHECK(isReferenceSlotCountValid, "D3D12 decode reference slot exceeds the native range after OpenRHI validation");
     if (!isReferenceSlotCountValid)
         return;
 
     referenceSlotCount = std::max(referenceSlotCount, setupSlot + 1);
 
-    Scratch<ID3D12Resource*> referenceResources = NRI_ALLOCATE_SCRATCH(m_Device, ID3D12Resource*, referenceSlotCount);
-    Scratch<uint32_t> referenceSubresources = NRI_ALLOCATE_SCRATCH(m_Device, uint32_t, referenceSlotCount);
+    Scratch<ID3D12Resource*> referenceResources = OPENRHI_ALLOCATE_SCRATCH(m_Device, ID3D12Resource*, referenceSlotCount);
+    Scratch<uint32_t> referenceSubresources = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint32_t, referenceSlotCount);
     for (uint32_t i = 0; i < referenceSlotCount; i++) {
         referenceResources[i] = nullptr;
         referenceSubresources[i] = 0;
@@ -1206,19 +1206,19 @@ NRI_INLINE void CommandBufferD3D12::DecodeVideo(const VideoDecodeDesc& videoDeco
     GetVideoDecodeCommandList()->DecodeFrame(session.GetDecoder(), &output, &input);
 }
 
-NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEncodeDesc) {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+OPENRHI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEncodeDesc) {
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     const VideoSessionD3D12& session = *(VideoSessionD3D12*)videoEncodeDesc.session;
     const VideoSessionDesc& sessionDesc = session.GetDesc();
 
     BufferD3D12& dstBitstream = *(BufferD3D12*)videoEncodeDesc.dstBitstream.buffer;
 
-    Scratch<ID3D12Resource*> referenceResources = NRI_ALLOCATE_SCRATCH(m_Device, ID3D12Resource*, videoEncodeDesc.referenceNum);
-    Scratch<uint32_t> referenceSubresources = NRI_ALLOCATE_SCRATCH(m_Device, uint32_t, videoEncodeDesc.referenceNum);
+    Scratch<ID3D12Resource*> referenceResources = OPENRHI_ALLOCATE_SCRATCH(m_Device, ID3D12Resource*, videoEncodeDesc.referenceNum);
+    Scratch<uint32_t> referenceSubresources = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint32_t, videoEncodeDesc.referenceNum);
     const uint32_t h264ReferenceNum = sessionDesc.codec == VideoCodec::H264 ? videoEncodeDesc.referenceNum : 0;
-    Scratch<UINT> h264List0References = NRI_ALLOCATE_SCRATCH(m_Device, UINT, h264ReferenceNum);
-    Scratch<UINT> h264List1References = NRI_ALLOCATE_SCRATCH(m_Device, UINT, h264ReferenceNum);
-    Scratch<D3D12_VIDEO_ENCODER_REFERENCE_PICTURE_DESCRIPTOR_H264> h264ReferenceDescriptors = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_VIDEO_ENCODER_REFERENCE_PICTURE_DESCRIPTOR_H264, h264ReferenceNum);
+    Scratch<UINT> h264List0References = OPENRHI_ALLOCATE_SCRATCH(m_Device, UINT, h264ReferenceNum);
+    Scratch<UINT> h264List1References = OPENRHI_ALLOCATE_SCRATCH(m_Device, UINT, h264ReferenceNum);
+    Scratch<D3D12_VIDEO_ENCODER_REFERENCE_PICTURE_DESCRIPTOR_H264> h264ReferenceDescriptors = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_VIDEO_ENCODER_REFERENCE_PICTURE_DESCRIPTOR_H264, h264ReferenceNum);
     uint32_t h264List0ReferenceNum = 0;
     uint32_t h264List1ReferenceNum = 0;
     for (uint32_t i = 0; i < videoEncodeDesc.referenceNum; i++) {
@@ -1228,7 +1228,7 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
 
         if (sessionDesc.codec == VideoCodec::H264) {
             const VideoH264EncodeReferenceDesc* referenceDesc = video::FindReferenceDesc(videoEncodeDesc.h264PictureDesc, videoEncodeDesc.references[i].slot);
-            NRI_CHECK(referenceDesc, "H.264 reference is missing after NRI validation");
+            OPENRHI_CHECK(referenceDesc, "H.264 reference is missing after OpenRHI validation");
 
             if (referenceDesc->listIndex == 0)
                 h264List0References[h264List0ReferenceNum++] = i;
@@ -1248,7 +1248,7 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
     const VideoEncodeRateControlDesc defaultRateControl = {VideoEncodeRateControlMode::CQP, 26, 28, 30, 0, 51, 30, 1, 0, 0, 0, 0, 0};
     const VideoEncodeRateControlDesc& rateControlDesc = videoEncodeDesc.rateControlDesc ? *videoEncodeDesc.rateControlDesc : defaultRateControl;
     if ((session.GetRateControlModes() & video::GetEncodeRateControlModeMask(rateControlDesc.mode)) == 0) {
-        NRI_REPORT_ERROR(&m_Device, "Unsupported D3D12 video encode rate control mode");
+        OPENRHI_REPORT_ERROR(&m_Device, "Unsupported D3D12 video encode rate control mode");
         return;
     }
 
@@ -1293,7 +1293,7 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
         gop.DataSize = sizeof(av1Sequence);
         gop.pAV1SequenceStructure = &av1Sequence;
     } else {
-        NRI_CHECK(false, "Unexpected video encode codec");
+        OPENRHI_CHECK(false, "Unexpected video encode codec");
         return;
     }
 
@@ -1306,7 +1306,7 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
     if (sessionDesc.codec == VideoCodec::AV1) {
         const VideoAV1TileLayoutDesc* tileLayout = videoEncodeDesc.av1PictureDesc ? videoEncodeDesc.av1PictureDesc->tileLayout : nullptr;
         if (tileLayout && (tileLayout->columnNum != 1 || tileLayout->rowNum != 1)) {
-            NRI_REPORT_ERROR(&m_Device, "D3D12 AV1 encode supports only a single tile");
+            OPENRHI_REPORT_ERROR(&m_Device, "D3D12 AV1 encode supports only a single tile");
             return;
         }
 
@@ -1321,7 +1321,7 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
     if (videoEncodeDesc.flags & VideoEncodeBits::FORCE_KEY_FRAME)
         pictureDesc.frameType = VideoFrameType::IDR;
     if (!video::IsFrameTypeSupported(sessionDesc.codec, pictureDesc.frameType, session.IsBFrameSupported())) {
-        NRI_REPORT_ERROR(&m_Device, "D3D12 video encode session does not support the requested frame type");
+        OPENRHI_REPORT_ERROR(&m_Device, "D3D12 video encode session does not support the requested frame type");
         return;
     }
 
@@ -1340,7 +1340,7 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
             h264Picture.FrameType = D3D12_VIDEO_ENCODER_FRAME_TYPE_H264_B_FRAME;
             break;
         default:
-            NRI_CHECK(false, "Unexpected video encode frame type");
+            OPENRHI_CHECK(false, "Unexpected video encode frame type");
             return;
     }
     h264Picture.pic_parameter_set_id = videoEncodeDesc.h264PictureDesc ? videoEncodeDesc.h264PictureDesc->pictureParameterSetId : 0;
@@ -1369,19 +1369,19 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
             hevcPicture.FrameType = D3D12_VIDEO_ENCODER_FRAME_TYPE_HEVC_B_FRAME;
             break;
         default:
-            NRI_CHECK(false, "Unexpected video encode frame type");
+            OPENRHI_CHECK(false, "Unexpected video encode frame type");
             return;
     }
 
     const uint32_t h265ReferenceNum = sessionDesc.codec == VideoCodec::H265 ? videoEncodeDesc.referenceNum : 0;
-    Scratch<UINT> hevcList0References = NRI_ALLOCATE_SCRATCH(m_Device, UINT, h265ReferenceNum);
-    Scratch<UINT> hevcList1References = NRI_ALLOCATE_SCRATCH(m_Device, UINT, h265ReferenceNum);
-    Scratch<D3D12_VIDEO_ENCODER_REFERENCE_PICTURE_DESCRIPTOR_HEVC> hevcReferenceDescriptors = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_VIDEO_ENCODER_REFERENCE_PICTURE_DESCRIPTOR_HEVC, h265ReferenceNum);
+    Scratch<UINT> hevcList0References = OPENRHI_ALLOCATE_SCRATCH(m_Device, UINT, h265ReferenceNum);
+    Scratch<UINT> hevcList1References = OPENRHI_ALLOCATE_SCRATCH(m_Device, UINT, h265ReferenceNum);
+    Scratch<D3D12_VIDEO_ENCODER_REFERENCE_PICTURE_DESCRIPTOR_HEVC> hevcReferenceDescriptors = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_VIDEO_ENCODER_REFERENCE_PICTURE_DESCRIPTOR_HEVC, h265ReferenceNum);
     if (sessionDesc.codec == VideoCodec::H265) {
         video::h265::EncodeReferenceLists hevcReferenceLists = {};
         if (!video::h265::BuildEncodeReferenceLists(videoEncodeDesc.references, videoEncodeDesc.h265ReferenceDescs, videoEncodeDesc.referenceNum, pictureDesc.frameType,
                 pictureDesc.pictureOrderCount, true, hevcReferenceLists)) {
-            NRI_CHECK(false, "Failed to build D3D12 H.265 reference lists from validated descriptors");
+            OPENRHI_CHECK(false, "Failed to build D3D12 H.265 reference lists from validated descriptors");
             return;
         }
         for (uint32_t i = 0; i < hevcReferenceLists.list0Num; i++)
@@ -1414,7 +1414,7 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
     if (sessionDesc.codec == VideoCodec::AV1) {
         D3D12_VIDEO_ENCODER_AV1_FRAME_TYPE frameType = GetVideoEncodeAV1FrameType(pictureDesc.frameType);
         if (frameType == (D3D12_VIDEO_ENCODER_AV1_FRAME_TYPE)-1) {
-            NRI_CHECK(false, "Unexpected AV1 video encode frame type");
+            OPENRHI_CHECK(false, "Unexpected AV1 video encode frame type");
             return;
         }
 
@@ -1436,7 +1436,7 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
         if ((session.GetAV1FeatureFlags() & D3D12_VIDEO_ENCODER_AV1_FEATURE_FLAG_FORCED_INTEGER_MOTION_VECTORS) && (pictureFlags & VideoAV1PictureBits::FORCE_INTEGER_MV))
             av1Picture.Flags |= D3D12_VIDEO_ENCODER_AV1_PICTURE_CONTROL_FLAG_FORCE_INTEGER_MOTION_VECTORS;
         if (videoEncodeDesc.av1PictureDesc && videoEncodeDesc.av1PictureDesc->segmentation) {
-            NRI_REPORT_ERROR(&m_Device, "D3D12 AV1 encode does not support explicit segmentation");
+            OPENRHI_REPORT_ERROR(&m_Device, "D3D12 AV1 encode does not support explicit segmentation");
             return;
         }
         if ((session.GetAV1FeatureFlags() & D3D12_VIDEO_ENCODER_AV1_FEATURE_FLAG_AUTO_SEGMENTATION) && (pictureFlags & VideoAV1PictureBits::SEGMENTATION_ENABLED))
@@ -1464,7 +1464,7 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
             : video::GetEncodeQPByFrameType(rateControlDesc, pictureDesc.frameType);
 
         if (av1Picture.Quantization.BaseQIndex < VIDEO_D3D12_ENCODE_AV1_MIN_Q_INDEX || av1Picture.Quantization.BaseQIndex > VIDEO_D3D12_ENCODE_AV1_MAX_Q_INDEX) {
-            NRI_REPORT_ERROR(&m_Device, "AV1 base Q index must be in [%u, %u]", VIDEO_D3D12_ENCODE_AV1_MIN_Q_INDEX, VIDEO_D3D12_ENCODE_AV1_MAX_Q_INDEX);
+            OPENRHI_REPORT_ERROR(&m_Device, "AV1 base Q index must be in [%u, %u]", VIDEO_D3D12_ENCODE_AV1_MIN_Q_INDEX, VIDEO_D3D12_ENCODE_AV1_MAX_Q_INDEX);
             return;
         }
 
@@ -1559,7 +1559,7 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
                     continue;
 
                 if (unusedReferenceIndex == UINT32_MAX) {
-                    NRI_REPORT_ERROR(&m_Device, "AV1 DPB snapshot has no DPB slot for unused reference names");
+                    OPENRHI_REPORT_ERROR(&m_Device, "AV1 DPB snapshot has no DPB slot for unused reference names");
                     return;
                 }
 
@@ -1666,8 +1666,8 @@ NRI_INLINE void CommandBufferD3D12::EncodeVideo(const VideoEncodeDesc& videoEnco
 #endif
 }
 
-NRI_INLINE void CommandBufferD3D12::SetViewports(const Viewport* viewports, uint32_t viewportNum) {
-    Scratch<D3D12_VIEWPORT> d3dViewports = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_VIEWPORT, viewportNum);
+OPENRHI_INLINE void CommandBufferD3D12::SetViewports(const Viewport* viewports, uint32_t viewportNum) {
+    Scratch<D3D12_VIEWPORT> d3dViewports = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_VIEWPORT, viewportNum);
     for (uint32_t i = 0; i < viewportNum; i++) {
         const Viewport& in = viewports[i];
         D3D12_VIEWPORT& out = d3dViewports[i];
@@ -1688,20 +1688,20 @@ NRI_INLINE void CommandBufferD3D12::SetViewports(const Viewport* viewports, uint
     GetGraphicsCommandList()->RSSetViewports(viewportNum, d3dViewports);
 }
 
-NRI_INLINE void CommandBufferD3D12::SetScissors(const Rect* rects, uint32_t rectNum) {
-    Scratch<D3D12_RECT> d3dRects = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_RECT, rectNum);
+OPENRHI_INLINE void CommandBufferD3D12::SetScissors(const Rect* rects, uint32_t rectNum) {
+    Scratch<D3D12_RECT> d3dRects = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_RECT, rectNum);
     ConvertRects(rects, rectNum, d3dRects);
 
     GetGraphicsCommandList()->RSSetScissorRects(rectNum, d3dRects);
 }
 
-NRI_INLINE void CommandBufferD3D12::SetDepthBounds(float boundsMin, float boundsMax) {
+OPENRHI_INLINE void CommandBufferD3D12::SetDepthBounds(float boundsMin, float boundsMax) {
     GetGraphicsCommandList()->OMSetDepthBounds(boundsMin, boundsMax);
 }
 
-NRI_INLINE void CommandBufferD3D12::SetStencilReference(uint8_t frontRef, uint8_t backRef) {
+OPENRHI_INLINE void CommandBufferD3D12::SetStencilReference(uint8_t frontRef, uint8_t backRef) {
     MaybeUnused(backRef);
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     if (m_Device.GetDesc().features.independentFrontAndBackStencilReferenceAndMasks && m_Device.GetVersion() >= 8)
         GetGraphicsCommandList()->OMSetFrontAndBackStencilRef(frontRef, backRef);
     else
@@ -1709,18 +1709,18 @@ NRI_INLINE void CommandBufferD3D12::SetStencilReference(uint8_t frontRef, uint8_
         GetGraphicsCommandList()->OMSetStencilRef(frontRef);
 }
 
-NRI_INLINE void CommandBufferD3D12::SetSampleLocations(const SampleLocation* locations, Sample_t locationNum, Sample_t sampleNum) {
+OPENRHI_INLINE void CommandBufferD3D12::SetSampleLocations(const SampleLocation* locations, Sample_t locationNum, Sample_t sampleNum) {
     static_assert(sizeof(D3D12_SAMPLE_POSITION) == sizeof(SampleLocation));
 
     uint32_t pixelNum = locationNum / sampleNum;
     GetGraphicsCommandList()->SetSamplePositions(sampleNum, pixelNum, (D3D12_SAMPLE_POSITION*)locations);
 }
 
-NRI_INLINE void CommandBufferD3D12::SetBlendConstants(const Color32f& color) {
+OPENRHI_INLINE void CommandBufferD3D12::SetBlendConstants(const Color32f& color) {
     GetGraphicsCommandList()->OMSetBlendFactor(&color.x);
 }
 
-NRI_INLINE void CommandBufferD3D12::SetShadingRate(const ShadingRateDesc& shadingRateDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::SetShadingRate(const ShadingRateDesc& shadingRateDesc) {
     D3D12_SHADING_RATE shadingRate = GetShadingRate(shadingRateDesc.shadingRate);
     D3D12_SHADING_RATE_COMBINER shadingRateCombiners[2] = {
         GetShadingRateCombiner(shadingRateDesc.primitiveCombiner),
@@ -1730,16 +1730,16 @@ NRI_INLINE void CommandBufferD3D12::SetShadingRate(const ShadingRateDesc& shadin
     GetGraphicsCommandList()->RSSetShadingRate(shadingRate, shadingRateCombiners);
 }
 
-NRI_INLINE void CommandBufferD3D12::SetDepthBias(const DepthBiasDesc& depthBiasDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::SetDepthBias(const DepthBiasDesc& depthBiasDesc) {
     MaybeUnused(depthBiasDesc);
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     if (m_Device.GetVersion() >= 9)
         GetGraphicsCommandList()->RSSetDepthBias(depthBiasDesc.constant, depthBiasDesc.clamp, depthBiasDesc.slope);
 #endif
 }
 
-NRI_INLINE void CommandBufferD3D12::ClearAttachments(const ClearAttachmentDesc* clearAttachmentDescs, uint32_t clearAttachmentDescNum, const Rect* rects, uint32_t rectNum) {
-    Scratch<D3D12_RECT> d3dRects = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_RECT, rectNum);
+OPENRHI_INLINE void CommandBufferD3D12::ClearAttachments(const ClearAttachmentDesc* clearAttachmentDescs, uint32_t clearAttachmentDescNum, const Rect* rects, uint32_t rectNum) {
+    Scratch<D3D12_RECT> d3dRects = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_RECT, rectNum);
     ConvertRects(rects, rectNum, d3dRects);
 
     for (uint32_t i = 0; i < clearAttachmentDescNum; i++) {
@@ -1761,7 +1761,7 @@ NRI_INLINE void CommandBufferD3D12::ClearAttachments(const ClearAttachmentDesc* 
     }
 }
 
-NRI_INLINE void CommandBufferD3D12::ClearStorage(const ClearStorageDesc& clearStorageDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::ClearStorage(const ClearStorageDesc& clearStorageDesc) {
     DescriptorSetD3D12* descriptorSet = m_DescriptorSets[clearStorageDesc.setIndex];
     const DescriptorD3D12& descriptorD3D12 = *(DescriptorD3D12*)clearStorageDesc.descriptor;
 
@@ -1776,7 +1776,7 @@ NRI_INLINE void CommandBufferD3D12::ClearStorage(const ClearStorageDesc& clearSt
         GetGraphicsCommandList()->ClearUnorderedAccessViewFloat({handleGPU}, {handleCPU}, descriptorD3D12.GetResource(), &clearStorageDesc.value.f.x, 0, nullptr);
 }
 
-NRI_INLINE void CommandBufferD3D12::BeginRendering(const RenderingDesc& renderingDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::BeginRendering(const RenderingDesc& renderingDesc) {
     ResetAttachments();
 
     std::array<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT> renderTargets = {};
@@ -1849,7 +1849,7 @@ NRI_INLINE void CommandBufferD3D12::BeginRendering(const RenderingDesc& renderin
     m_RenderPass = true;
 }
 
-NRI_INLINE void CommandBufferD3D12::EndRendering() {
+OPENRHI_INLINE void CommandBufferD3D12::EndRendering() {
     uint32_t resourceBarrierNum = 0;
     if (!m_Device.GetDesc().features.enhancedBarriers) {
         for (const AttachmentDescD3D12& attachmentDesc : m_RenderTargets) {
@@ -1869,11 +1869,11 @@ NRI_INLINE void CommandBufferD3D12::EndRendering() {
             resourceBarrierNum += srcDesc.layerNum;
         }
     }
-    Scratch<D3D12_RESOURCE_BARRIER> resourceBarriers = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_RESOURCE_BARRIER, resourceBarrierNum * 2);
+    Scratch<D3D12_RESOURCE_BARRIER> resourceBarriers = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_RESOURCE_BARRIER, resourceBarrierNum * 2);
     uint32_t barrierNum = 0;
 
     constexpr uint32_t attachmentNum = (D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT + 2) * 2; // (colors, depth and stencil) x (src and dst)
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     std::array<D3D12_TEXTURE_BARRIER, attachmentNum> textureBarriers = {};
 
     D3D12_BARRIER_GROUP barrierGroup = {};
@@ -1897,7 +1897,7 @@ NRI_INLINE void CommandBufferD3D12::EndRendering() {
 
         DescriptorD3D12* resolveSrc = attachmentDesc->attachment;
         DescriptorD3D12* resolveDst = attachmentDesc->resolveDst;
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         if (m_Device.GetDesc().features.enhancedBarriers) {
             FillResolveBarrier(true, *resolveSrc, planeBits, textureBarriers[barrierNum++]);
             FillResolveBarrier(false, *resolveDst, planeBits, textureBarriers[barrierNum++]);
@@ -1922,7 +1922,7 @@ NRI_INLINE void CommandBufferD3D12::EndRendering() {
 
     if (barrierNum) {
         // Barriers to "RESOLVE" state
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         barrierGroup.NumBarriers = barrierNum;
         if (m_Device.GetDesc().features.enhancedBarriers)
             GetGraphicsCommandList()->Barrier(1, &barrierGroup);
@@ -1962,7 +1962,7 @@ NRI_INLINE void CommandBufferD3D12::EndRendering() {
         }
 
         // Restore state
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         if (m_Device.GetDesc().features.enhancedBarriers) {
             for (uint32_t i = 0; i < barrierNum; i++) {
                 D3D12_TEXTURE_BARRIER& textureBarrier = textureBarriers[i];
@@ -1991,8 +1991,8 @@ NRI_INLINE void CommandBufferD3D12::EndRendering() {
     m_RenderPass = false;
 }
 
-NRI_INLINE void CommandBufferD3D12::SetVertexBuffers(uint32_t baseSlot, const VertexBufferDesc* vertexBufferDescs, uint32_t vertexBufferNum) {
-    Scratch<D3D12_VERTEX_BUFFER_VIEW> vertexBufferViews = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_VERTEX_BUFFER_VIEW, vertexBufferNum);
+OPENRHI_INLINE void CommandBufferD3D12::SetVertexBuffers(uint32_t baseSlot, const VertexBufferDesc* vertexBufferDescs, uint32_t vertexBufferNum) {
+    Scratch<D3D12_VERTEX_BUFFER_VIEW> vertexBufferViews = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_VERTEX_BUFFER_VIEW, vertexBufferNum);
     for (uint32_t i = 0; i < vertexBufferNum; i++) {
         const VertexBufferDesc& vertexBufferDesc = vertexBufferDescs[i];
 
@@ -2011,7 +2011,7 @@ NRI_INLINE void CommandBufferD3D12::SetVertexBuffers(uint32_t baseSlot, const Ve
     GetGraphicsCommandList()->IASetVertexBuffers(baseSlot, vertexBufferNum, vertexBufferViews);
 }
 
-NRI_INLINE void CommandBufferD3D12::SetIndexBuffer(const Buffer& buffer, uint64_t offset, IndexType indexType) {
+OPENRHI_INLINE void CommandBufferD3D12::SetIndexBuffer(const Buffer& buffer, uint64_t offset, IndexType indexType) {
     const BufferD3D12& bufferD3D12 = (BufferD3D12&)buffer;
 
     D3D12_INDEX_BUFFER_VIEW indexBufferView;
@@ -2022,7 +2022,7 @@ NRI_INLINE void CommandBufferD3D12::SetIndexBuffer(const Buffer& buffer, uint64_
     GetGraphicsCommandList()->IASetIndexBuffer(&indexBufferView);
 }
 
-NRI_INLINE void CommandBufferD3D12::SetPipelineLayout(BindPoint bindPoint, const PipelineLayout& pipelineLayout) {
+OPENRHI_INLINE void CommandBufferD3D12::SetPipelineLayout(BindPoint bindPoint, const PipelineLayout& pipelineLayout) {
     const PipelineLayoutD3D12& pipelineLayoutD3D12 = (PipelineLayoutD3D12&)pipelineLayout;
     if (bindPoint == BindPoint::GRAPHICS)
         GetGraphicsCommandList()->SetGraphicsRootSignature(pipelineLayoutD3D12);
@@ -2033,33 +2033,33 @@ NRI_INLINE void CommandBufferD3D12::SetPipelineLayout(BindPoint bindPoint, const
     m_PipelineBindPoint = bindPoint;
 }
 
-NRI_INLINE void CommandBufferD3D12::SetPipeline(const Pipeline& pipeline) {
+OPENRHI_INLINE void CommandBufferD3D12::SetPipeline(const Pipeline& pipeline) {
     PipelineD3D12* pipelineD3D12 = (PipelineD3D12*)&pipeline;
     pipelineD3D12->Bind(GetGraphicsCommandList());
 }
 
-NRI_INLINE void CommandBufferD3D12::SetDescriptorPool(const DescriptorPool& descriptorPool) {
+OPENRHI_INLINE void CommandBufferD3D12::SetDescriptorPool(const DescriptorPool& descriptorPool) {
     ((DescriptorPoolD3D12&)descriptorPool).Bind(GetGraphicsCommandList());
 }
 
-NRI_INLINE void CommandBufferD3D12::SetDescriptorSet(const SetDescriptorSetDesc& setDescriptorSetDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::SetDescriptorSet(const SetDescriptorSetDesc& setDescriptorSetDesc) {
     BindPoint bindPoint = setDescriptorSetDesc.bindPoint == BindPoint::INHERIT ? m_PipelineBindPoint : setDescriptorSetDesc.bindPoint;
     m_PipelineLayout->SetDescriptorSet(GetGraphicsCommandList(), bindPoint, setDescriptorSetDesc);
 
     m_DescriptorSets[setDescriptorSetDesc.setIndex] = (DescriptorSetD3D12*)setDescriptorSetDesc.descriptorSet;
 }
 
-NRI_INLINE void CommandBufferD3D12::SetRootConstants(const SetRootConstantsDesc& setRootConstantsDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::SetRootConstants(const SetRootConstantsDesc& setRootConstantsDesc) {
     BindPoint bindPoint = setRootConstantsDesc.bindPoint == BindPoint::INHERIT ? m_PipelineBindPoint : setRootConstantsDesc.bindPoint;
     m_PipelineLayout->SetRootConstants(GetGraphicsCommandList(), bindPoint, setRootConstantsDesc);
 }
 
-NRI_INLINE void CommandBufferD3D12::SetRootDescriptor(const SetRootDescriptorDesc& setRootDescriptorDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::SetRootDescriptor(const SetRootDescriptorDesc& setRootDescriptorDesc) {
     BindPoint bindPoint = setRootDescriptorDesc.bindPoint == BindPoint::INHERIT ? m_PipelineBindPoint : setRootDescriptorDesc.bindPoint;
     m_PipelineLayout->SetRootDescriptor(GetGraphicsCommandList(), bindPoint, setRootDescriptorDesc);
 }
 
-NRI_INLINE void CommandBufferD3D12::Draw(const DrawDesc& drawDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::Draw(const DrawDesc& drawDesc) {
     if (m_PipelineLayout && m_PipelineLayout->IsDrawParametersEmulationEnabled()) {
         struct BaseVertexInstance {
             uint32_t baseVertex;
@@ -2077,7 +2077,7 @@ NRI_INLINE void CommandBufferD3D12::Draw(const DrawDesc& drawDesc) {
     GetGraphicsCommandList()->DrawInstanced(drawDesc.vertexNum, drawDesc.instanceNum, drawDesc.baseVertex, drawDesc.baseInstance);
 }
 
-NRI_INLINE void CommandBufferD3D12::DrawIndexed(const DrawIndexedDesc& drawIndexedDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::DrawIndexed(const DrawIndexedDesc& drawIndexedDesc) {
     if (m_PipelineLayout && m_PipelineLayout->IsDrawParametersEmulationEnabled()) {
         struct BaseVertexInstance {
             int32_t baseVertex;
@@ -2095,7 +2095,7 @@ NRI_INLINE void CommandBufferD3D12::DrawIndexed(const DrawIndexedDesc& drawIndex
     GetGraphicsCommandList()->DrawIndexedInstanced(drawIndexedDesc.indexNum, drawIndexedDesc.instanceNum, drawIndexedDesc.baseIndex, drawIndexedDesc.baseVertex, drawIndexedDesc.baseInstance);
 }
 
-NRI_INLINE void CommandBufferD3D12::DrawIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
+OPENRHI_INLINE void CommandBufferD3D12::DrawIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
     ID3D12Resource* pCountBuffer = nullptr;
     if (countBuffer)
         pCountBuffer = *(BufferD3D12*)countBuffer;
@@ -2103,7 +2103,7 @@ NRI_INLINE void CommandBufferD3D12::DrawIndirect(const Buffer& buffer, uint64_t 
     GetGraphicsCommandList()->ExecuteIndirect(m_Device.GetDrawCommandSignature(m_PipelineLayout, stride), drawNum, (BufferD3D12&)buffer, offset, pCountBuffer, countBufferOffset);
 }
 
-NRI_INLINE void CommandBufferD3D12::DrawIndexedIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
+OPENRHI_INLINE void CommandBufferD3D12::DrawIndexedIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
     ID3D12Resource* pCountBuffer = nullptr;
     if (countBuffer)
         pCountBuffer = *(BufferD3D12*)countBuffer;
@@ -2111,14 +2111,14 @@ NRI_INLINE void CommandBufferD3D12::DrawIndexedIndirect(const Buffer& buffer, ui
     GetGraphicsCommandList()->ExecuteIndirect(m_Device.GetDrawIndexedCommandSignature(m_PipelineLayout, stride), drawNum, (BufferD3D12&)buffer, offset, pCountBuffer, countBufferOffset);
 }
 
-NRI_INLINE void CommandBufferD3D12::CopyBuffer(Buffer& dstBuffer, uint64_t dstOffset, const Buffer& srcBuffer, uint64_t srcOffset, uint64_t size) {
+OPENRHI_INLINE void CommandBufferD3D12::CopyBuffer(Buffer& dstBuffer, uint64_t dstOffset, const Buffer& srcBuffer, uint64_t srcOffset, uint64_t size) {
     if (size == WHOLE_SIZE)
         size = ((BufferD3D12&)srcBuffer).GetDesc().size;
 
     GetGraphicsCommandList()->CopyBufferRegion((BufferD3D12&)dstBuffer, dstOffset, (BufferD3D12&)srcBuffer, srcOffset, size);
 }
 
-NRI_INLINE void CommandBufferD3D12::CopyTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion) {
+OPENRHI_INLINE void CommandBufferD3D12::CopyTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion) {
     const TextureD3D12& dst = (TextureD3D12&)dstTexture;
     const TextureD3D12& src = (TextureD3D12&)srcTexture;
 
@@ -2157,7 +2157,7 @@ NRI_INLINE void CommandBufferD3D12::CopyTexture(Texture& dstTexture, const Textu
     }
 }
 
-NRI_INLINE void CommandBufferD3D12::ZeroBuffer(Buffer& buffer, uint64_t offset, uint64_t size) {
+OPENRHI_INLINE void CommandBufferD3D12::ZeroBuffer(Buffer& buffer, uint64_t offset, uint64_t size) {
     const BufferD3D12& dst = (BufferD3D12&)buffer;
     ID3D12Resource* zeroBuffer = m_Device.GetZeroBuffer();
     D3D12_RESOURCE_DESC zeroBufferDesc = zeroBuffer->GetDesc();
@@ -2176,7 +2176,7 @@ NRI_INLINE void CommandBufferD3D12::ZeroBuffer(Buffer& buffer, uint64_t offset, 
     }
 }
 
-NRI_INLINE void CommandBufferD3D12::ResolveTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion, ResolveOp resolveOp) {
+OPENRHI_INLINE void CommandBufferD3D12::ResolveTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion, ResolveOp resolveOp) {
     const TextureD3D12& dst = (TextureD3D12&)dstTexture;
     const TextureD3D12& src = (TextureD3D12&)srcTexture;
     const TextureDesc& dstDesc = dst.GetDesc();
@@ -2217,7 +2217,7 @@ NRI_INLINE void CommandBufferD3D12::ResolveTexture(Texture& dstTexture, const Te
     }
 }
 
-NRI_INLINE void CommandBufferD3D12::UploadBufferToTexture(Texture& dstTexture, const TextureRegionDesc& dstRegion, const Buffer& srcBuffer, const TextureDataLayoutDesc& srcDataLayout) {
+OPENRHI_INLINE void CommandBufferD3D12::UploadBufferToTexture(Texture& dstTexture, const TextureRegionDesc& dstRegion, const Buffer& srcBuffer, const TextureDataLayoutDesc& srcDataLayout) {
     const TextureD3D12& dst = (TextureD3D12&)dstTexture;
     const TextureDesc& dstDesc = dst.GetDesc();
     auto getPlaneCompatibleFormat = [](Format format, PlaneBits planes) {
@@ -2264,7 +2264,7 @@ NRI_INLINE void CommandBufferD3D12::UploadBufferToTexture(Texture& dstTexture, c
     GetGraphicsCommandList()->CopyTextureRegion(&dstTextureCopyLocation, x, y, dstRegion.z, &srcTextureCopyLocation, nullptr);
 }
 
-NRI_INLINE void CommandBufferD3D12::ReadbackTextureToBuffer(Buffer& dstBuffer, const TextureDataLayoutDesc& dstDataLayout, const Texture& srcTexture, const TextureRegionDesc& srcRegion) {
+OPENRHI_INLINE void CommandBufferD3D12::ReadbackTextureToBuffer(Buffer& dstBuffer, const TextureDataLayoutDesc& dstDataLayout, const Texture& srcTexture, const TextureRegionDesc& srcRegion) {
     const TextureD3D12& src = (TextureD3D12&)srcTexture;
     const TextureDesc& srcDesc = src.GetDesc();
     auto getPlaneCompatibleFormat = [](Format format, PlaneBits planes) {
@@ -2318,18 +2318,18 @@ NRI_INLINE void CommandBufferD3D12::ReadbackTextureToBuffer(Buffer& dstBuffer, c
     GetGraphicsCommandList()->CopyTextureRegion(&dstTextureCopyLocation, 0, 0, 0, &srcTextureCopyLocation, &srcBox);
 }
 
-NRI_INLINE void CommandBufferD3D12::Dispatch(const DispatchDesc& dispatchDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::Dispatch(const DispatchDesc& dispatchDesc) {
     GetGraphicsCommandList()->Dispatch(dispatchDesc.workGroupNumX, dispatchDesc.workGroupNumY, dispatchDesc.workGroupNumZ);
 }
 
-NRI_INLINE void CommandBufferD3D12::DispatchIndirect(const Buffer& buffer, uint64_t offset) {
+OPENRHI_INLINE void CommandBufferD3D12::DispatchIndirect(const Buffer& buffer, uint64_t offset) {
     static_assert(sizeof(DispatchDesc) == sizeof(D3D12_DISPATCH_ARGUMENTS));
 
     GetGraphicsCommandList()->ExecuteIndirect(m_Device.GetDispatchCommandSignature(), 1, (BufferD3D12&)buffer, offset, nullptr, 0);
 }
 
-NRI_INLINE void CommandBufferD3D12::Barrier(const BarrierDesc& barrierDesc) {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+OPENRHI_INLINE void CommandBufferD3D12::Barrier(const BarrierDesc& barrierDesc) {
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     if (m_Device.GetDesc().features.enhancedBarriers) {
         // Count
         uint32_t barrierNum = barrierDesc.globalNum + barrierDesc.bufferNum + barrierDesc.textureNum;
@@ -2339,11 +2339,11 @@ NRI_INLINE void CommandBufferD3D12::Barrier(const BarrierDesc& barrierDesc) {
         D3D12_BARRIER_GROUP barrierGroups[3] = {};
         uint32_t barriersGroupsNum = 0;
 
-        Scratch<D3D12_RESOURCE_BARRIER> videoBufferResourceBarriers = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_RESOURCE_BARRIER, barrierDesc.bufferNum * 2);
+        Scratch<D3D12_RESOURCE_BARRIER> videoBufferResourceBarriers = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_RESOURCE_BARRIER, barrierDesc.bufferNum * 2);
         uint32_t videoBufferResourceBarrierNum = 0;
 
         // Global
-        Scratch<D3D12_GLOBAL_BARRIER> globalBarriers = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_GLOBAL_BARRIER, barrierDesc.globalNum);
+        Scratch<D3D12_GLOBAL_BARRIER> globalBarriers = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_GLOBAL_BARRIER, barrierDesc.globalNum);
 
         if (barrierDesc.globalNum) {
             D3D12_BARRIER_GROUP* barrierGroup = &barrierGroups[barriersGroupsNum++];
@@ -2376,7 +2376,7 @@ NRI_INLINE void CommandBufferD3D12::Barrier(const BarrierDesc& barrierDesc) {
             bufferBarrierNum++;
         }
 
-        Scratch<D3D12_BUFFER_BARRIER> bufferBarriers = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_BUFFER_BARRIER, barrierDesc.bufferNum);
+        Scratch<D3D12_BUFFER_BARRIER> bufferBarriers = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_BUFFER_BARRIER, barrierDesc.bufferNum);
         if (bufferBarrierNum) {
             D3D12_BARRIER_GROUP* barrierGroup = &barrierGroups[barriersGroupsNum++];
             barrierGroup->Type = D3D12_BARRIER_TYPE_BUFFER;
@@ -2424,7 +2424,7 @@ NRI_INLINE void CommandBufferD3D12::Barrier(const BarrierDesc& barrierDesc) {
         }
 
         // Texture
-        Scratch<D3D12_TEXTURE_BARRIER> textureBarriers = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_TEXTURE_BARRIER, barrierDesc.textureNum);
+        Scratch<D3D12_TEXTURE_BARRIER> textureBarriers = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_TEXTURE_BARRIER, barrierDesc.textureNum);
         if (barrierDesc.textureNum) {
             D3D12_BARRIER_GROUP* barrierGroup = &barrierGroups[barriersGroupsNum++];
             barrierGroup->Type = D3D12_BARRIER_TYPE_TEXTURE;
@@ -2533,7 +2533,7 @@ NRI_INLINE void CommandBufferD3D12::Barrier(const BarrierDesc& barrierDesc) {
             return;
 
         // Gather
-        Scratch<D3D12_RESOURCE_BARRIER> barriers = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_RESOURCE_BARRIER, barrierNum);
+        Scratch<D3D12_RESOURCE_BARRIER> barriers = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_RESOURCE_BARRIER, barrierNum);
         memset(barriers, 0, sizeof(D3D12_RESOURCE_BARRIER) * barrierNum);
 
         D3D12_RESOURCE_BARRIER* ptr = barriers;
@@ -2584,12 +2584,12 @@ NRI_INLINE void CommandBufferD3D12::Barrier(const BarrierDesc& barrierDesc) {
     }
 }
 
-NRI_INLINE void CommandBufferD3D12::ResetQueries(QueryPool& queryPool, uint32_t, uint32_t) {
+OPENRHI_INLINE void CommandBufferD3D12::ResetQueries(QueryPool& queryPool, uint32_t, uint32_t) {
     QueryPoolD3D12& queryPoolD3D12 = (QueryPoolD3D12&)queryPool;
     if (queryPoolD3D12.GetType() >= QUERY_TYPE_ACCELERATION_STRUCTURE_SIZE) {
         // TODO: "bufferForAccelerationStructuresSizes" is completely hidden from a user, transition needs to be done under the hood.
         // "ResetQueries" is a good indicator that next call will be "CmdWrite*Sizes" where UAV state is needed
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         if (m_Device.GetDesc().features.enhancedBarriers) {
             D3D12_BUFFER_BARRIER barrier = {};
             barrier.SyncBefore = D3D12_BARRIER_SYNC_COPY;
@@ -2620,17 +2620,17 @@ NRI_INLINE void CommandBufferD3D12::ResetQueries(QueryPool& queryPool, uint32_t,
     }
 }
 
-NRI_INLINE void CommandBufferD3D12::BeginQuery(QueryPool& queryPool, uint32_t offset) {
+OPENRHI_INLINE void CommandBufferD3D12::BeginQuery(QueryPool& queryPool, uint32_t offset) {
     QueryPoolD3D12& queryPoolD3D12 = (QueryPoolD3D12&)queryPool;
     GetGraphicsCommandList()->BeginQuery(queryPoolD3D12, queryPoolD3D12.GetType(), offset);
 }
 
-NRI_INLINE void CommandBufferD3D12::EndQuery(QueryPool& queryPool, uint32_t offset) {
+OPENRHI_INLINE void CommandBufferD3D12::EndQuery(QueryPool& queryPool, uint32_t offset) {
     QueryPoolD3D12& queryPoolD3D12 = (QueryPoolD3D12&)queryPool;
     GetGraphicsCommandList()->EndQuery(queryPoolD3D12, queryPoolD3D12.GetType(), offset);
 }
 
-NRI_INLINE void CommandBufferD3D12::CopyQueries(const QueryPool& queryPool, uint32_t offset, uint32_t num, Buffer& buffer, uint64_t alignedBufferOffset) {
+OPENRHI_INLINE void CommandBufferD3D12::CopyQueries(const QueryPool& queryPool, uint32_t offset, uint32_t num, Buffer& buffer, uint64_t alignedBufferOffset) {
     QueryPoolD3D12& queryPoolD3D12 = (QueryPoolD3D12&)queryPool;
     const BufferD3D12& bufferD3D12 = (BufferD3D12&)buffer;
 
@@ -2641,7 +2641,7 @@ NRI_INLINE void CommandBufferD3D12::CopyQueries(const QueryPool& queryPool, uint
 
         // TODO: "bufferForAccelerationStructuresSizes" is completely hidden from a user, transition needs to be done under the hood.
         // Let's naively assume that "CopyQueries" can be called only once after potentially multiple "CmdWrite*Sizes"
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         if (m_Device.GetDesc().features.enhancedBarriers) {
             D3D12_BUFFER_BARRIER barrier = {};
             barrier.SyncBefore = D3D12_BARRIER_SYNC_EMIT_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO;
@@ -2675,28 +2675,28 @@ NRI_INLINE void CommandBufferD3D12::CopyQueries(const QueryPool& queryPool, uint
         GetGraphicsCommandList()->ResolveQueryData(queryPoolD3D12, queryPoolD3D12.GetType(), offset, num, bufferD3D12, alignedBufferOffset);
 }
 
-NRI_INLINE void CommandBufferD3D12::BeginAnnotation(const char* name, uint32_t bgra) {
+OPENRHI_INLINE void CommandBufferD3D12::BeginAnnotation(const char* name, uint32_t bgra) {
     if (m_Device.HasPix())
         m_Device.GetPix().BeginEventOnCommandList(GetGraphicsCommandList(), bgra, name);
     else
         PIXBeginEvent(GetGraphicsCommandList(), bgra, name);
 }
 
-NRI_INLINE void CommandBufferD3D12::EndAnnotation() {
+OPENRHI_INLINE void CommandBufferD3D12::EndAnnotation() {
     if (m_Device.HasPix())
         m_Device.GetPix().EndEventOnCommandList(GetGraphicsCommandList());
     else
         PIXEndEvent(GetGraphicsCommandList());
 }
 
-NRI_INLINE void CommandBufferD3D12::Annotation(const char* name, uint32_t bgra) {
+OPENRHI_INLINE void CommandBufferD3D12::Annotation(const char* name, uint32_t bgra) {
     if (m_Device.HasPix())
         m_Device.GetPix().SetMarkerOnCommandList(GetGraphicsCommandList(), bgra, name);
     else
         PIXSetMarker(GetGraphicsCommandList(), bgra, name);
 }
 
-NRI_INLINE void CommandBufferD3D12::BuildTopLevelAccelerationStructures(const BuildTopLevelAccelerationStructureDesc* buildTopLevelAccelerationStructureDescs, uint32_t buildTopLevelAccelerationStructureDescNum) {
+OPENRHI_INLINE void CommandBufferD3D12::BuildTopLevelAccelerationStructures(const BuildTopLevelAccelerationStructureDesc* buildTopLevelAccelerationStructureDescs, uint32_t buildTopLevelAccelerationStructureDescNum) {
     static_assert(sizeof(D3D12_RAYTRACING_INSTANCE_DESC) == sizeof(TopLevelInstance), "Mismatched sizeof");
 
     for (uint32_t i = 0; i < buildTopLevelAccelerationStructureDescNum; i++) {
@@ -2723,7 +2723,7 @@ NRI_INLINE void CommandBufferD3D12::BuildTopLevelAccelerationStructures(const Bu
     }
 }
 
-NRI_INLINE void CommandBufferD3D12::BuildBottomLevelAccelerationStructures(const BuildBottomLevelAccelerationStructureDesc* buildBottomLevelAccelerationStructureDescs, uint32_t buildBottomLevelAccelerationStructureDescNum) {
+OPENRHI_INLINE void CommandBufferD3D12::BuildBottomLevelAccelerationStructures(const BuildBottomLevelAccelerationStructureDesc* buildBottomLevelAccelerationStructureDescs, uint32_t buildBottomLevelAccelerationStructureDescNum) {
     // Scratch memory
     uint32_t geometryMaxNum = 0;
     uint32_t micromapMaxNum = 0;
@@ -2742,9 +2742,9 @@ NRI_INLINE void CommandBufferD3D12::BuildBottomLevelAccelerationStructures(const
         micromapMaxNum = std::max(micromapMaxNum, micromapNum);
     }
 
-    Scratch<D3D12_RAYTRACING_GEOMETRY_DESC> geometryDescs = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_RAYTRACING_GEOMETRY_DESC, geometryMaxNum);
-    Scratch<D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC> trianglesDescs = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC, micromapMaxNum);
-    Scratch<D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC> ommDescs = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC, micromapMaxNum);
+    Scratch<D3D12_RAYTRACING_GEOMETRY_DESC> geometryDescs = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_RAYTRACING_GEOMETRY_DESC, geometryMaxNum);
+    Scratch<D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC> trianglesDescs = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC, micromapMaxNum);
+    Scratch<D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC> ommDescs = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC, micromapMaxNum);
 
     // 1 by 1
     for (uint32_t i = 0; i < buildBottomLevelAccelerationStructureDescNum; i++) {
@@ -2773,15 +2773,15 @@ NRI_INLINE void CommandBufferD3D12::BuildBottomLevelAccelerationStructures(const
     }
 }
 
-NRI_INLINE void CommandBufferD3D12::BuildMicromaps(const BuildMicromapDesc* buildMicromapDescs, uint32_t buildMicromapDescNum) {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+OPENRHI_INLINE void CommandBufferD3D12::BuildMicromaps(const BuildMicromapDesc* buildMicromapDescs, uint32_t buildMicromapDescNum) {
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     static_assert(sizeof(MicromapTriangle) == sizeof(D3D12_RAYTRACING_OPACITY_MICROMAP_DESC), "Type mismatch");
 
     uint32_t usageMaxNum = 0;
     for (uint32_t i = 0; i < buildMicromapDescNum; i++)
         usageMaxNum = std::max(usageMaxNum, ((MicromapD3D12*)buildMicromapDescs[i].dst)->GetUsageNum());
 
-    Scratch<D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY> usages = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY, usageMaxNum);
+    Scratch<D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY> usages = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY, usageMaxNum);
 
     for (uint32_t i = 0; i < buildMicromapDescNum; i++) {
         const BuildMicromapDesc& in = buildMicromapDescs[i];
@@ -2814,16 +2814,16 @@ NRI_INLINE void CommandBufferD3D12::BuildMicromaps(const BuildMicromapDesc* buil
 #endif
 }
 
-NRI_INLINE void CommandBufferD3D12::CopyAccelerationStructure(AccelerationStructure& dst, const AccelerationStructure& src, CopyMode copyMode) {
+OPENRHI_INLINE void CommandBufferD3D12::CopyAccelerationStructure(AccelerationStructure& dst, const AccelerationStructure& src, CopyMode copyMode) {
     GetGraphicsCommandList()->CopyRaytracingAccelerationStructure(((AccelerationStructureD3D12&)dst).GetHandle(), ((AccelerationStructureD3D12&)src).GetHandle(), GetCopyMode(copyMode));
 }
 
-NRI_INLINE void CommandBufferD3D12::CopyMicromap(Micromap& dst, const Micromap& src, CopyMode copyMode) {
+OPENRHI_INLINE void CommandBufferD3D12::CopyMicromap(Micromap& dst, const Micromap& src, CopyMode copyMode) {
     GetGraphicsCommandList()->CopyRaytracingAccelerationStructure(((MicromapD3D12&)dst).GetHandle(), ((MicromapD3D12&)src).GetHandle(), GetCopyMode(copyMode));
 }
 
-NRI_INLINE void CommandBufferD3D12::WriteAccelerationStructureSizes(const AccelerationStructure* const* accelerationStructures, uint32_t accelerationStructureNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
-    Scratch<D3D12_GPU_VIRTUAL_ADDRESS> virtualAddresses = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_GPU_VIRTUAL_ADDRESS, accelerationStructureNum);
+OPENRHI_INLINE void CommandBufferD3D12::WriteAccelerationStructureSizes(const AccelerationStructure* const* accelerationStructures, uint32_t accelerationStructureNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
+    Scratch<D3D12_GPU_VIRTUAL_ADDRESS> virtualAddresses = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_GPU_VIRTUAL_ADDRESS, accelerationStructureNum);
     for (uint32_t i = 0; i < accelerationStructureNum; i++)
         virtualAddresses[i] = ((AccelerationStructureD3D12*)accelerationStructures[i])->GetHandle();
 
@@ -2841,8 +2841,8 @@ NRI_INLINE void CommandBufferD3D12::WriteAccelerationStructureSizes(const Accele
     GetGraphicsCommandList()->EmitRaytracingAccelerationStructurePostbuildInfo(&postbuildInfo, accelerationStructureNum, virtualAddresses);
 }
 
-NRI_INLINE void CommandBufferD3D12::WriteMicromapSizes(const Micromap* const* micromaps, uint32_t micromapNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
-    Scratch<D3D12_GPU_VIRTUAL_ADDRESS> virtualAddresses = NRI_ALLOCATE_SCRATCH(m_Device, D3D12_GPU_VIRTUAL_ADDRESS, micromapNum);
+OPENRHI_INLINE void CommandBufferD3D12::WriteMicromapSizes(const Micromap* const* micromaps, uint32_t micromapNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
+    Scratch<D3D12_GPU_VIRTUAL_ADDRESS> virtualAddresses = OPENRHI_ALLOCATE_SCRATCH(m_Device, D3D12_GPU_VIRTUAL_ADDRESS, micromapNum);
     for (uint32_t i = 0; i < micromapNum; i++)
         virtualAddresses[i] = ((MicromapD3D12*)micromaps[i])->GetHandle();
 
@@ -2860,7 +2860,7 @@ NRI_INLINE void CommandBufferD3D12::WriteMicromapSizes(const Micromap* const* mi
     GetGraphicsCommandList()->EmitRaytracingAccelerationStructurePostbuildInfo(&postbuildInfo, micromapNum, virtualAddresses);
 }
 
-NRI_INLINE void CommandBufferD3D12::DispatchRays(const DispatchRaysDesc& dispatchRaysDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::DispatchRays(const DispatchRaysDesc& dispatchRaysDesc) {
     D3D12_DISPATCH_RAYS_DESC desc = {};
 
     desc.RayGenerationShaderRecord.StartAddress = (*(BufferD3D12*)dispatchRaysDesc.raygenShaderRecord.buffer).GetDeviceAddress() + dispatchRaysDesc.raygenShaderRecord.offset;
@@ -2891,17 +2891,17 @@ NRI_INLINE void CommandBufferD3D12::DispatchRays(const DispatchRaysDesc& dispatc
     GetGraphicsCommandList()->DispatchRays(&desc);
 }
 
-NRI_INLINE void CommandBufferD3D12::DispatchRaysIndirect(const Buffer& buffer, uint64_t offset) {
+OPENRHI_INLINE void CommandBufferD3D12::DispatchRaysIndirect(const Buffer& buffer, uint64_t offset) {
     static_assert(sizeof(DispatchRaysIndirectDesc) == sizeof(D3D12_DISPATCH_RAYS_DESC));
 
     GetGraphicsCommandList()->ExecuteIndirect(m_Device.GetDispatchRaysCommandSignature(), 1, (BufferD3D12&)buffer, offset, nullptr, 0);
 }
 
-NRI_INLINE void CommandBufferD3D12::DrawMeshTasks(const DrawMeshTasksDesc& drawMeshTasksDesc) {
+OPENRHI_INLINE void CommandBufferD3D12::DrawMeshTasks(const DrawMeshTasksDesc& drawMeshTasksDesc) {
     GetGraphicsCommandList()->DispatchMesh(drawMeshTasksDesc.x, drawMeshTasksDesc.y, drawMeshTasksDesc.z);
 }
 
-NRI_INLINE void CommandBufferD3D12::DrawMeshTasksIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
+OPENRHI_INLINE void CommandBufferD3D12::DrawMeshTasksIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
     static_assert(sizeof(DrawMeshTasksDesc) == sizeof(D3D12_DISPATCH_MESH_ARGUMENTS));
 
     ID3D12Resource* pCountBuffer = nullptr;

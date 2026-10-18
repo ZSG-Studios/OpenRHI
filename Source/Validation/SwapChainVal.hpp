@@ -5,7 +5,7 @@ SwapChainVal::~SwapChainVal() {
         Destroy(m_Textures[i]);
 }
 
-NRI_INLINE Texture* const* SwapChainVal::GetTextures(uint32_t& textureNum) {
+OPENRHI_INLINE Texture* const* SwapChainVal::GetTextures(uint32_t& textureNum) {
     Texture* const* textures = GetSwapChainInterfaceImpl().GetSwapChainTextures(*GetImpl(), textureNum);
 
     if (m_Textures.empty()) {
@@ -18,72 +18,72 @@ NRI_INLINE Texture* const* SwapChainVal::GetTextures(uint32_t& textureNum) {
     return (Texture* const*)m_Textures.data();
 }
 
-NRI_INLINE Result SwapChainVal::AcquireNextTexture(Fence& acquireSemaphore, uint32_t& textureIndex) {
+OPENRHI_INLINE Result SwapChainVal::AcquireNextTexture(Fence& acquireSemaphore, uint32_t& textureIndex) {
     const FenceVal& acquireSemaphoreVal = (FenceVal&)acquireSemaphore;
-    NRI_RETURN_ON_FAILURE(&m_Device, acquireSemaphoreVal.IsSwapChainSemaphore(), Result::INVALID_ARGUMENT, "'acquireSemaphore' must be created with 'SWAPCHAIN_SEMAPHORE' initial value");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, acquireSemaphoreVal.IsSwapChainSemaphore(), Result::INVALID_ARGUMENT, "'acquireSemaphore' must be created with 'SWAPCHAIN_SEMAPHORE' initial value");
 
-    Fence* textureAcquiredSemaphoreImpl = NRI_GET_IMPL(Fence, &acquireSemaphore);
+    Fence* textureAcquiredSemaphoreImpl = OPENRHI_GET_IMPL(Fence, &acquireSemaphore);
 
     return GetSwapChainInterfaceImpl().AcquireNextTexture(*GetImpl(), *textureAcquiredSemaphoreImpl, textureIndex);
 }
 
-NRI_INLINE Result SwapChainVal::WaitForPresent(uint64_t presentId) {
-    NRI_RETURN_ON_FAILURE(&m_Device, presentId != 0, Result::INVALID_ARGUMENT, "'presentId' is 0");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::WAITABLE, Result::FAILURE, "Swap chain has not been created with 'WAITABLE' flag");
+OPENRHI_INLINE Result SwapChainVal::WaitForPresent(uint64_t presentId) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, presentId != 0, Result::INVALID_ARGUMENT, "'presentId' is 0");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::WAITABLE, Result::FAILURE, "Swap chain has not been created with 'WAITABLE' flag");
 
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.waitableSwapChain, Result::FAILURE, "'features.waitableSwapChain' is false");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.waitableSwapChain, Result::FAILURE, "'features.waitableSwapChain' is false");
 
     return GetSwapChainInterfaceImpl().WaitForPresent(*GetImpl(), presentId);
 }
 
-NRI_INLINE Result SwapChainVal::Present(Fence& releaseSemaphore, uint64_t presentId) {
+OPENRHI_INLINE Result SwapChainVal::Present(Fence& releaseSemaphore, uint64_t presentId) {
     const FenceVal& releaseSemaphoreVal = (FenceVal&)releaseSemaphore;
-    NRI_RETURN_ON_FAILURE(&m_Device, releaseSemaphoreVal.IsSwapChainSemaphore(), Result::INVALID_ARGUMENT, "'releaseSemaphore' must be created with 'SWAPCHAIN_SEMAPHORE' initial value");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, releaseSemaphoreVal.IsSwapChainSemaphore(), Result::INVALID_ARGUMENT, "'releaseSemaphore' must be created with 'SWAPCHAIN_SEMAPHORE' initial value");
 
-    Fence* renderingFinishedSemaphoreImpl = NRI_GET_IMPL(Fence, &releaseSemaphore);
+    Fence* renderingFinishedSemaphoreImpl = OPENRHI_GET_IMPL(Fence, &releaseSemaphore);
 
     return GetSwapChainInterfaceImpl().QueuePresent(*GetImpl(), *renderingFinishedSemaphoreImpl, presentId);
 }
 
-NRI_INLINE Result SwapChainVal::GetDisplayDesc(DisplayDesc& displayDesc) const {
+OPENRHI_INLINE Result SwapChainVal::GetDisplayDesc(DisplayDesc& displayDesc) const {
     return GetSwapChainInterfaceImpl().GetDisplayDesc(*GetImpl(), displayDesc);
 }
 
-NRI_INLINE Result SwapChainVal::SetLatencySleepMode(const LatencySleepMode& latencySleepMode) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::ALLOW_LOW_LATENCY, Result::FAILURE, "Swap chain has not been created with 'ALLOW_LOW_LATENCY' flag");
+OPENRHI_INLINE Result SwapChainVal::SetLatencySleepMode(const LatencySleepMode& latencySleepMode) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::ALLOW_LOW_LATENCY, Result::FAILURE, "Swap chain has not been created with 'ALLOW_LOW_LATENCY' flag");
 
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.lowLatency, Result::FAILURE, "'features.lowLatency' is false");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.lowLatency, Result::FAILURE, "'features.lowLatency' is false");
 
     return GetLowLatencyInterfaceImpl().SetLatencySleepMode(*GetImpl(), latencySleepMode);
 }
 
-NRI_INLINE Result SwapChainVal::SetLatencyMarker(uint64_t presentId, LatencyMarker latencyMarker) {
-    NRI_RETURN_ON_FAILURE(&m_Device, presentId != 0, Result::INVALID_ARGUMENT, "'presentId' is 0");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::ALLOW_LOW_LATENCY, Result::FAILURE, "Swap chain has not been created with 'ALLOW_LOW_LATENCY' flag");
+OPENRHI_INLINE Result SwapChainVal::SetLatencyMarker(uint64_t presentId, LatencyMarker latencyMarker) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, presentId != 0, Result::INVALID_ARGUMENT, "'presentId' is 0");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::ALLOW_LOW_LATENCY, Result::FAILURE, "Swap chain has not been created with 'ALLOW_LOW_LATENCY' flag");
 
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.lowLatency, Result::FAILURE, "'features.lowLatency' is false");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.lowLatency, Result::FAILURE, "'features.lowLatency' is false");
 
     return GetLowLatencyInterfaceImpl().SetLatencyMarker(*GetImpl(), presentId, latencyMarker);
 }
 
-NRI_INLINE Result SwapChainVal::LatencySleep(uint64_t presentId) {
-    NRI_RETURN_ON_FAILURE(&m_Device, presentId != 0, Result::INVALID_ARGUMENT, "'presentId' is 0");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::ALLOW_LOW_LATENCY, Result::FAILURE, "Swap chain has not been created with 'ALLOW_LOW_LATENCY' flag");
+OPENRHI_INLINE Result SwapChainVal::LatencySleep(uint64_t presentId) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, presentId != 0, Result::INVALID_ARGUMENT, "'presentId' is 0");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::ALLOW_LOW_LATENCY, Result::FAILURE, "Swap chain has not been created with 'ALLOW_LOW_LATENCY' flag");
 
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.lowLatency, Result::FAILURE, "'features.lowLatency' is false");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.lowLatency, Result::FAILURE, "'features.lowLatency' is false");
 
     return GetLowLatencyInterfaceImpl().LatencySleep(*GetImpl(), presentId);
 }
 
-NRI_INLINE Result SwapChainVal::GetLatencyReport(LatencyReport& latencyReport) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::ALLOW_LOW_LATENCY, Result::FAILURE, "Swap chain has not been created with 'ALLOW_LOW_LATENCY' flag");
+OPENRHI_INLINE Result SwapChainVal::GetLatencyReport(LatencyReport& latencyReport) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::ALLOW_LOW_LATENCY, Result::FAILURE, "Swap chain has not been created with 'ALLOW_LOW_LATENCY' flag");
 
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.lowLatency, Result::FAILURE, "'features.lowLatency' is false");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.lowLatency, Result::FAILURE, "'features.lowLatency' is false");
 
     return GetLowLatencyInterfaceImpl().GetLatencyReport(*GetImpl(), latencyReport);
 }

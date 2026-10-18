@@ -5,7 +5,7 @@
 struct IDXGISwapChain4;
 typedef IDXGISwapChain4 IDXGISwapChainBest;
 
-namespace nri {
+namespace openrhi {
 
 struct SwapChainD3D12 final : public DisplayDescHelper, DebugNameBase {
     inline SwapChainD3D12(DeviceD3D12& device)
@@ -25,12 +25,12 @@ struct SwapChainD3D12 final : public DisplayDescHelper, DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(m_SwapChain, name);
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(m_SwapChain, name);
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     inline Result GetDisplayDesc(DisplayDesc& displayDesc) {
@@ -57,4 +57,4 @@ private:
     SwapChainBits m_Flags = SwapChainBits::NONE;
 };
 
-} // namespace nri
+} // namespace openrhi

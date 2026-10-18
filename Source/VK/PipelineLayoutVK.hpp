@@ -117,7 +117,7 @@ Result PipelineLayoutVK::Create(const PipelineLayoutDesc& pipelineLayoutDesc) {
     }
 
     // Root constants
-    Scratch<VkPushConstantRange> pushConstantRanges = NRI_ALLOCATE_SCRATCH(m_Device, VkPushConstantRange, pipelineLayoutDesc.rootConstantNum);
+    Scratch<VkPushConstantRange> pushConstantRanges = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkPushConstantRange, pipelineLayoutDesc.rootConstantNum);
 
     uint32_t offset = 0;
     for (uint32_t i = 0; i < pipelineLayoutDesc.rootConstantNum; i++) {
@@ -138,7 +138,7 @@ Result PipelineLayoutVK::Create(const PipelineLayoutDesc& pipelineLayoutDesc) {
     // Root descriptors & samplers
     bool hasRootSet = pipelineLayoutDesc.rootDescriptorNum || pipelineLayoutDesc.rootSamplerNum;
     if (hasRootSet) {
-        Scratch<DescriptorRangeDesc> rootRanges = NRI_ALLOCATE_SCRATCH(m_Device, DescriptorRangeDesc, pipelineLayoutDesc.rootDescriptorNum);
+        Scratch<DescriptorRangeDesc> rootRanges = OPENRHI_ALLOCATE_SCRATCH(m_Device, DescriptorRangeDesc, pipelineLayoutDesc.rootDescriptorNum);
 
         DescriptorSetDesc rootSet = {};
         rootSet.ranges = rootRanges;
@@ -180,7 +180,7 @@ Result PipelineLayoutVK::Create(const PipelineLayoutDesc& pipelineLayoutDesc) {
 
     // Allocate temp memory for ALL "register spaces" making the entire range consecutive (thanks to VK API!)
     setNum++;
-    Scratch<VkDescriptorSetLayout> descriptorSetLayouts = NRI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetLayout, setNum);
+    Scratch<VkDescriptorSetLayout> descriptorSetLayouts = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetLayout, setNum);
 
     bool hasGaps = setNum > (pipelineLayoutDesc.descriptorSetNum + (hasRootSet ? 1 : 0));
     if (hasGaps) {
@@ -214,7 +214,7 @@ Result PipelineLayoutVK::Create(const PipelineLayoutDesc& pipelineLayoutDesc) {
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreatePipelineLayout(m_Device, &pipelineLayoutCreateInfo, m_Device.GetVkAllocationCallbacks(), &m_Handle);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreatePipelineLayout");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreatePipelineLayout");
 
     return Result::SUCCESS;
 }
@@ -326,10 +326,10 @@ void PipelineLayoutVK::CreateSetLayout(VkDescriptorSetLayout* setLayout, const D
     }
 
     // Allocate scratch
-    Scratch<VkDescriptorSetLayoutBinding> bindings = NRI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetLayoutBinding, bindingMaxNum);
-    Scratch<VkDescriptorBindingFlags> bindingFlags = NRI_ALLOCATE_SCRATCH(m_Device, VkDescriptorBindingFlags, bindingMaxNum);
-    Scratch<VkMutableDescriptorTypeListEXT> mutableTypeLists = NRI_ALLOCATE_SCRATCH(m_Device, VkMutableDescriptorTypeListEXT, bindingMaxNum);
-    Scratch<VkSampler> immutableSamplers = NRI_ALLOCATE_SCRATCH(m_Device, VkSampler, rootSamplerNum);
+    Scratch<VkDescriptorSetLayoutBinding> bindings = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetLayoutBinding, bindingMaxNum);
+    Scratch<VkDescriptorBindingFlags> bindingFlags = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkDescriptorBindingFlags, bindingMaxNum);
+    Scratch<VkMutableDescriptorTypeListEXT> mutableTypeLists = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkMutableDescriptorTypeListEXT, bindingMaxNum);
+    Scratch<VkSampler> immutableSamplers = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkSampler, rootSamplerNum);
     uint32_t bindingNum = 0;
 
     // Add ranges
@@ -393,7 +393,7 @@ void PipelineLayoutVK::CreateSetLayout(VkDescriptorSetLayout* setLayout, const D
 
         const auto& vk = m_Device.GetDispatchTable();
         VkResult vkResult = vk.CreateSampler(m_Device, &info, m_Device.GetVkAllocationCallbacks(), &immutableSamplers[i]);
-        NRI_RETURN_VOID_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateSampler");
+        OPENRHI_RETURN_VOID_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateSampler");
 
         m_ImmutableSamplers.push_back(immutableSamplers[i]);
 
@@ -432,9 +432,9 @@ void PipelineLayoutVK::CreateSetLayout(VkDescriptorSetLayout* setLayout, const D
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateDescriptorSetLayout(m_Device, &info, m_Device.GetVkAllocationCallbacks(), setLayout);
-    NRI_RETURN_VOID_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateDescriptorSetLayout");
+    OPENRHI_RETURN_VOID_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateDescriptorSetLayout");
 }
 
-NRI_INLINE void PipelineLayoutVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void PipelineLayoutVK::SetDebugName(const char* name) {
     m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_PIPELINE_LAYOUT, (uint64_t)m_Handle, name);
 }

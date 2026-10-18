@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct FenceVal final : public ObjectVal {
     inline FenceVal(DeviceVal& device, Fence* fence, bool isSwapChainSemaphore = false)
@@ -22,7 +22,7 @@ struct FenceVal final : public ObjectVal {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     uint64_t GetFenceValue() const;
@@ -32,4 +32,4 @@ private:
     bool m_IsSwapChainSemaphore = false;
 };
 
-} // namespace nri
+} // namespace openrhi

@@ -24,7 +24,7 @@ Result PipelineCacheD3D12::GetData(void* dst, uint64_t& size) const {
 
     if (dst) {
         HRESULT hr = m_Library->Serialize(dst, (SIZE_T)size);
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12PipelineLibrary::Serialize");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12PipelineLibrary::Serialize");
     }
 
     size = (uint64_t)m_Library->GetSerializedSize();

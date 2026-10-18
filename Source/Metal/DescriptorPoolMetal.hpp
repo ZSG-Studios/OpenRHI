@@ -55,21 +55,21 @@ Result DescriptorPoolMetal::Create(const DescriptorHeapDesc& desc) {
     return Create(pool);
 }
 
-NRI_INLINE Result DescriptorPoolMetal::WriteResourceDescriptors(const WriteResourceDescriptorsDesc* descs, uint32_t num) {
+OPENRHI_INLINE Result DescriptorPoolMetal::WriteResourceDescriptors(const WriteResourceDescriptorsDesc* descs, uint32_t num) {
     for (uint32_t i = 0; i < num; i++)
         ((const DescriptorMetal*)descs[i].resource)->WriteEntry(GetEntry(false, descs[i].descriptorIndex));
 
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result DescriptorPoolMetal::WriteSamplerDescriptors(const WriteSamplerDescriptorsDesc* descs, uint32_t num) {
+OPENRHI_INLINE Result DescriptorPoolMetal::WriteSamplerDescriptors(const WriteSamplerDescriptorsDesc* descs, uint32_t num) {
     for (uint32_t i = 0; i < num; i++)
         ((const DescriptorMetal*)descs[i].sampler)->WriteEntry(GetEntry(true, descs[i].descriptorIndex));
 
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result DescriptorPoolMetal::AllocateDescriptorSets(const PipelineLayout& layout, uint32_t setIndex, DescriptorSet** sets, uint32_t instanceNum, uint32_t variableNum) {
+OPENRHI_INLINE Result DescriptorPoolMetal::AllocateDescriptorSets(const PipelineLayout& layout, uint32_t setIndex, DescriptorSet** sets, uint32_t instanceNum, uint32_t variableNum) {
     ExclusiveScope lock(m_Lock);
 
     const DescriptorSetMappingMetal& mapping = ((const PipelineLayoutMetal&)layout).GetDescriptorSetMapping(setIndex);
@@ -103,7 +103,7 @@ NRI_INLINE Result DescriptorPoolMetal::AllocateDescriptorSets(const PipelineLayo
     return Result::SUCCESS;
 }
 
-NRI_INLINE void DescriptorPoolMetal::Reset() {
+OPENRHI_INLINE void DescriptorPoolMetal::Reset() {
     ExclusiveScope lock(m_Lock);
 
     m_ResourceUsed = 0;
@@ -127,7 +127,7 @@ uint8_t* DescriptorPoolMetal::GetEntry(bool sampler, uint32_t index) const {
     return (sampler ? m_SamplerEntries : m_ResourceEntries) + index * DESCRIPTOR_ENTRY_SIZE;
 }
 
-NRI_INLINE void DescriptorPoolMetal::SetDebugName(const char* name) {
+OPENRHI_INLINE void DescriptorPoolMetal::SetDebugName(const char* name) {
     NS::String* label = NS::String::alloc()->init(name, NS::UTF8StringEncoding);
 
     if (m_ResourceHeap)

@@ -114,7 +114,7 @@ static inline bool IsAverageResolvable(Format format, PlaneBits planes = PlaneBi
     return !isIntegerColor && (!formatProps.isStencil || (planes != PlaneBits::ALL && !(planes & PlaneBits::STENCIL)));
 }
 
-static_assert((uint32_t)ResolveOp::MAX_NUM == 4 && (uint32_t)ResolveOpBits::SAMPLE_ZERO == NriBit((uint32_t)ResolveOp::SAMPLE_ZERO), "'ResolveOpBits' must be 'NriBit(ResolveOp)'");
+static_assert((uint32_t)ResolveOp::MAX_NUM == 4 && (uint32_t)ResolveOpBits::SAMPLE_ZERO == OpenRhiBit((uint32_t)ResolveOp::SAMPLE_ZERO), "'ResolveOpBits' must be 'OpenRhiBit(ResolveOp)'");
 
 constexpr std::array<const char*, (size_t)ResolveOp::MAX_NUM> g_ResolveOpNames = {
     "AVERAGE",
@@ -122,10 +122,10 @@ constexpr std::array<const char*, (size_t)ResolveOp::MAX_NUM> g_ResolveOpNames =
     "MAX",
     "SAMPLE_ZERO",
 };
-NRI_VALIDATE_ARRAY_BY_PTR(g_ResolveOpNames);
+OPENRHI_VALIDATE_ARRAY_BY_PTR(g_ResolveOpNames);
 
 static inline bool IsResolveOpSupported(ResolveOpBits resolveOps, ResolveOp resolveOp) {
-    return (resolveOps & (ResolveOpBits)NriBit((uint32_t)resolveOp)) != 0;
+    return (resolveOps & (ResolveOpBits)OpenRhiBit((uint32_t)resolveOp)) != 0;
 }
 
 static inline ResolveOpBits GetColorResolveOps(const ResolveOps& resolveOps, Format format) {
@@ -163,13 +163,13 @@ static inline bool AreRegionPlanesValid(Format format, PlaneBits planes) {
 }
 
 static bool ValidateBufferBarrierDesc(const DeviceVal& device, uint32_t i, const BufferBarrierDesc& bufferBarrier) {
-    NRI_RETURN_ON_FAILURE(&device, bufferBarrier.buffer, false, "'barrierDesc.buffers[%u].buffer' is NULL", i);
+    OPENRHI_RETURN_ON_FAILURE(&device, bufferBarrier.buffer, false, "'barrierDesc.buffers[%u].buffer' is NULL", i);
 
     const BufferVal& bufferVal = *(const BufferVal*)bufferBarrier.buffer;
 
-    NRI_RETURN_ON_FAILURE(&device, IsAccessMaskSupported(bufferVal.GetDesc(), bufferBarrier.before.access), false,
+    OPENRHI_RETURN_ON_FAILURE(&device, IsAccessMaskSupported(bufferVal.GetDesc(), bufferBarrier.before.access), false,
         "'barrierDesc.buffers[%u].before.access' is not supported by the usage mask of the buffer ('%s')", i, bufferVal.GetDebugName());
-    NRI_RETURN_ON_FAILURE(&device, IsAccessMaskSupported(bufferVal.GetDesc(), bufferBarrier.after.access), false,
+    OPENRHI_RETURN_ON_FAILURE(&device, IsAccessMaskSupported(bufferVal.GetDesc(), bufferBarrier.after.access), false,
         "'barrierDesc.buffers[%u].after.access' is not supported by the usage mask of the buffer ('%s')", i, bufferVal.GetDebugName());
 
     return true;
@@ -180,43 +180,43 @@ static bool ValidateHostTextureState(const DeviceVal& device, uint32_t i, const 
     if (!(state.access & hostAccess))
         return true;
 
-    NRI_RETURN_ON_FAILURE(&device, state.access == AccessBits::HOST_READ || state.access == AccessBits::HOST_WRITE, false,
+    OPENRHI_RETURN_ON_FAILURE(&device, state.access == AccessBits::HOST_READ || state.access == AccessBits::HOST_WRITE, false,
         "'barrierDesc.textures[%u].%s.access' must be 'AccessBits::HOST_READ' or 'AccessBits::HOST_WRITE'", i, stateName);
-    NRI_RETURN_ON_FAILURE(&device, state.layout == Layout::GENERAL, false,
+    OPENRHI_RETURN_ON_FAILURE(&device, state.layout == Layout::GENERAL, false,
         "'barrierDesc.textures[%u].%s.layout' must be 'Layout::GENERAL' for host access", i, stateName);
-    NRI_RETURN_ON_FAILURE(&device, state.stages == StageBits::HOST, false,
+    OPENRHI_RETURN_ON_FAILURE(&device, state.stages == StageBits::HOST, false,
         "'barrierDesc.textures[%u].%s.stages' must be 'StageBits::HOST' for host access", i, stateName);
 
     return true;
 }
 
 static bool ValidateTextureBarrierDesc(const DeviceVal& device, uint32_t i, const TextureBarrierDesc& textureBarrier) {
-    NRI_RETURN_ON_FAILURE(&device, textureBarrier.texture, false, "'barrierDesc.textures[%u].texture' is NULL", i);
-    NRI_RETURN_ON_FAILURE(&device, textureBarrier.before.layout < Layout::MAX_NUM, false, "'barrierDesc.textures[%u].before.layout' is invalid", i);
-    NRI_RETURN_ON_FAILURE(&device, textureBarrier.after.layout < Layout::MAX_NUM, false, "'barrierDesc.textures[%u].after.layout' is invalid", i);
+    OPENRHI_RETURN_ON_FAILURE(&device, textureBarrier.texture, false, "'barrierDesc.textures[%u].texture' is NULL", i);
+    OPENRHI_RETURN_ON_FAILURE(&device, textureBarrier.before.layout < Layout::MAX_NUM, false, "'barrierDesc.textures[%u].before.layout' is invalid", i);
+    OPENRHI_RETURN_ON_FAILURE(&device, textureBarrier.after.layout < Layout::MAX_NUM, false, "'barrierDesc.textures[%u].after.layout' is invalid", i);
 
     const TextureVal& textureVal = *(const TextureVal*)textureBarrier.texture;
     const TextureDesc& textureDesc = textureVal.GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&device, textureBarrier.mipOffset < textureDesc.mipNum, false,
+    OPENRHI_RETURN_ON_FAILURE(&device, textureBarrier.mipOffset < textureDesc.mipNum, false,
         "'barrierDesc.textures[%u].mipOffset' is out of bounds for texture ('%s')", i, textureVal.GetDebugName());
-    NRI_RETURN_ON_FAILURE(&device, textureBarrier.layerOffset < textureDesc.layerNum, false,
+    OPENRHI_RETURN_ON_FAILURE(&device, textureBarrier.layerOffset < textureDesc.layerNum, false,
         "'barrierDesc.textures[%u].layerOffset' is out of bounds for texture ('%s')", i, textureVal.GetDebugName());
 
     Dim_t mipNum = textureBarrier.mipNum == REMAINING ? textureDesc.mipNum - textureBarrier.mipOffset : textureBarrier.mipNum;
     Dim_t layerNum = textureBarrier.layerNum == REMAINING ? textureDesc.layerNum - textureBarrier.layerOffset : textureBarrier.layerNum;
-    NRI_RETURN_ON_FAILURE(&device, mipNum <= textureDesc.mipNum - textureBarrier.mipOffset, false,
+    OPENRHI_RETURN_ON_FAILURE(&device, mipNum <= textureDesc.mipNum - textureBarrier.mipOffset, false,
         "'barrierDesc.textures[%u].mipNum' is out of bounds for texture ('%s')", i, textureVal.GetDebugName());
-    NRI_RETURN_ON_FAILURE(&device, layerNum <= textureDesc.layerNum - textureBarrier.layerOffset, false,
+    OPENRHI_RETURN_ON_FAILURE(&device, layerNum <= textureDesc.layerNum - textureBarrier.layerOffset, false,
         "'barrierDesc.textures[%u].layerNum' is out of bounds for texture ('%s')", i, textureVal.GetDebugName());
 
-    NRI_RETURN_ON_FAILURE(&device, IsAccessMaskSupported(textureDesc, textureBarrier.before.access), false,
+    OPENRHI_RETURN_ON_FAILURE(&device, IsAccessMaskSupported(textureDesc, textureBarrier.before.access), false,
         "'barrierDesc.textures[%u].before.access' is not supported by the usage mask of the texture ('%s')", i, textureVal.GetDebugName());
-    NRI_RETURN_ON_FAILURE(&device, IsAccessMaskSupported(textureDesc, textureBarrier.after.access), false,
+    OPENRHI_RETURN_ON_FAILURE(&device, IsAccessMaskSupported(textureDesc, textureBarrier.after.access), false,
         "'barrierDesc.textures[%u].after.access' is not supported by the usage mask of the texture ('%s')", i, textureVal.GetDebugName());
-    NRI_RETURN_ON_FAILURE(&device, IsTextureLayoutSupported(textureDesc, textureBarrier.before.layout), false,
+    OPENRHI_RETURN_ON_FAILURE(&device, IsTextureLayoutSupported(textureDesc, textureBarrier.before.layout), false,
         "'barrierDesc.textures[%u].before.layout' is not supported by the usage mask of the texture ('%s')", i, textureVal.GetDebugName());
-    NRI_RETURN_ON_FAILURE(&device, IsTextureLayoutSupported(textureDesc, textureBarrier.after.layout), false,
+    OPENRHI_RETURN_ON_FAILURE(&device, IsTextureLayoutSupported(textureDesc, textureBarrier.after.layout), false,
         "'barrierDesc.textures[%u].after.layout' is not supported by the usage mask of the texture ('%s')", i, textureVal.GetDebugName());
     if (!ValidateHostTextureState(device, i, textureBarrier.before, "before") || !ValidateHostTextureState(device, i, textureBarrier.after, "after"))
         return false;
@@ -225,16 +225,16 @@ static bool ValidateTextureBarrierDesc(const DeviceVal& device, uint32_t i, cons
     bool hasHostState = (textureBarrier.before.access & hostAccess) || (textureBarrier.after.access & hostAccess);
     if (hasHostState) {
         const FormatProps& formatProps = GetFormatProps(textureDesc.format);
-        NRI_RETURN_ON_FAILURE(&device, device.GetFormatSupport(textureDesc.format) & FormatSupportBits::HOST_COPY, false,
+        OPENRHI_RETURN_ON_FAILURE(&device, device.GetFormatSupport(textureDesc.format) & FormatSupportBits::HOST_COPY, false,
             "texture ('%s') format does not support 'FormatSupportBits::HOST_COPY'", textureVal.GetDebugName());
-        NRI_RETURN_ON_FAILURE(&device, textureDesc.sampleNum == 1, false, "texture ('%s') is multisampled", textureVal.GetDebugName());
-        NRI_RETURN_ON_FAILURE(&device, !formatProps.isDepth && !formatProps.isStencil, false, "texture ('%s') must have a color format for host access", textureVal.GetDebugName());
-        NRI_RETURN_ON_FAILURE(&device, textureBarrier.planes == PlaneBits::ALL || textureBarrier.planes == PlaneBits::COLOR, false,
+        OPENRHI_RETURN_ON_FAILURE(&device, textureDesc.sampleNum == 1, false, "texture ('%s') is multisampled", textureVal.GetDebugName());
+        OPENRHI_RETURN_ON_FAILURE(&device, !formatProps.isDepth && !formatProps.isStencil, false, "texture ('%s') must have a color format for host access", textureVal.GetDebugName());
+        OPENRHI_RETURN_ON_FAILURE(&device, textureBarrier.planes == PlaneBits::ALL || textureBarrier.planes == PlaneBits::COLOR, false,
             "'barrierDesc.textures[%u].planes' must be 'ALL' or 'COLOR' for host access", i);
     }
 
     if (textureBarrier.after.layout == Layout::PRESENT) {
-        NRI_RETURN_ON_FAILURE(&device, textureBarrier.after.access == AccessBits::NONE && textureBarrier.after.stages == StageBits::NONE, false,
+        OPENRHI_RETURN_ON_FAILURE(&device, textureBarrier.after.access == AccessBits::NONE && textureBarrier.after.stages == StageBits::NONE, false,
             "'barrierDesc.textures[%u].after.layout = Layout::PRESENT' for texture ('%s') expects 'AccessBits::NONE' and 'StageBits::NONE'", i, textureVal.GetDebugName());
     }
 
@@ -471,15 +471,15 @@ static bool IsVideoAV1EncodePictureDescValid(const VideoEncodeDesc& videoEncodeD
     return desc.primaryReferenceName == VideoAV1ReferenceName::NONE || HasVideoAV1ReferenceName(desc.references, desc.referenceNum, desc.primaryReferenceName);
 }
 
-NRI_INLINE Result CommandBufferVal::Begin(const DescriptorPool* descriptorPool) {
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRecordingStarted, Result::FAILURE, "already in the recording state");
+OPENRHI_INLINE Result CommandBufferVal::Begin(const DescriptorPool* descriptorPool) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRecordingStarted, Result::FAILURE, "already in the recording state");
 
     if (descriptorPool) {
         const DescriptorPoolVal& descriptorPoolVal = *(DescriptorPoolVal*)descriptorPool;
-        NRI_RETURN_ON_FAILURE(&m_Device, !descriptorPoolVal.IsCopySource(), Result::INVALID_ARGUMENT, "'descriptorPool' must not have 'DescriptorPoolBits::COPY_SOURCE'");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, !descriptorPoolVal.IsCopySource(), Result::INVALID_ARGUMENT, "'descriptorPool' must not have 'DescriptorPoolBits::COPY_SOURCE'");
     }
 
-    DescriptorPool* descriptorPoolImpl = NRI_GET_IMPL(DescriptorPool, descriptorPool);
+    DescriptorPool* descriptorPoolImpl = OPENRHI_GET_IMPL(DescriptorPool, descriptorPool);
 
     Result result = GetCoreInterfaceImpl().BeginCommandBuffer(*GetImpl(), descriptorPoolImpl);
     if (result == Result::SUCCESS)
@@ -493,13 +493,13 @@ NRI_INLINE Result CommandBufferVal::Begin(const DescriptorPool* descriptorPool) 
     return result;
 }
 
-NRI_INLINE Result CommandBufferVal::End() {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, Result::FAILURE, "not in the recording state");
+OPENRHI_INLINE Result CommandBufferVal::End() {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, Result::FAILURE, "not in the recording state");
 
     if (m_AnnotationStack > 0)
-        NRI_REPORT_ERROR(&m_Device, "'CmdBeginAnnotation' is called more times than 'CmdEndAnnotation'");
+        OPENRHI_REPORT_ERROR(&m_Device, "'CmdBeginAnnotation' is called more times than 'CmdEndAnnotation'");
     else if (m_AnnotationStack < 0)
-        NRI_REPORT_ERROR(&m_Device, "'CmdEndAnnotation' is called more times than 'CmdBeginAnnotation'");
+        OPENRHI_REPORT_ERROR(&m_Device, "'CmdEndAnnotation' is called more times than 'CmdBeginAnnotation'");
 
     Result result = GetCoreInterfaceImpl().EndCommandBuffer(*GetImpl());
     if (result == Result::SUCCESS)
@@ -508,90 +508,90 @@ NRI_INLINE Result CommandBufferVal::End() {
     return result;
 }
 
-NRI_INLINE void CommandBufferVal::SetViewports(const Viewport* viewports, uint32_t viewportNum) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+OPENRHI_INLINE void CommandBufferVal::SetViewports(const Viewport* viewports, uint32_t viewportNum) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
 
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
-    NRI_RETURN_ON_FAILURE(&m_Device, viewportNum != 0, ReturnVoid(), "'viewportNum' is 0");
-    NRI_RETURN_ON_FAILURE(&m_Device, viewportNum <= deviceDesc.viewport.maxNum, ReturnVoid(), "'viewportNum' is greater than 'DeviceDesc::viewport.maxNum'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, viewportNum != 0, ReturnVoid(), "'viewportNum' is 0");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, viewportNum <= deviceDesc.viewport.maxNum, ReturnVoid(), "'viewportNum' is greater than 'DeviceDesc::viewport.maxNum'");
 
     if (!deviceDesc.features.viewportOriginBottomLeft) {
         for (uint32_t i = 0; i < viewportNum; i++) {
-            NRI_RETURN_ON_FAILURE(&m_Device, !viewports[i].originBottomLeft, ReturnVoid(), "'features.viewportOriginBottomLeft' is false");
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, !viewports[i].originBottomLeft, ReturnVoid(), "'features.viewportOriginBottomLeft' is false");
         }
     }
 
     GetCoreInterfaceImpl().CmdSetViewports(*GetImpl(), viewports, viewportNum);
 }
 
-NRI_INLINE void CommandBufferVal::SetScissors(const Rect* rects, uint32_t rectNum) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, rectNum != 0, ReturnVoid(), "'rectNum' is 0");
-    NRI_RETURN_ON_FAILURE(&m_Device, rectNum <= m_Device.GetDesc().viewport.maxNum, ReturnVoid(), "'rectNum' is greater than 'DeviceDesc::viewport.maxNum'");
+OPENRHI_INLINE void CommandBufferVal::SetScissors(const Rect* rects, uint32_t rectNum) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, rectNum != 0, ReturnVoid(), "'rectNum' is 0");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, rectNum <= m_Device.GetDesc().viewport.maxNum, ReturnVoid(), "'rectNum' is greater than 'DeviceDesc::viewport.maxNum'");
 
     GetCoreInterfaceImpl().CmdSetScissors(*GetImpl(), rects, rectNum);
 }
 
-NRI_INLINE void CommandBufferVal::SetDepthBounds(float boundsMin, float boundsMax) {
+OPENRHI_INLINE void CommandBufferVal::SetDepthBounds(float boundsMin, float boundsMax) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.depthBoundsTest, ReturnVoid(), "'features.depthBoundsTest' is false");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.depthBoundsTest, ReturnVoid(), "'features.depthBoundsTest' is false");
 
     GetCoreInterfaceImpl().CmdSetDepthBounds(*GetImpl(), boundsMin, boundsMax);
 }
 
-NRI_INLINE void CommandBufferVal::SetStencilReference(uint8_t frontRef, uint8_t backRef) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+OPENRHI_INLINE void CommandBufferVal::SetStencilReference(uint8_t frontRef, uint8_t backRef) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
 
     GetCoreInterfaceImpl().CmdSetStencilReference(*GetImpl(), frontRef, backRef);
 }
 
-NRI_INLINE void CommandBufferVal::SetSampleLocations(const SampleLocation* locations, Sample_t locationNum, Sample_t sampleNum) {
+OPENRHI_INLINE void CommandBufferVal::SetSampleLocations(const SampleLocation* locations, Sample_t locationNum, Sample_t sampleNum) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.tiers.sampleLocations != 0, ReturnVoid(), "'tiers.sampleLocations > 0' required");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.tiers.sampleLocations != 0, ReturnVoid(), "'tiers.sampleLocations > 0' required");
 
     GetCoreInterfaceImpl().CmdSetSampleLocations(*GetImpl(), locations, locationNum, sampleNum);
 }
 
-NRI_INLINE void CommandBufferVal::SetBlendConstants(const Color32f& color) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+OPENRHI_INLINE void CommandBufferVal::SetBlendConstants(const Color32f& color) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
 
     GetCoreInterfaceImpl().CmdSetBlendConstants(*GetImpl(), color);
 }
 
-NRI_INLINE void CommandBufferVal::SetShadingRate(const ShadingRateDesc& shadingRateDesc) {
+OPENRHI_INLINE void CommandBufferVal::SetShadingRate(const ShadingRateDesc& shadingRateDesc) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.tiers.shadingRate, ReturnVoid(), "'tiers.shadingRate > 0' required");
-    NRI_RETURN_ON_FAILURE(&m_Device, shadingRateDesc.shadingRate < ShadingRate::MAX_NUM, ReturnVoid(), "'shadingRate' is invalid");
-    NRI_RETURN_ON_FAILURE(&m_Device, shadingRateDesc.primitiveCombiner < ShadingRateCombiner::MAX_NUM, ReturnVoid(), "'primitiveCombiner' is invalid");
-    NRI_RETURN_ON_FAILURE(&m_Device, shadingRateDesc.attachmentCombiner < ShadingRateCombiner::MAX_NUM, ReturnVoid(), "'attachmentCombiner' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.tiers.shadingRate, ReturnVoid(), "'tiers.shadingRate > 0' required");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, shadingRateDesc.shadingRate < ShadingRate::MAX_NUM, ReturnVoid(), "'shadingRate' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, shadingRateDesc.primitiveCombiner < ShadingRateCombiner::MAX_NUM, ReturnVoid(), "'primitiveCombiner' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, shadingRateDesc.attachmentCombiner < ShadingRateCombiner::MAX_NUM, ReturnVoid(), "'attachmentCombiner' is invalid");
     if (shadingRateDesc.shadingRate > ShadingRate::FRAGMENT_SIZE_2X2)
-        NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.additionalShadingRates, ReturnVoid(), "'features.additionalShadingRates' is false");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.additionalShadingRates, ReturnVoid(), "'features.additionalShadingRates' is false");
     if (shadingRateDesc.primitiveCombiner != ShadingRateCombiner::KEEP || shadingRateDesc.attachmentCombiner != ShadingRateCombiner::KEEP)
-        NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.tiers.shadingRate >= 2, ReturnVoid(), "'tiers.shadingRate >= 2' required");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.tiers.shadingRate >= 2, ReturnVoid(), "'tiers.shadingRate >= 2' required");
     if (shadingRateDesc.primitiveCombiner == ShadingRateCombiner::SUM || shadingRateDesc.attachmentCombiner == ShadingRateCombiner::SUM)
-        NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.sumShadingRateCombiner, ReturnVoid(), "'features.sumShadingRateCombiner' is false");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.sumShadingRateCombiner, ReturnVoid(), "'features.sumShadingRateCombiner' is false");
 
     GetCoreInterfaceImpl().CmdSetShadingRate(*GetImpl(), shadingRateDesc);
 }
 
-NRI_INLINE void CommandBufferVal::SetDepthBias(const DepthBiasDesc& depthBiasDesc) {
+OPENRHI_INLINE void CommandBufferVal::SetDepthBias(const DepthBiasDesc& depthBiasDesc) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.dynamicDepthBias, ReturnVoid(), "'features.dynamicDepthBias' is false");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.dynamicDepthBias, ReturnVoid(), "'features.dynamicDepthBias' is false");
 
     GetCoreInterfaceImpl().CmdSetDepthBias(*GetImpl(), depthBiasDesc);
 }
 
-NRI_INLINE void CommandBufferVal::ClearAttachments(const ClearAttachmentDesc* clearAttachmentDescs, uint32_t clearAttachmentDescNum, const Rect* rects, uint32_t rectNum) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::ClearAttachments(const ClearAttachmentDesc* clearAttachmentDescs, uint32_t clearAttachmentDescNum, const Rect* rects, uint32_t rectNum) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
 
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
     for (uint32_t i = 0; i < clearAttachmentDescNum; i++) {
@@ -599,91 +599,91 @@ NRI_INLINE void CommandBufferVal::ClearAttachments(const ClearAttachmentDesc* cl
 
         bool isColor = clearAttachmentDesc.planes & PlaneBits::COLOR;
         bool isDepthStencil = clearAttachmentDesc.planes & (PlaneBits::DEPTH | PlaneBits::STENCIL);
-        NRI_RETURN_ON_FAILURE(&m_Device, isColor != isDepthStencil, ReturnVoid(), "'[%u].planes' must represent a color or a depth-stencil", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, !rectNum || !isColor || deviceDesc.features.rectColorClears, ReturnVoid(), "'features.rectColorClears' is false");
-        NRI_RETURN_ON_FAILURE(&m_Device, !rectNum || !isDepthStencil || deviceDesc.features.rectDepthStencilClears, ReturnVoid(), "'features.rectDepthStencilClears' is false");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, isColor != isDepthStencil, ReturnVoid(), "'[%u].planes' must represent a color or a depth-stencil", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, !rectNum || !isColor || deviceDesc.features.rectColorClears, ReturnVoid(), "'features.rectColorClears' is false");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, !rectNum || !isDepthStencil || deviceDesc.features.rectDepthStencilClears, ReturnVoid(), "'features.rectDepthStencilClears' is false");
 
         if (clearAttachmentDesc.planes & PlaneBits::COLOR) {
-            NRI_RETURN_ON_FAILURE(&m_Device, clearAttachmentDesc.colorAttachmentIndex < deviceDesc.shaderStage.fragment.attachmentMaxNum, ReturnVoid(), "'[%u].colorAttachmentIndex=%u' is out of bounds", i, clearAttachmentDesc.colorAttachmentIndex);
-            NRI_RETURN_ON_FAILURE(&m_Device, m_RenderTargets[clearAttachmentDesc.colorAttachmentIndex], ReturnVoid(), "'[%u].colorAttachmentIndex=%u' references a NULL COLOR attachment", i, clearAttachmentDesc.colorAttachmentIndex);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, clearAttachmentDesc.colorAttachmentIndex < deviceDesc.shaderStage.fragment.attachmentMaxNum, ReturnVoid(), "'[%u].colorAttachmentIndex=%u' is out of bounds", i, clearAttachmentDesc.colorAttachmentIndex);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, m_RenderTargets[clearAttachmentDesc.colorAttachmentIndex], ReturnVoid(), "'[%u].colorAttachmentIndex=%u' references a NULL COLOR attachment", i, clearAttachmentDesc.colorAttachmentIndex);
         }
 
         if (clearAttachmentDesc.planes & (PlaneBits::DEPTH | PlaneBits::STENCIL)) {
-            NRI_RETURN_ON_FAILURE(&m_Device, m_DepthStencil, ReturnVoid(), "DEPTH_STENCIL attachment is NULL", i);
-            NRI_RETURN_ON_FAILURE(&m_Device, clearAttachmentDesc.colorAttachmentIndex == 0, ReturnVoid(), "'[%u].planes' is not COLOR, but `colorAttachmentIndex != 0`", i);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, m_DepthStencil, ReturnVoid(), "DEPTH_STENCIL attachment is NULL", i);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, clearAttachmentDesc.colorAttachmentIndex == 0, ReturnVoid(), "'[%u].planes' is not COLOR, but `colorAttachmentIndex != 0`", i);
         }
     }
 
     GetCoreInterfaceImpl().CmdClearAttachments(*GetImpl(), clearAttachmentDescs, clearAttachmentDescNum, rects, rectNum);
 }
 
-NRI_INLINE void CommandBufferVal::ClearStorage(const ClearStorageDesc& clearStorageDesc) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, clearStorageDesc.descriptor, ReturnVoid(), "'storage' is NULL");
+OPENRHI_INLINE void CommandBufferVal::ClearStorage(const ClearStorageDesc& clearStorageDesc) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, clearStorageDesc.descriptor, ReturnVoid(), "'storage' is NULL");
 
     const DescriptorVal& descriptorVal = *(DescriptorVal*)clearStorageDesc.descriptor;
-    NRI_RETURN_ON_FAILURE(&m_Device, descriptorVal.IsShaderResourceStorage(), ReturnVoid(), "'.storage' is not a 'SHADER_RESOURCE_STORAGE' descriptor");
-    NRI_RETURN_ON_FAILURE(&m_Device, clearStorageDesc.setIndex < m_DescriptorSets.size(), ReturnVoid(), "'setIndex=%u' is out of bounds", clearStorageDesc.setIndex);
-    NRI_RETURN_ON_FAILURE(&m_Device, m_DescriptorSets[clearStorageDesc.setIndex], ReturnVoid(), "descriptor set %u is not bound", clearStorageDesc.setIndex);
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, descriptorVal.IsShaderResourceStorage(), ReturnVoid(), "'.storage' is not a 'SHADER_RESOURCE_STORAGE' descriptor");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, clearStorageDesc.setIndex < m_DescriptorSets.size(), ReturnVoid(), "'setIndex=%u' is out of bounds", clearStorageDesc.setIndex);
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_DescriptorSets[clearStorageDesc.setIndex], ReturnVoid(), "descriptor set %u is not bound", clearStorageDesc.setIndex);
 
     auto clearStorageDescImpl = clearStorageDesc;
-    clearStorageDescImpl.descriptor = NRI_GET_IMPL(Descriptor, clearStorageDesc.descriptor);
+    clearStorageDescImpl.descriptor = OPENRHI_GET_IMPL(Descriptor, clearStorageDesc.descriptor);
 
     GetCoreInterfaceImpl().CmdClearStorage(*GetImpl(), clearStorageDescImpl);
 }
 
-NRI_INLINE void CommandBufferVal::BeginRendering(const RenderingDesc& renderingDesc) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "'CmdBeginRendering' has already been called");
+OPENRHI_INLINE void CommandBufferVal::BeginRendering(const RenderingDesc& renderingDesc) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "'CmdBeginRendering' has already been called");
 
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
     if (renderingDesc.shadingRate) {
         const DescriptorVal& shadingRateVal = *(DescriptorVal*)renderingDesc.shadingRate;
 
-        NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.tiers.shadingRate >= 2, ReturnVoid(), "'tiers.shadingRate >= 2' required");
-        NRI_RETURN_ON_FAILURE(&m_Device, shadingRateVal.IsShadingRateAttachment(), ReturnVoid(), "'shadingRate' is not a 'SHADING_RATE_ATTACHMENT' descriptor");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.tiers.shadingRate >= 2, ReturnVoid(), "'tiers.shadingRate >= 2' required");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, shadingRateVal.IsShadingRateAttachment(), ReturnVoid(), "'shadingRate' is not a 'SHADING_RATE_ATTACHMENT' descriptor");
     }
     if (renderingDesc.viewMask)
-        NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.other.viewMaxNum > 1, ReturnVoid(), "'viewMask' is non-zero, but 'DeviceDesc::other.viewMaxNum <= 1'");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.other.viewMaxNum > 1, ReturnVoid(), "'viewMask' is non-zero, but 'DeviceDesc::other.viewMaxNum <= 1'");
 
     ResetAttachments();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.colorNum == 0 || renderingDesc.colors != nullptr, ReturnVoid(), "'colors' is NULL");
-    NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.depth.loadOp < LoadOp::MAX_NUM, ReturnVoid(), "'depth.loadOp' is invalid");
-    NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.depth.storeOp < StoreOp::MAX_NUM, ReturnVoid(), "'depth.storeOp' is invalid");
-    NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.depth.resolveOp < ResolveOp::MAX_NUM, ReturnVoid(), "'depth.resolveOp' is invalid");
-    NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.stencil.loadOp < LoadOp::MAX_NUM, ReturnVoid(), "'stencil.loadOp' is invalid");
-    NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.stencil.storeOp < StoreOp::MAX_NUM, ReturnVoid(), "'stencil.storeOp' is invalid");
-    NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.stencil.resolveOp < ResolveOp::MAX_NUM, ReturnVoid(), "'stencil.resolveOp' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.colorNum == 0 || renderingDesc.colors != nullptr, ReturnVoid(), "'colors' is NULL");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.depth.loadOp < LoadOp::MAX_NUM, ReturnVoid(), "'depth.loadOp' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.depth.storeOp < StoreOp::MAX_NUM, ReturnVoid(), "'depth.storeOp' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.depth.resolveOp < ResolveOp::MAX_NUM, ReturnVoid(), "'depth.resolveOp' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.stencil.loadOp < LoadOp::MAX_NUM, ReturnVoid(), "'stencil.loadOp' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.stencil.storeOp < StoreOp::MAX_NUM, ReturnVoid(), "'stencil.storeOp' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.stencil.resolveOp < ResolveOp::MAX_NUM, ReturnVoid(), "'stencil.resolveOp' is invalid");
 
-    Scratch<AttachmentDesc> colors = NRI_ALLOCATE_SCRATCH(m_Device, AttachmentDesc, renderingDesc.colorNum);
+    Scratch<AttachmentDesc> colors = OPENRHI_ALLOCATE_SCRATCH(m_Device, AttachmentDesc, renderingDesc.colorNum);
     for (uint32_t i = 0; i < renderingDesc.colorNum; i++) {
-        NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.colors[i].loadOp < LoadOp::MAX_NUM, ReturnVoid(), "'colors[%u].loadOp' is invalid", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.colors[i].storeOp < StoreOp::MAX_NUM, ReturnVoid(), "'colors[%u].storeOp' is invalid", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.colors[i].resolveOp < ResolveOp::MAX_NUM, ReturnVoid(), "'colors[%u].resolveOp' is invalid", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.colors[i].descriptor, ReturnVoid(), "'colors[%u].descriptor' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.colors[i].loadOp < LoadOp::MAX_NUM, ReturnVoid(), "'colors[%u].loadOp' is invalid", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.colors[i].storeOp < StoreOp::MAX_NUM, ReturnVoid(), "'colors[%u].storeOp' is invalid", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.colors[i].resolveOp < ResolveOp::MAX_NUM, ReturnVoid(), "'colors[%u].resolveOp' is invalid", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.colors[i].descriptor, ReturnVoid(), "'colors[%u].descriptor' is NULL", i);
 
         const DescriptorVal& colorVal = *(DescriptorVal*)renderingDesc.colors[i].descriptor;
-        NRI_RETURN_ON_FAILURE(&m_Device, colorVal.IsColorAttachment(), ReturnVoid(), "'colors[%u].descriptor' is not a 'COLOR_ATTACHMENT' descriptor", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, colorVal.IsColorAttachment(), ReturnVoid(), "'colors[%u].descriptor' is not a 'COLOR_ATTACHMENT' descriptor", i);
         if (renderingDesc.colors[i].resolveDst) {
             const DescriptorVal& resolveDstVal = *(DescriptorVal*)renderingDesc.colors[i].resolveDst;
 
-            NRI_RETURN_ON_FAILURE(&m_Device, resolveDstVal.IsColorAttachment(), ReturnVoid(), "'colors[%u].resolveDst' is not a 'COLOR_ATTACHMENT' descriptor", i);
-            NRI_RETURN_ON_FAILURE(&m_Device, m_Device.GetFormatSupport(resolveDstVal.GetFormat()) & FormatSupportBits::MULTISAMPLE_RESOLVE, ReturnVoid(), "'colors[%u].resolveDst' format does not support 'FormatSupportBits::MULTISAMPLE_RESOLVE'", i);
-            NRI_RETURN_ON_FAILURE(&m_Device, resolveDstVal.GetFormat() == colorVal.GetFormat(), ReturnVoid(), "'colors[%u].resolveDst' format must match 'colors[%u].descriptor' format", i, i);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, resolveDstVal.IsColorAttachment(), ReturnVoid(), "'colors[%u].resolveDst' is not a 'COLOR_ATTACHMENT' descriptor", i);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, m_Device.GetFormatSupport(resolveDstVal.GetFormat()) & FormatSupportBits::MULTISAMPLE_RESOLVE, ReturnVoid(), "'colors[%u].resolveDst' format does not support 'FormatSupportBits::MULTISAMPLE_RESOLVE'", i);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, resolveDstVal.GetFormat() == colorVal.GetFormat(), ReturnVoid(), "'colors[%u].resolveDst' format must match 'colors[%u].descriptor' format", i, i);
 
             const ResolveOp resolveOp = renderingDesc.colors[i].resolveOp;
             if (resolveOp == ResolveOp::AVERAGE)
-                NRI_RETURN_ON_FAILURE(&m_Device, IsAverageResolvable(colorVal.GetFormat()), ReturnVoid(), "'colors[%u].resolveOp': 'ResolveOp::AVERAGE' can't be used with integer formats", i);
+                OPENRHI_RETURN_ON_FAILURE(&m_Device, IsAverageResolvable(colorVal.GetFormat()), ReturnVoid(), "'colors[%u].resolveOp': 'ResolveOp::AVERAGE' can't be used with integer formats", i);
 
-            NRI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(GetColorResolveOps(deviceDesc.resolve.attachment, colorVal.GetFormat()), resolveOp), ReturnVoid(),
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(GetColorResolveOps(deviceDesc.resolve.attachment, colorVal.GetFormat()), resolveOp), ReturnVoid(),
                 "'colors[%u].resolveOp': 'ResolveOp::%s' is not supported for this format (see 'resolve.attachment')", i, g_ResolveOpNames[(size_t)resolveOp]);
         }
 
         colors[i] = renderingDesc.colors[i];
-        colors[i].descriptor = NRI_GET_IMPL(Descriptor, renderingDesc.colors[i].descriptor);
-        colors[i].resolveDst = NRI_GET_IMPL(Descriptor, renderingDesc.colors[i].resolveDst);
+        colors[i].descriptor = OPENRHI_GET_IMPL(Descriptor, renderingDesc.colors[i].descriptor);
+        colors[i].resolveDst = OPENRHI_GET_IMPL(Descriptor, renderingDesc.colors[i].resolveDst);
 
         m_RenderTargets[i] = (DescriptorVal*)renderingDesc.colors[i].descriptor;
     }
@@ -691,46 +691,46 @@ NRI_INLINE void CommandBufferVal::BeginRendering(const RenderingDesc& renderingD
     auto attachmentsDescImpl = renderingDesc;
     attachmentsDescImpl.colors = colors;
     attachmentsDescImpl.colorNum = renderingDesc.colorNum;
-    attachmentsDescImpl.depth.descriptor = NRI_GET_IMPL(Descriptor, renderingDesc.depth.descriptor);
-    attachmentsDescImpl.depth.resolveDst = NRI_GET_IMPL(Descriptor, renderingDesc.depth.resolveDst);
-    attachmentsDescImpl.stencil.descriptor = NRI_GET_IMPL(Descriptor, renderingDesc.stencil.descriptor);
-    attachmentsDescImpl.stencil.resolveDst = NRI_GET_IMPL(Descriptor, renderingDesc.stencil.resolveDst);
-    attachmentsDescImpl.shadingRate = NRI_GET_IMPL(Descriptor, renderingDesc.shadingRate);
+    attachmentsDescImpl.depth.descriptor = OPENRHI_GET_IMPL(Descriptor, renderingDesc.depth.descriptor);
+    attachmentsDescImpl.depth.resolveDst = OPENRHI_GET_IMPL(Descriptor, renderingDesc.depth.resolveDst);
+    attachmentsDescImpl.stencil.descriptor = OPENRHI_GET_IMPL(Descriptor, renderingDesc.stencil.descriptor);
+    attachmentsDescImpl.stencil.resolveDst = OPENRHI_GET_IMPL(Descriptor, renderingDesc.stencil.resolveDst);
+    attachmentsDescImpl.shadingRate = OPENRHI_GET_IMPL(Descriptor, renderingDesc.shadingRate);
 
     if (renderingDesc.depth.descriptor) {
         const DescriptorVal& depthVal = *(DescriptorVal*)renderingDesc.depth.descriptor;
-        NRI_RETURN_ON_FAILURE(&m_Device, depthVal.IsDepthStencilAttachment(), ReturnVoid(), "'depth.descriptor' is not a 'DEPTH_STENCIL_ATTACHMENT' descriptor");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, depthVal.IsDepthStencilAttachment(), ReturnVoid(), "'depth.descriptor' is not a 'DEPTH_STENCIL_ATTACHMENT' descriptor");
     }
     if (renderingDesc.depth.resolveDst) {
         const DescriptorVal& resolveDstVal = *(DescriptorVal*)renderingDesc.depth.resolveDst;
-        NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.depth.descriptor, ReturnVoid(), "'depth.resolveDst' is not NULL, but 'depth.descriptor' is NULL");
-        NRI_RETURN_ON_FAILURE(&m_Device, resolveDstVal.IsDepthStencilAttachment(), ReturnVoid(), "'depth.resolveDst' is not a 'DEPTH_STENCIL_ATTACHMENT' descriptor");
-        NRI_RETURN_ON_FAILURE(&m_Device, m_Device.GetFormatSupport(resolveDstVal.GetFormat()) & FormatSupportBits::MULTISAMPLE_RESOLVE, ReturnVoid(), "'depth.resolveDst' format does not support 'FormatSupportBits::MULTISAMPLE_RESOLVE'");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.depth.descriptor, ReturnVoid(), "'depth.resolveDst' is not NULL, but 'depth.descriptor' is NULL");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, resolveDstVal.IsDepthStencilAttachment(), ReturnVoid(), "'depth.resolveDst' is not a 'DEPTH_STENCIL_ATTACHMENT' descriptor");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, m_Device.GetFormatSupport(resolveDstVal.GetFormat()) & FormatSupportBits::MULTISAMPLE_RESOLVE, ReturnVoid(), "'depth.resolveDst' format does not support 'FormatSupportBits::MULTISAMPLE_RESOLVE'");
         // Without a separate "stencil" attachment the stencil plane is resolved with "depth.resolveOp"
         const ResolveOp resolveOp = renderingDesc.depth.resolveOp;
         const DescriptorVal& depthVal = *(DescriptorVal*)renderingDesc.depth.descriptor;
         const bool isStencilResolved = GetFormatProps(depthVal.GetFormat()).isStencil && !renderingDesc.stencil.descriptor;
         if (resolveOp == ResolveOp::AVERAGE)
-            NRI_RETURN_ON_FAILURE(&m_Device, !isStencilResolved, ReturnVoid(), "'depth.resolveOp': 'ResolveOp::AVERAGE' can't be used with a depth-stencil format without a separate 'stencil' attachment");
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, !isStencilResolved, ReturnVoid(), "'depth.resolveOp': 'ResolveOp::AVERAGE' can't be used with a depth-stencil format without a separate 'stencil' attachment");
 
-        NRI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(deviceDesc.resolve.attachment.depth, resolveOp), ReturnVoid(),
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(deviceDesc.resolve.attachment.depth, resolveOp), ReturnVoid(),
             "'depth.resolveOp': 'ResolveOp::%s' is not supported for depth (see 'resolve.attachment')", g_ResolveOpNames[(size_t)resolveOp]);
 
         if (isStencilResolved)
-            NRI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(deviceDesc.resolve.attachment.stencil, resolveOp), ReturnVoid(),
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(deviceDesc.resolve.attachment.stencil, resolveOp), ReturnVoid(),
                 "'depth.resolveOp': 'ResolveOp::%s' is not supported for stencil, which is resolved with 'depth.resolveOp' (see 'resolve.attachment', or use a separate 'stencil' attachment)", g_ResolveOpNames[(size_t)resolveOp]);
     }
     if (renderingDesc.stencil.descriptor) {
         const DescriptorVal& stencilVal = *(DescriptorVal*)renderingDesc.stencil.descriptor;
-        NRI_RETURN_ON_FAILURE(&m_Device, stencilVal.IsDepthStencilAttachment(), ReturnVoid(), "'stencil.descriptor' is not a 'DEPTH_STENCIL_ATTACHMENT' descriptor");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, stencilVal.IsDepthStencilAttachment(), ReturnVoid(), "'stencil.descriptor' is not a 'DEPTH_STENCIL_ATTACHMENT' descriptor");
     }
     if (renderingDesc.stencil.resolveDst) {
         const DescriptorVal& resolveDstVal = *(DescriptorVal*)renderingDesc.stencil.resolveDst;
-        NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.stencil.descriptor, ReturnVoid(), "'stencil.resolveDst' is not NULL, but 'stencil.descriptor' is NULL");
-        NRI_RETURN_ON_FAILURE(&m_Device, resolveDstVal.IsDepthStencilAttachment(), ReturnVoid(), "'stencil.resolveDst' is not a 'DEPTH_STENCIL_ATTACHMENT' descriptor");
-        NRI_RETURN_ON_FAILURE(&m_Device, m_Device.GetFormatSupport(resolveDstVal.GetFormat()) & FormatSupportBits::MULTISAMPLE_RESOLVE, ReturnVoid(), "'stencil.resolveDst' format does not support 'FormatSupportBits::MULTISAMPLE_RESOLVE'");
-        NRI_RETURN_ON_FAILURE(&m_Device, renderingDesc.stencil.resolveOp != ResolveOp::AVERAGE, ReturnVoid(), "'stencil.resolveOp': 'ResolveOp::AVERAGE' can't be used with stencil");
-        NRI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(deviceDesc.resolve.attachment.stencil, renderingDesc.stencil.resolveOp), ReturnVoid(),
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.stencil.descriptor, ReturnVoid(), "'stencil.resolveDst' is not NULL, but 'stencil.descriptor' is NULL");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, resolveDstVal.IsDepthStencilAttachment(), ReturnVoid(), "'stencil.resolveDst' is not a 'DEPTH_STENCIL_ATTACHMENT' descriptor");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, m_Device.GetFormatSupport(resolveDstVal.GetFormat()) & FormatSupportBits::MULTISAMPLE_RESOLVE, ReturnVoid(), "'stencil.resolveDst' format does not support 'FormatSupportBits::MULTISAMPLE_RESOLVE'");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, renderingDesc.stencil.resolveOp != ResolveOp::AVERAGE, ReturnVoid(), "'stencil.resolveOp': 'ResolveOp::AVERAGE' can't be used with stencil");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(deviceDesc.resolve.attachment.stencil, renderingDesc.stencil.resolveOp), ReturnVoid(),
             "'stencil.resolveOp': 'ResolveOp::%s' is not supported for stencil (see 'resolve.attachment')", g_ResolveOpNames[(size_t)renderingDesc.stencil.resolveOp]);
     }
 
@@ -743,10 +743,10 @@ NRI_INLINE void CommandBufferVal::BeginRendering(const RenderingDesc& renderingD
             const bool isStencilResolved = renderingDesc.stencil.descriptor ? renderingDesc.stencil.resolveDst != nullptr : isDepthResolved;
 
             if (isDepthResolved != isStencilResolved)
-                NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.resolve.independentDepthStencilNone, ReturnVoid(), "only one of depth and stencil is resolved, but 'resolve.independentDepthStencilNone' is false");
+                OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.resolve.independentDepthStencilNone, ReturnVoid(), "only one of depth and stencil is resolved, but 'resolve.independentDepthStencilNone' is false");
 
             if (isDepthResolved && isStencilResolved && renderingDesc.stencil.descriptor && renderingDesc.depth.resolveOp != renderingDesc.stencil.resolveOp)
-                NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.resolve.independentDepthStencil, ReturnVoid(), "depth and stencil are resolved with different ops, but 'resolve.independentDepthStencil' is false");
+                OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.resolve.independentDepthStencil, ReturnVoid(), "depth and stencil are resolved with different ops, but 'resolve.independentDepthStencil' is false");
         }
     }
 
@@ -759,9 +759,9 @@ NRI_INLINE void CommandBufferVal::BeginRendering(const RenderingDesc& renderingD
     GetCoreInterfaceImpl().CmdBeginRendering(*GetImpl(), attachmentsDescImpl);
 }
 
-NRI_INLINE void CommandBufferVal::EndRendering() {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "'CmdBeginRendering' has not been called");
+OPENRHI_INLINE void CommandBufferVal::EndRendering() {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "'CmdBeginRendering' has not been called");
 
     m_IsRenderPass = false;
 
@@ -770,33 +770,33 @@ NRI_INLINE void CommandBufferVal::EndRendering() {
     GetCoreInterfaceImpl().CmdEndRendering(*GetImpl());
 }
 
-NRI_INLINE void CommandBufferVal::SetVertexBuffers(uint32_t baseSlot, const VertexBufferDesc* vertexBufferDescs, uint32_t vertexBufferNum) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+OPENRHI_INLINE void CommandBufferVal::SetVertexBuffers(uint32_t baseSlot, const VertexBufferDesc* vertexBufferDescs, uint32_t vertexBufferNum) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
 
-    Scratch<VertexBufferDesc> vertexBufferDescsImpl = NRI_ALLOCATE_SCRATCH(m_Device, VertexBufferDesc, vertexBufferNum);
+    Scratch<VertexBufferDesc> vertexBufferDescsImpl = OPENRHI_ALLOCATE_SCRATCH(m_Device, VertexBufferDesc, vertexBufferNum);
     for (uint32_t i = 0; i < vertexBufferNum; i++) {
         vertexBufferDescsImpl[i] = vertexBufferDescs[i];
-        vertexBufferDescsImpl[i].buffer = NRI_GET_IMPL(Buffer, vertexBufferDescs[i].buffer);
+        vertexBufferDescsImpl[i].buffer = OPENRHI_GET_IMPL(Buffer, vertexBufferDescs[i].buffer);
     }
 
     GetCoreInterfaceImpl().CmdSetVertexBuffers(*GetImpl(), baseSlot, vertexBufferDescsImpl, vertexBufferNum);
 }
 
-NRI_INLINE void CommandBufferVal::SetIndexBuffer(const Buffer& buffer, uint64_t offset, IndexType indexType) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, indexType < IndexType::MAX_NUM, ReturnVoid(), "'indexType' is invalid");
+OPENRHI_INLINE void CommandBufferVal::SetIndexBuffer(const Buffer& buffer, uint64_t offset, IndexType indexType) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, indexType < IndexType::MAX_NUM, ReturnVoid(), "'indexType' is invalid");
 
-    Buffer* bufferImpl = NRI_GET_IMPL(Buffer, &buffer);
+    Buffer* bufferImpl = OPENRHI_GET_IMPL(Buffer, &buffer);
 
     GetCoreInterfaceImpl().CmdSetIndexBuffer(*GetImpl(), *bufferImpl, offset, indexType);
 }
 
-NRI_INLINE void CommandBufferVal::SetPipelineLayout(BindPoint bindPoint, const PipelineLayout& pipelineLayout) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, bindPoint < BindPoint::MAX_NUM, ReturnVoid(), "'bindPoint' is invalid");
-    NRI_RETURN_ON_FAILURE(&m_Device, bindPoint != BindPoint::INHERIT, ReturnVoid(), "'INHERIT' is not allowed");
+OPENRHI_INLINE void CommandBufferVal::SetPipelineLayout(BindPoint bindPoint, const PipelineLayout& pipelineLayout) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, bindPoint < BindPoint::MAX_NUM, ReturnVoid(), "'bindPoint' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, bindPoint != BindPoint::INHERIT, ReturnVoid(), "'INHERIT' is not allowed");
 
-    PipelineLayout* pipelineLayoutImpl = NRI_GET_IMPL(PipelineLayout, &pipelineLayout);
+    PipelineLayout* pipelineLayoutImpl = OPENRHI_GET_IMPL(PipelineLayout, &pipelineLayout);
 
     m_PipelineLayout = (PipelineLayoutVal*)&pipelineLayout;
     ResetDescriptorSets();
@@ -805,306 +805,306 @@ NRI_INLINE void CommandBufferVal::SetPipelineLayout(BindPoint bindPoint, const P
     GetCoreInterfaceImpl().CmdSetPipelineLayout(*GetImpl(), bindPoint, *pipelineLayoutImpl);
 }
 
-NRI_INLINE void CommandBufferVal::SetPipeline(const Pipeline& pipeline) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+OPENRHI_INLINE void CommandBufferVal::SetPipeline(const Pipeline& pipeline) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
 
-    Pipeline* pipelineImpl = NRI_GET_IMPL(Pipeline, &pipeline);
+    Pipeline* pipelineImpl = OPENRHI_GET_IMPL(Pipeline, &pipeline);
 
     GetCoreInterfaceImpl().CmdSetPipeline(*GetImpl(), *pipelineImpl);
 }
 
-NRI_INLINE void CommandBufferVal::SetDescriptorPool(const DescriptorPool& descriptorPool) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+OPENRHI_INLINE void CommandBufferVal::SetDescriptorPool(const DescriptorPool& descriptorPool) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
 
     const DescriptorPoolVal& descriptorPoolVal = (const DescriptorPoolVal&)descriptorPool;
-    NRI_RETURN_ON_FAILURE(&m_Device, !descriptorPoolVal.IsCopySource(), ReturnVoid(), "'descriptorPool' must not have 'DescriptorPoolBits::COPY_SOURCE'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !descriptorPoolVal.IsCopySource(), ReturnVoid(), "'descriptorPool' must not have 'DescriptorPoolBits::COPY_SOURCE'");
 
-    DescriptorPool* descriptorPoolImpl = NRI_GET_IMPL(DescriptorPool, &descriptorPool);
+    DescriptorPool* descriptorPoolImpl = OPENRHI_GET_IMPL(DescriptorPool, &descriptorPool);
 
     GetCoreInterfaceImpl().CmdSetDescriptorPool(*GetImpl(), *descriptorPoolImpl);
 }
 
-NRI_INLINE void CommandBufferVal::SetDescriptorHeap(const DescriptorHeap& descriptorHeap) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_QueueType == QueueType::GRAPHICS || m_QueueType == QueueType::COMPUTE, ReturnVoid(), "the command buffer must belong to a GRAPHICS or COMPUTE queue");
+OPENRHI_INLINE void CommandBufferVal::SetDescriptorHeap(const DescriptorHeap& descriptorHeap) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_QueueType == QueueType::GRAPHICS || m_QueueType == QueueType::COMPUTE, ReturnVoid(), "the command buffer must belong to a GRAPHICS or COMPUTE queue");
 
     ResetDescriptorSets();
 
     m_Device.GetDescriptorHeapInterfaceImpl().CmdSetDescriptorHeap(*GetImpl(), descriptorHeap);
 }
 
-NRI_INLINE void CommandBufferVal::SetDescriptorSet(const SetDescriptorSetDesc& setDescriptorSetDesc) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_PipelineLayout, ReturnVoid(), "'SetPipelineLayout' has not been called");
-    NRI_RETURN_ON_FAILURE(&m_Device, setDescriptorSetDesc.descriptorSet, ReturnVoid(), "'descriptorSet' is NULL");
-    NRI_RETURN_ON_FAILURE(&m_Device, setDescriptorSetDesc.bindPoint < BindPoint::MAX_NUM, ReturnVoid(), "'bindPoint' is invalid");
-    NRI_RETURN_ON_FAILURE(&m_Device, setDescriptorSetDesc.setIndex < m_DescriptorSets.size(), ReturnVoid(), "'setIndex=%u' is out of bounds", setDescriptorSetDesc.setIndex);
+OPENRHI_INLINE void CommandBufferVal::SetDescriptorSet(const SetDescriptorSetDesc& setDescriptorSetDesc) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_PipelineLayout, ReturnVoid(), "'SetPipelineLayout' has not been called");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setDescriptorSetDesc.descriptorSet, ReturnVoid(), "'descriptorSet' is NULL");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setDescriptorSetDesc.bindPoint < BindPoint::MAX_NUM, ReturnVoid(), "'bindPoint' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setDescriptorSetDesc.setIndex < m_DescriptorSets.size(), ReturnVoid(), "'setIndex=%u' is out of bounds", setDescriptorSetDesc.setIndex);
 
     const DescriptorSetVal& descriptorSetVal = *(DescriptorSetVal*)setDescriptorSetDesc.descriptorSet;
-    NRI_RETURN_ON_FAILURE(&m_Device, !descriptorSetVal.IsCopySource(), ReturnVoid(), "'descriptorSet' must not be allocated from a pool with 'DescriptorPoolBits::COPY_SOURCE'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !descriptorSetVal.IsCopySource(), ReturnVoid(), "'descriptorSet' must not be allocated from a pool with 'DescriptorPoolBits::COPY_SOURCE'");
 
     auto descriptorSetBindingDescImpl = setDescriptorSetDesc;
-    descriptorSetBindingDescImpl.descriptorSet = NRI_GET_IMPL(DescriptorSet, setDescriptorSetDesc.descriptorSet);
+    descriptorSetBindingDescImpl.descriptorSet = OPENRHI_GET_IMPL(DescriptorSet, setDescriptorSetDesc.descriptorSet);
 
     GetCoreInterfaceImpl().CmdSetDescriptorSet(*GetImpl(), descriptorSetBindingDescImpl);
 
     m_DescriptorSets[setDescriptorSetDesc.setIndex] = (DescriptorSetVal*)setDescriptorSetDesc.descriptorSet;
 }
 
-NRI_INLINE void CommandBufferVal::SetRootConstants(const SetRootConstantsDesc& setRootConstantsDesc) {
+OPENRHI_INLINE void CommandBufferVal::SetRootConstants(const SetRootConstantsDesc& setRootConstantsDesc) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_PipelineLayout, ReturnVoid(), "'SetPipelineLayout' has not been called");
-    NRI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.data, ReturnVoid(), "'data' is NULL");
-    NRI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.size != 0, ReturnVoid(), "'size' is 0");
-    NRI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.offset == 0 || deviceDesc.features.rootConstantsOffset, ReturnVoid(), "Non-zero 'setRootConstantsDesc.offset' is not supported");
-    NRI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.bindPoint < BindPoint::MAX_NUM, ReturnVoid(), "'bindPoint' is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_PipelineLayout, ReturnVoid(), "'SetPipelineLayout' has not been called");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.data, ReturnVoid(), "'data' is NULL");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.size != 0, ReturnVoid(), "'size' is 0");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.offset == 0 || deviceDesc.features.rootConstantsOffset, ReturnVoid(), "Non-zero 'setRootConstantsDesc.offset' is not supported");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.bindPoint < BindPoint::MAX_NUM, ReturnVoid(), "'bindPoint' is invalid");
 
     const PipelineLayoutDesc& pipelineLayoutDesc = m_PipelineLayout->GetPipelineLayoutDesc();
-    NRI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.rootConstantIndex < pipelineLayoutDesc.rootConstantNum, ReturnVoid(), "'rootConstantIndex=%u' is out of bounds", setRootConstantsDesc.rootConstantIndex);
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.rootConstantIndex < pipelineLayoutDesc.rootConstantNum, ReturnVoid(), "'rootConstantIndex=%u' is out of bounds", setRootConstantsDesc.rootConstantIndex);
 
     const RootConstantDesc& rootConstantDesc = pipelineLayoutDesc.rootConstants[setRootConstantsDesc.rootConstantIndex];
-    NRI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.offset <= rootConstantDesc.size && setRootConstantsDesc.size <= rootConstantDesc.size - setRootConstantsDesc.offset, ReturnVoid(), "'offset=%u' + 'size=%u' must be <= root constant 'size=%u'", setRootConstantsDesc.offset, setRootConstantsDesc.size, rootConstantDesc.size);
-    NRI_RETURN_ON_FAILURE(&m_Device, IsAligned(setRootConstantsDesc.offset, 4) && IsAligned(setRootConstantsDesc.size, 4), ReturnVoid(), "'offset=%u' and 'size=%u' must be 4-byte aligned", setRootConstantsDesc.offset, setRootConstantsDesc.size);
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setRootConstantsDesc.offset <= rootConstantDesc.size && setRootConstantsDesc.size <= rootConstantDesc.size - setRootConstantsDesc.offset, ReturnVoid(), "'offset=%u' + 'size=%u' must be <= root constant 'size=%u'", setRootConstantsDesc.offset, setRootConstantsDesc.size, rootConstantDesc.size);
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, IsAligned(setRootConstantsDesc.offset, 4) && IsAligned(setRootConstantsDesc.size, 4), ReturnVoid(), "'offset=%u' and 'size=%u' must be 4-byte aligned", setRootConstantsDesc.offset, setRootConstantsDesc.size);
 
     GetCoreInterfaceImpl().CmdSetRootConstants(*GetImpl(), setRootConstantsDesc);
 }
 
-NRI_INLINE void CommandBufferVal::SetRootDescriptor(const SetRootDescriptorDesc& setRootDescriptorDesc) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_PipelineLayout, ReturnVoid(), "'SetPipelineLayout' has not been called");
-    NRI_RETURN_ON_FAILURE(&m_Device, setRootDescriptorDesc.descriptor, ReturnVoid(), "'descriptor' is NULL");
-    NRI_RETURN_ON_FAILURE(&m_Device, setRootDescriptorDesc.bindPoint < BindPoint::MAX_NUM, ReturnVoid(), "'bindPoint' is invalid");
+OPENRHI_INLINE void CommandBufferVal::SetRootDescriptor(const SetRootDescriptorDesc& setRootDescriptorDesc) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_PipelineLayout, ReturnVoid(), "'SetPipelineLayout' has not been called");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setRootDescriptorDesc.descriptor, ReturnVoid(), "'descriptor' is NULL");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setRootDescriptorDesc.bindPoint < BindPoint::MAX_NUM, ReturnVoid(), "'bindPoint' is invalid");
 
     const PipelineLayoutDesc& pipelineLayoutDesc = m_PipelineLayout->GetPipelineLayoutDesc();
-    NRI_RETURN_ON_FAILURE(&m_Device, setRootDescriptorDesc.rootDescriptorIndex < pipelineLayoutDesc.rootDescriptorNum, ReturnVoid(), "'rootDescriptorIndex=%u' is out of bounds", setRootDescriptorDesc.rootDescriptorIndex);
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, setRootDescriptorDesc.rootDescriptorIndex < pipelineLayoutDesc.rootDescriptorNum, ReturnVoid(), "'rootDescriptorIndex=%u' is out of bounds", setRootDescriptorDesc.rootDescriptorIndex);
 
     const DescriptorVal& descriptorVal = *(DescriptorVal*)setRootDescriptorDesc.descriptor;
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
     const RootDescriptorDesc& rootDescriptorDesc = pipelineLayoutDesc.rootDescriptors[setRootDescriptorDesc.rootDescriptorIndex];
 
-    NRI_RETURN_ON_FAILURE(&m_Device, descriptorVal.CanBeRoot(), ReturnVoid(), "'descriptor' must be a non-typed buffer or an acceleration structure");
-    NRI_RETURN_ON_FAILURE(&m_Device, descriptorVal.GetType() == rootDescriptorDesc.descriptorType, ReturnVoid(), "'descriptor' type doesn't match 'rootDescriptors[%u].descriptorType'", setRootDescriptorDesc.rootDescriptorIndex);
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, descriptorVal.CanBeRoot(), ReturnVoid(), "'descriptor' must be a non-typed buffer or an acceleration structure");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, descriptorVal.GetType() == rootDescriptorDesc.descriptorType, ReturnVoid(), "'descriptor' type doesn't match 'rootDescriptors[%u].descriptorType'", setRootDescriptorDesc.rootDescriptorIndex);
 
     if (!descriptorVal.IsConstantBuffer())
-        NRI_RETURN_ON_FAILURE(&m_Device, setRootDescriptorDesc.offset == 0 || deviceDesc.features.nonConstantBufferRootDescriptorOffset, ReturnVoid(), "Non-zero 'setRootDescriptorDesc.offset' for non-'CONSTANT_BUFFER' descriptors requires 'features.nonConstantBufferRootDescriptorOffset'");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, setRootDescriptorDesc.offset == 0 || deviceDesc.features.nonConstantBufferRootDescriptorOffset, ReturnVoid(), "Non-zero 'setRootDescriptorDesc.offset' for non-'CONSTANT_BUFFER' descriptors requires 'features.nonConstantBufferRootDescriptorOffset'");
 
     if (rootDescriptorDesc.descriptorType != DescriptorType::ACCELERATION_STRUCTURE)
-        NRI_RETURN_ON_FAILURE(&m_Device, setRootDescriptorDesc.offset <= descriptorVal.GetRootDescriptorOffsetMax(), ReturnVoid(), "'offset=%u' must be <= maximum root descriptor 'offset=%" PRIu64 "'", setRootDescriptorDesc.offset, descriptorVal.GetRootDescriptorOffsetMax());
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, setRootDescriptorDesc.offset <= descriptorVal.GetRootDescriptorOffsetMax(), ReturnVoid(), "'offset=%u' must be <= maximum root descriptor 'offset=%" PRIu64 "'", setRootDescriptorDesc.offset, descriptorVal.GetRootDescriptorOffsetMax());
 
     auto rootDescriptorBindingDescImpl = setRootDescriptorDesc;
-    rootDescriptorBindingDescImpl.descriptor = NRI_GET_IMPL(Descriptor, setRootDescriptorDesc.descriptor);
+    rootDescriptorBindingDescImpl.descriptor = OPENRHI_GET_IMPL(Descriptor, setRootDescriptorDesc.descriptor);
 
     GetCoreInterfaceImpl().CmdSetRootDescriptor(*GetImpl(), rootDescriptorBindingDescImpl);
 }
 
-NRI_INLINE void CommandBufferVal::Draw(const DrawDesc& drawDesc) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::Draw(const DrawDesc& drawDesc) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
 
     GetCoreInterfaceImpl().CmdDraw(*GetImpl(), drawDesc);
 }
 
-NRI_INLINE void CommandBufferVal::DrawIndexed(const DrawIndexedDesc& drawIndexedDesc) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::DrawIndexed(const DrawIndexedDesc& drawIndexedDesc) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
 
     GetCoreInterfaceImpl().CmdDrawIndexed(*GetImpl(), drawIndexedDesc);
 }
 
-NRI_INLINE void CommandBufferVal::DrawIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
+OPENRHI_INLINE void CommandBufferVal::DrawIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_PipelineLayout, ReturnVoid(), "'SetPipelineLayout' has not been called");
-    NRI_RETURN_ON_FAILURE(&m_Device, !countBuffer || deviceDesc.features.drawIndirectCount, ReturnVoid(), "'countBuffer' is not supported");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_PipelineLayout, ReturnVoid(), "'SetPipelineLayout' has not been called");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !countBuffer || deviceDesc.features.drawIndirectCount, ReturnVoid(), "'countBuffer' is not supported");
 
     const PipelineLayoutDesc& pipelineLayoutDesc = m_PipelineLayout->GetPipelineLayoutDesc();
     bool enableDrawParametersEmulation = IsDrawParametersEmulationEnabled(pipelineLayoutDesc);
     uint32_t minStride = enableDrawParametersEmulation ? sizeof(DrawBaseDesc) : sizeof(DrawDesc);
-    NRI_RETURN_ON_FAILURE(&m_Device, stride >= minStride, ReturnVoid(), "'stride' is too small, expected >= %u", minStride);
-    NRI_RETURN_ON_FAILURE(&m_Device, (stride % 4) == 0, ReturnVoid(), "'stride' must be 4-byte aligned");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, stride >= minStride, ReturnVoid(), "'stride' is too small, expected >= %u", minStride);
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, (stride % 4) == 0, ReturnVoid(), "'stride' must be 4-byte aligned");
 
-    Buffer* bufferImpl = NRI_GET_IMPL(Buffer, &buffer);
-    Buffer* countBufferImpl = NRI_GET_IMPL(Buffer, countBuffer);
+    Buffer* bufferImpl = OPENRHI_GET_IMPL(Buffer, &buffer);
+    Buffer* countBufferImpl = OPENRHI_GET_IMPL(Buffer, countBuffer);
 
     GetCoreInterfaceImpl().CmdDrawIndirect(*GetImpl(), *bufferImpl, offset, drawNum, stride, countBufferImpl, countBufferOffset);
 }
 
-NRI_INLINE void CommandBufferVal::DrawIndexedIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
+OPENRHI_INLINE void CommandBufferVal::DrawIndexedIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_PipelineLayout, ReturnVoid(), "'SetPipelineLayout' has not been called");
-    NRI_RETURN_ON_FAILURE(&m_Device, !countBuffer || deviceDesc.features.drawIndirectCount, ReturnVoid(), "'countBuffer' is not supported");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_PipelineLayout, ReturnVoid(), "'SetPipelineLayout' has not been called");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !countBuffer || deviceDesc.features.drawIndirectCount, ReturnVoid(), "'countBuffer' is not supported");
 
     const PipelineLayoutDesc& pipelineLayoutDesc = m_PipelineLayout->GetPipelineLayoutDesc();
     bool enableDrawParametersEmulation = IsDrawParametersEmulationEnabled(pipelineLayoutDesc);
     uint32_t minStride = enableDrawParametersEmulation ? sizeof(DrawIndexedBaseDesc) : sizeof(DrawIndexedDesc);
-    NRI_RETURN_ON_FAILURE(&m_Device, stride >= minStride, ReturnVoid(), "'stride' is too small, expected >= %u", minStride);
-    NRI_RETURN_ON_FAILURE(&m_Device, (stride % 4) == 0, ReturnVoid(), "'stride' must be 4-byte aligned");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, stride >= minStride, ReturnVoid(), "'stride' is too small, expected >= %u", minStride);
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, (stride % 4) == 0, ReturnVoid(), "'stride' must be 4-byte aligned");
 
-    Buffer* bufferImpl = NRI_GET_IMPL(Buffer, &buffer);
-    Buffer* countBufferImpl = NRI_GET_IMPL(Buffer, countBuffer);
+    Buffer* bufferImpl = OPENRHI_GET_IMPL(Buffer, &buffer);
+    Buffer* countBufferImpl = OPENRHI_GET_IMPL(Buffer, countBuffer);
 
     GetCoreInterfaceImpl().CmdDrawIndexedIndirect(*GetImpl(), *bufferImpl, offset, drawNum, stride, countBufferImpl, countBufferOffset);
 }
 
-NRI_INLINE void CommandBufferVal::CopyBuffer(Buffer& dstBuffer, uint64_t dstOffset, const Buffer& srcBuffer, uint64_t srcOffset, uint64_t size) {
+OPENRHI_INLINE void CommandBufferVal::CopyBuffer(Buffer& dstBuffer, uint64_t dstOffset, const Buffer& srcBuffer, uint64_t srcOffset, uint64_t size) {
     const BufferDesc& dstDesc = ((BufferVal&)dstBuffer).GetDesc();
     const BufferDesc& srcDesc = ((BufferVal&)srcBuffer).GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
     if (size == WHOLE_SIZE) {
-        NRI_RETURN_ON_FAILURE(&m_Device, dstOffset == 0, ReturnVoid(), "'WHOLE_SIZE' is used but 'dstOffset' is not 0");
-        NRI_RETURN_ON_FAILURE(&m_Device, srcOffset == 0, ReturnVoid(), "'WHOLE_SIZE' is used but 'srcOffset' is not 0");
-        NRI_RETURN_ON_FAILURE(&m_Device, dstDesc.size == srcDesc.size, ReturnVoid(), "'WHOLE_SIZE' is used but 'dstBuffer' and 'srcBuffer' have different sizes");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, dstOffset == 0, ReturnVoid(), "'WHOLE_SIZE' is used but 'dstOffset' is not 0");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, srcOffset == 0, ReturnVoid(), "'WHOLE_SIZE' is used but 'srcOffset' is not 0");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, dstDesc.size == srcDesc.size, ReturnVoid(), "'WHOLE_SIZE' is used but 'dstBuffer' and 'srcBuffer' have different sizes");
     } else {
-        NRI_RETURN_ON_FAILURE(&m_Device, srcOffset + size <= srcDesc.size, ReturnVoid(), "'srcOffset + size' > srcBuffer.size");
-        NRI_RETURN_ON_FAILURE(&m_Device, dstOffset + size <= dstDesc.size, ReturnVoid(), "'dstOffset + size' > dstBuffer.size");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, srcOffset + size <= srcDesc.size, ReturnVoid(), "'srcOffset + size' > srcBuffer.size");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, dstOffset + size <= dstDesc.size, ReturnVoid(), "'dstOffset + size' > dstBuffer.size");
     }
 
-    Buffer* dstBufferImpl = NRI_GET_IMPL(Buffer, &dstBuffer);
-    Buffer* srcBufferImpl = NRI_GET_IMPL(Buffer, &srcBuffer);
+    Buffer* dstBufferImpl = OPENRHI_GET_IMPL(Buffer, &dstBuffer);
+    Buffer* srcBufferImpl = OPENRHI_GET_IMPL(Buffer, &srcBuffer);
 
     GetCoreInterfaceImpl().CmdCopyBuffer(*GetImpl(), *dstBufferImpl, dstOffset, *srcBufferImpl, srcOffset, size);
 }
 
-NRI_INLINE void CommandBufferVal::CopyTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::CopyTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
 
     const TextureDesc& dstDesc = ((TextureVal&)dstTexture).GetDesc();
     const TextureDesc& srcDesc = ((TextureVal&)srcTexture).GetDesc();
     const PlaneBits srcPlanes = GetRegionPlanes(srcDesc.format, srcRegion);
     const PlaneBits dstPlanes = GetRegionPlanes(dstDesc.format, dstRegion);
-    NRI_RETURN_ON_FAILURE(&m_Device, AreRegionPlanesValid(srcDesc.format, srcPlanes), ReturnVoid(), "'srcRegion->planes' is empty or has planes missing in the source format");
-    NRI_RETURN_ON_FAILURE(&m_Device, AreRegionPlanesValid(dstDesc.format, dstPlanes), ReturnVoid(), "'dstRegion->planes' is empty or has planes missing in the destination format");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, AreRegionPlanesValid(srcDesc.format, srcPlanes), ReturnVoid(), "'srcRegion->planes' is empty or has planes missing in the source format");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, AreRegionPlanesValid(dstDesc.format, dstPlanes), ReturnVoid(), "'dstRegion->planes' is empty or has planes missing in the destination format");
 
-    Texture* dstTextureImpl = NRI_GET_IMPL(Texture, &dstTexture);
-    Texture* srcTextureImpl = NRI_GET_IMPL(Texture, &srcTexture);
+    Texture* dstTextureImpl = OPENRHI_GET_IMPL(Texture, &dstTexture);
+    Texture* srcTextureImpl = OPENRHI_GET_IMPL(Texture, &srcTexture);
 
     GetCoreInterfaceImpl().CmdCopyTexture(*GetImpl(), *dstTextureImpl, dstRegion, *srcTextureImpl, srcRegion);
 }
 
-NRI_INLINE void CommandBufferVal::ResolveTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion, ResolveOp resolveOp) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, resolveOp < ResolveOp::MAX_NUM, ReturnVoid(), "'resolveOp' is invalid");
+OPENRHI_INLINE void CommandBufferVal::ResolveTexture(Texture& dstTexture, const TextureRegionDesc* dstRegion, const Texture& srcTexture, const TextureRegionDesc* srcRegion, ResolveOp resolveOp) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, resolveOp < ResolveOp::MAX_NUM, ReturnVoid(), "'resolveOp' is invalid");
 
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
     const TextureDesc& dstDesc = ((TextureVal&)dstTexture).GetDesc();
     const TextureDesc& srcDesc = ((TextureVal&)srcTexture).GetDesc();
-    NRI_RETURN_ON_FAILURE(&m_Device, srcDesc.sampleNum > 1 && dstDesc.sampleNum == 1, ReturnVoid(), "'srcTexture' must be multisampled and 'dstTexture' must be single-sampled");
-    NRI_RETURN_ON_FAILURE(&m_Device, srcDesc.format == dstDesc.format, ReturnVoid(), "'srcTexture' and 'dstTexture' formats must match");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, srcDesc.sampleNum > 1 && dstDesc.sampleNum == 1, ReturnVoid(), "'srcTexture' must be multisampled and 'dstTexture' must be single-sampled");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, srcDesc.format == dstDesc.format, ReturnVoid(), "'srcTexture' and 'dstTexture' formats must match");
 
     if (!dstRegion && !srcRegion)
-        NRI_RETURN_ON_FAILURE(&m_Device, srcDesc.layerNum == dstDesc.layerNum, ReturnVoid(), "'layerNum' mismatch for a whole-texture resolve");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, srcDesc.layerNum == dstDesc.layerNum, ReturnVoid(), "'layerNum' mismatch for a whole-texture resolve");
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_Device.GetFormatSupport(dstDesc.format) & FormatSupportBits::MULTISAMPLE_RESOLVE, ReturnVoid(), "'dstTexture' format does not support 'FormatSupportBits::MULTISAMPLE_RESOLVE'");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_Device.GetFormatSupport(srcDesc.format) & FormatSupportBits::MULTISAMPLE_RESOLVE, ReturnVoid(), "'srcTexture' format does not support 'FormatSupportBits::MULTISAMPLE_RESOLVE'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_Device.GetFormatSupport(dstDesc.format) & FormatSupportBits::MULTISAMPLE_RESOLVE, ReturnVoid(), "'dstTexture' format does not support 'FormatSupportBits::MULTISAMPLE_RESOLVE'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_Device.GetFormatSupport(srcDesc.format) & FormatSupportBits::MULTISAMPLE_RESOLVE, ReturnVoid(), "'srcTexture' format does not support 'FormatSupportBits::MULTISAMPLE_RESOLVE'");
 
     if (!deviceDesc.features.regionResolve)
-        NRI_RETURN_ON_FAILURE(&m_Device, !dstRegion && !srcRegion, ReturnVoid(), "region(s) are specified, but 'features.regionResolve' is false");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, !dstRegion && !srcRegion, ReturnVoid(), "region(s) are specified, but 'features.regionResolve' is false");
     // A missing region covers all planes
     const PlaneBits srcPlanes = GetRegionPlanes(srcDesc.format, srcRegion);
     const PlaneBits dstPlanes = GetRegionPlanes(dstDesc.format, dstRegion);
-    NRI_RETURN_ON_FAILURE(&m_Device, AreRegionPlanesValid(srcDesc.format, srcPlanes), ReturnVoid(), "'srcRegion->planes' is empty or has planes missing in the source format");
-    NRI_RETURN_ON_FAILURE(&m_Device, AreRegionPlanesValid(dstDesc.format, dstPlanes), ReturnVoid(), "'dstRegion->planes' is empty or has planes missing in the destination format");
-    NRI_RETURN_ON_FAILURE(&m_Device, srcPlanes == dstPlanes, ReturnVoid(), "source and destination must resolve the same planes");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, AreRegionPlanesValid(srcDesc.format, srcPlanes), ReturnVoid(), "'srcRegion->planes' is empty or has planes missing in the source format");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, AreRegionPlanesValid(dstDesc.format, dstPlanes), ReturnVoid(), "'dstRegion->planes' is empty or has planes missing in the destination format");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, srcPlanes == dstPlanes, ReturnVoid(), "source and destination must resolve the same planes");
 
     if (resolveOp == ResolveOp::AVERAGE)
-        NRI_RETURN_ON_FAILURE(&m_Device, IsAverageResolvable(srcDesc.format, srcRegion ? srcRegion->planes : PlaneBits::ALL), ReturnVoid(), "'ResolveOp::AVERAGE' can't be used with integer or stencil formats");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, IsAverageResolvable(srcDesc.format, srcRegion ? srcRegion->planes : PlaneBits::ALL), ReturnVoid(), "'ResolveOp::AVERAGE' can't be used with integer or stencil formats");
 
     const FormatProps& formatProps = GetFormatProps(srcDesc.format);
     const char* opName = g_ResolveOpNames[(size_t)resolveOp];
     if (!formatProps.isDepth && !formatProps.isStencil)
-        NRI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(GetColorResolveOps(deviceDesc.resolve.command, srcDesc.format), resolveOp), ReturnVoid(), "'ResolveOp::%s' is not supported for this format (see 'resolve.command')", opName);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(GetColorResolveOps(deviceDesc.resolve.command, srcDesc.format), resolveOp), ReturnVoid(), "'ResolveOp::%s' is not supported for this format (see 'resolve.command')", opName);
 
     if (srcPlanes & PlaneBits::DEPTH)
-        NRI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(deviceDesc.resolve.command.depth, resolveOp), ReturnVoid(), "'ResolveOp::%s' is not supported for depth (see 'resolve.command')", opName);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(deviceDesc.resolve.command.depth, resolveOp), ReturnVoid(), "'ResolveOp::%s' is not supported for depth (see 'resolve.command')", opName);
 
     if (srcPlanes & PlaneBits::STENCIL)
-        NRI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(deviceDesc.resolve.command.stencil, resolveOp), ReturnVoid(), "'ResolveOp::%s' is not supported for stencil (see 'resolve.command')", opName);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, IsResolveOpSupported(deviceDesc.resolve.command.stencil, resolveOp), ReturnVoid(), "'ResolveOp::%s' is not supported for stencil (see 'resolve.command')", opName);
 
     // Only one plane of a depth-stencil format
     if (formatProps.isDepth && formatProps.isStencil && srcPlanes != (PlaneBits::DEPTH | PlaneBits::STENCIL))
-        NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.resolve.independentDepthStencilNone, ReturnVoid(), "only one of depth and stencil is resolved, but 'resolve.independentDepthStencilNone' is false");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.resolve.independentDepthStencilNone, ReturnVoid(), "only one of depth and stencil is resolved, but 'resolve.independentDepthStencilNone' is false");
 
-    Texture* dstTextureImpl = NRI_GET_IMPL(Texture, &dstTexture);
-    Texture* srcTextureImpl = NRI_GET_IMPL(Texture, &srcTexture);
+    Texture* dstTextureImpl = OPENRHI_GET_IMPL(Texture, &dstTexture);
+    Texture* srcTextureImpl = OPENRHI_GET_IMPL(Texture, &srcTexture);
 
     GetCoreInterfaceImpl().CmdResolveTexture(*GetImpl(), *dstTextureImpl, dstRegion, *srcTextureImpl, srcRegion, resolveOp);
 }
 
-NRI_INLINE void CommandBufferVal::UploadBufferToTexture(Texture& dstTexture, const TextureRegionDesc& dstRegion, const Buffer& srcBuffer, const TextureDataLayoutDesc& srcDataLayout) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::UploadBufferToTexture(Texture& dstTexture, const TextureRegionDesc& dstRegion, const Buffer& srcBuffer, const TextureDataLayoutDesc& srcDataLayout) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
 
-    Texture* dstTextureImpl = NRI_GET_IMPL(Texture, &dstTexture);
-    Buffer* srcBufferImpl = NRI_GET_IMPL(Buffer, &srcBuffer);
+    Texture* dstTextureImpl = OPENRHI_GET_IMPL(Texture, &dstTexture);
+    Buffer* srcBufferImpl = OPENRHI_GET_IMPL(Buffer, &srcBuffer);
 
     GetCoreInterfaceImpl().CmdUploadBufferToTexture(*GetImpl(), *dstTextureImpl, dstRegion, *srcBufferImpl, srcDataLayout);
 }
 
-NRI_INLINE void CommandBufferVal::ReadbackTextureToBuffer(Buffer& dstBuffer, const TextureDataLayoutDesc& dstDataLayout, const Texture& srcTexture, const TextureRegionDesc& srcRegion) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::ReadbackTextureToBuffer(Buffer& dstBuffer, const TextureDataLayoutDesc& dstDataLayout, const Texture& srcTexture, const TextureRegionDesc& srcRegion) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
 
-    Buffer* dstBufferImpl = NRI_GET_IMPL(Buffer, &dstBuffer);
-    Texture* srcTextureImpl = NRI_GET_IMPL(Texture, &srcTexture);
+    Buffer* dstBufferImpl = OPENRHI_GET_IMPL(Buffer, &dstBuffer);
+    Texture* srcTextureImpl = OPENRHI_GET_IMPL(Texture, &srcTexture);
 
     GetCoreInterfaceImpl().CmdReadbackTextureToBuffer(*GetImpl(), *dstBufferImpl, dstDataLayout, *srcTextureImpl, srcRegion);
 }
 
-NRI_INLINE void CommandBufferVal::ZeroBuffer(Buffer& buffer, uint64_t offset, uint64_t size) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::ZeroBuffer(Buffer& buffer, uint64_t offset, uint64_t size) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
 
     if (size == WHOLE_SIZE) {
-        NRI_RETURN_ON_FAILURE(&m_Device, offset == 0, ReturnVoid(), "'WHOLE_SIZE' is used but 'offset' is not 0");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, offset == 0, ReturnVoid(), "'WHOLE_SIZE' is used but 'offset' is not 0");
     } else {
         const BufferDesc& bufferDesc = ((BufferVal&)buffer).GetDesc();
-        NRI_RETURN_ON_FAILURE(&m_Device, offset + size <= bufferDesc.size, ReturnVoid(), "'offset + size' > buffer.size");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, offset + size <= bufferDesc.size, ReturnVoid(), "'offset + size' > buffer.size");
     }
 
-    Buffer* bufferImpl = NRI_GET_IMPL(Buffer, &buffer);
+    Buffer* bufferImpl = OPENRHI_GET_IMPL(Buffer, &buffer);
 
     GetCoreInterfaceImpl().CmdZeroBuffer(*GetImpl(), *bufferImpl, offset, size);
 }
 
-NRI_INLINE void CommandBufferVal::Dispatch(const DispatchDesc& dispatchDesc) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::Dispatch(const DispatchDesc& dispatchDesc) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
 
     GetCoreInterfaceImpl().CmdDispatch(*GetImpl(), dispatchDesc);
 }
 
-NRI_INLINE void CommandBufferVal::DispatchIndirect(const Buffer& buffer, uint64_t offset) {
+OPENRHI_INLINE void CommandBufferVal::DispatchIndirect(const Buffer& buffer, uint64_t offset) {
     const BufferDesc& bufferDesc = ((BufferVal&)buffer).GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, offset < bufferDesc.size, ReturnVoid(), "offset is greater than the buffer size");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, offset < bufferDesc.size, ReturnVoid(), "offset is greater than the buffer size");
 
-    Buffer* bufferImpl = NRI_GET_IMPL(Buffer, &buffer);
+    Buffer* bufferImpl = OPENRHI_GET_IMPL(Buffer, &buffer);
     GetCoreInterfaceImpl().CmdDispatchIndirect(*GetImpl(), *bufferImpl, offset);
 }
 
-NRI_INLINE void CommandBufferVal::Barrier(const BarrierDesc& barrierDesc) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+OPENRHI_INLINE void CommandBufferVal::Barrier(const BarrierDesc& barrierDesc) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
 
     // Inside rendering only "Layout::INPUT_ATTACHMENT" access transitions are allowed
     if (m_IsRenderPass) {
-        NRI_RETURN_ON_FAILURE(&m_Device, barrierDesc.globalNum == 0 && barrierDesc.bufferNum == 0, ReturnVoid(), "only texture barriers are allowed inside 'CmdBeginRendering/CmdEndRendering'");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, barrierDesc.globalNum == 0 && barrierDesc.bufferNum == 0, ReturnVoid(), "only texture barriers are allowed inside 'CmdBeginRendering/CmdEndRendering'");
 
         for (uint32_t i = 0; i < barrierDesc.textureNum; i++) {
             const TextureBarrierDesc& textureBarrier = barrierDesc.textures[i];
-            NRI_RETURN_ON_FAILURE(&m_Device, textureBarrier.before.layout == Layout::INPUT_ATTACHMENT && textureBarrier.after.layout == Layout::INPUT_ATTACHMENT, ReturnVoid(),
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, textureBarrier.before.layout == Layout::INPUT_ATTACHMENT && textureBarrier.after.layout == Layout::INPUT_ATTACHMENT, ReturnVoid(),
                 "'textures[%u]': only 'Layout::INPUT_ATTACHMENT' access transitions are allowed inside 'CmdBeginRendering/CmdEndRendering'", i);
         }
     }
@@ -1119,20 +1119,20 @@ NRI_INLINE void CommandBufferVal::Barrier(const BarrierDesc& barrierDesc) {
             return;
     }
 
-    Scratch<BufferBarrierDesc> buffers = NRI_ALLOCATE_SCRATCH(m_Device, BufferBarrierDesc, barrierDesc.bufferNum);
+    Scratch<BufferBarrierDesc> buffers = OPENRHI_ALLOCATE_SCRATCH(m_Device, BufferBarrierDesc, barrierDesc.bufferNum);
     if (barrierDesc.bufferNum > 0) {
         memcpy(buffers, barrierDesc.buffers, sizeof(BufferBarrierDesc) * barrierDesc.bufferNum);
         for (uint32_t i = 0; i < barrierDesc.bufferNum; i++)
-            buffers[i].buffer = NRI_GET_IMPL(Buffer, barrierDesc.buffers[i].buffer);
+            buffers[i].buffer = OPENRHI_GET_IMPL(Buffer, barrierDesc.buffers[i].buffer);
     }
 
-    Scratch<TextureBarrierDesc> textures = NRI_ALLOCATE_SCRATCH(m_Device, TextureBarrierDesc, barrierDesc.textureNum);
+    Scratch<TextureBarrierDesc> textures = OPENRHI_ALLOCATE_SCRATCH(m_Device, TextureBarrierDesc, barrierDesc.textureNum);
     if (barrierDesc.textureNum > 0) {
         memcpy(textures, barrierDesc.textures, sizeof(TextureBarrierDesc) * barrierDesc.textureNum);
         for (uint32_t i = 0; i < barrierDesc.textureNum; i++) {
-            textures[i].texture = NRI_GET_IMPL(Texture, barrierDesc.textures[i].texture);
-            textures[i].srcQueue = NRI_GET_IMPL(Queue, barrierDesc.textures[i].srcQueue);
-            textures[i].dstQueue = NRI_GET_IMPL(Queue, barrierDesc.textures[i].dstQueue);
+            textures[i].texture = OPENRHI_GET_IMPL(Texture, barrierDesc.textures[i].texture);
+            textures[i].srcQueue = OPENRHI_GET_IMPL(Queue, barrierDesc.textures[i].srcQueue);
+            textures[i].dstQueue = OPENRHI_GET_IMPL(Queue, barrierDesc.textures[i].dstQueue);
         }
     }
 
@@ -1143,136 +1143,136 @@ NRI_INLINE void CommandBufferVal::Barrier(const BarrierDesc& barrierDesc) {
     GetCoreInterfaceImpl().CmdBarrier(*GetImpl(), barrierGroupDescImpl);
 }
 
-NRI_INLINE void CommandBufferVal::BeginQuery(QueryPool& queryPool, uint32_t offset) {
+OPENRHI_INLINE void CommandBufferVal::BeginQuery(QueryPool& queryPool, uint32_t offset) {
     QueryPoolVal& queryPoolVal = (QueryPoolVal&)queryPool;
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
     QueryType queryType = queryPoolVal.GetQueryType();
-    NRI_RETURN_ON_FAILURE(&m_Device, queryType != QueryType::TIMESTAMP && queryType != QueryType::TIMESTAMP_COPY_QUEUE, ReturnVoid(), "'BeginQuery' is not supported for timestamp queries");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, queryType != QueryType::TIMESTAMP && queryType != QueryType::TIMESTAMP_COPY_QUEUE, ReturnVoid(), "'BeginQuery' is not supported for timestamp queries");
 
     if (!queryPoolVal.IsImported())
-        NRI_RETURN_ON_FAILURE(&m_Device, offset < queryPoolVal.GetQueryNum(), ReturnVoid(), "'offset=%u' is out of range", offset);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, offset < queryPoolVal.GetQueryNum(), ReturnVoid(), "'offset=%u' is out of range", offset);
 
-    QueryPool* queryPoolImpl = NRI_GET_IMPL(QueryPool, &queryPool);
+    QueryPool* queryPoolImpl = OPENRHI_GET_IMPL(QueryPool, &queryPool);
     GetCoreInterfaceImpl().CmdBeginQuery(*GetImpl(), *queryPoolImpl, offset);
 }
 
-NRI_INLINE void CommandBufferVal::EndQuery(QueryPool& queryPool, uint32_t offset) {
+OPENRHI_INLINE void CommandBufferVal::EndQuery(QueryPool& queryPool, uint32_t offset) {
     QueryPoolVal& queryPoolVal = (QueryPoolVal&)queryPool;
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
 
     if (!queryPoolVal.IsImported())
-        NRI_RETURN_ON_FAILURE(&m_Device, offset < queryPoolVal.GetQueryNum(), ReturnVoid(), "'offset=%u' is out of range", offset);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, offset < queryPoolVal.GetQueryNum(), ReturnVoid(), "'offset=%u' is out of range", offset);
 
-    QueryPool* queryPoolImpl = NRI_GET_IMPL(QueryPool, &queryPool);
+    QueryPool* queryPoolImpl = OPENRHI_GET_IMPL(QueryPool, &queryPool);
     GetCoreInterfaceImpl().CmdEndQuery(*GetImpl(), *queryPoolImpl, offset);
 }
 
-NRI_INLINE void CommandBufferVal::CopyQueries(const QueryPool& queryPool, uint32_t offset, uint32_t num, Buffer& dstBuffer, uint64_t dstOffset) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::CopyQueries(const QueryPool& queryPool, uint32_t offset, uint32_t num, Buffer& dstBuffer, uint64_t dstOffset) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
 
     const QueryPoolVal& queryPoolVal = (QueryPoolVal&)queryPool;
     if (queryPoolVal.GetQueryType() == QueryType::TIMESTAMP_COPY_QUEUE) {
         bool resolveOnCopyQueue = m_Device.GetDesc().other.timestampCopyQueueResolveOnCopyQueue;
         bool validQueue = resolveOnCopyQueue ? m_QueueType == QueueType::COPY : (m_QueueType == QueueType::GRAPHICS || m_QueueType == QueueType::COMPUTE);
-        NRI_RETURN_ON_FAILURE(&m_Device, validQueue, ReturnVoid(), "the command buffer queue cannot resolve 'TIMESTAMP_COPY_QUEUE' queries");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, validQueue, ReturnVoid(), "the command buffer queue cannot resolve 'TIMESTAMP_COPY_QUEUE' queries");
     } else if (queryPoolVal.GetQueryType() == QueryType::TIMESTAMP)
-        NRI_RETURN_ON_FAILURE(&m_Device, m_QueueType == QueueType::GRAPHICS || m_QueueType == QueueType::COMPUTE, ReturnVoid(), "the command buffer must belong to a 'GRAPHICS' or 'COMPUTE' queue");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, m_QueueType == QueueType::GRAPHICS || m_QueueType == QueueType::COMPUTE, ReturnVoid(), "the command buffer must belong to a 'GRAPHICS' or 'COMPUTE' queue");
 
     if (!queryPoolVal.IsImported())
-        NRI_RETURN_ON_FAILURE(&m_Device, offset + num <= queryPoolVal.GetQueryNum(), ReturnVoid(), "'offset + num = %u' is out of range", offset + num);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, offset + num <= queryPoolVal.GetQueryNum(), ReturnVoid(), "'offset + num = %u' is out of range", offset + num);
 
-    QueryPool* queryPoolImpl = NRI_GET_IMPL(QueryPool, &queryPool);
-    Buffer* dstBufferImpl = NRI_GET_IMPL(Buffer, &dstBuffer);
+    QueryPool* queryPoolImpl = OPENRHI_GET_IMPL(QueryPool, &queryPool);
+    Buffer* dstBufferImpl = OPENRHI_GET_IMPL(Buffer, &dstBuffer);
 
     GetCoreInterfaceImpl().CmdCopyQueries(*GetImpl(), *queryPoolImpl, offset, num, *dstBufferImpl, dstOffset);
 }
 
-NRI_INLINE void CommandBufferVal::ResetQueries(QueryPool& queryPool, uint32_t offset, uint32_t num) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_QueueType != QueueType::COPY, ReturnVoid(), "the command buffer must not belong to a COPY queue");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::ResetQueries(QueryPool& queryPool, uint32_t offset, uint32_t num) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_QueueType != QueueType::COPY, ReturnVoid(), "the command buffer must not belong to a COPY queue");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
 
     QueryPoolVal& queryPoolVal = (QueryPoolVal&)queryPool;
     if (!queryPoolVal.IsImported())
-        NRI_RETURN_ON_FAILURE(&m_Device, offset + num <= queryPoolVal.GetQueryNum(), ReturnVoid(), "'offset + num = %u' is out of range", offset + num);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, offset + num <= queryPoolVal.GetQueryNum(), ReturnVoid(), "'offset + num = %u' is out of range", offset + num);
 
-    QueryPool* queryPoolImpl = NRI_GET_IMPL(QueryPool, &queryPool);
+    QueryPool* queryPoolImpl = OPENRHI_GET_IMPL(QueryPool, &queryPool);
     GetCoreInterfaceImpl().CmdResetQueries(*GetImpl(), *queryPoolImpl, offset, num);
 }
 
-NRI_INLINE void CommandBufferVal::BeginAnnotation(const char* name, uint32_t bgra) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+OPENRHI_INLINE void CommandBufferVal::BeginAnnotation(const char* name, uint32_t bgra) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
 
     m_AnnotationStack++;
     GetCoreInterfaceImpl().CmdBeginAnnotation(*GetImpl(), name, bgra);
 }
 
-NRI_INLINE void CommandBufferVal::EndAnnotation() {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+OPENRHI_INLINE void CommandBufferVal::EndAnnotation() {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
 
     GetCoreInterfaceImpl().CmdEndAnnotation(*GetImpl());
     m_AnnotationStack--;
 }
 
-NRI_INLINE void CommandBufferVal::Annotation(const char* name, uint32_t bgra) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+OPENRHI_INLINE void CommandBufferVal::Annotation(const char* name, uint32_t bgra) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
 
     GetCoreInterfaceImpl().CmdAnnotation(*GetImpl(), name, bgra);
 }
 
-NRI_INLINE void CommandBufferVal::BuildTopLevelAccelerationStructure(const BuildTopLevelAccelerationStructureDesc* buildTopLevelAccelerationStructureDescs, uint32_t buildTopLevelAccelerationStructureDescNum) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::BuildTopLevelAccelerationStructure(const BuildTopLevelAccelerationStructureDesc* buildTopLevelAccelerationStructureDescs, uint32_t buildTopLevelAccelerationStructureDescNum) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
 
-    Scratch<BuildTopLevelAccelerationStructureDesc> buildTopLevelAccelerationStructureDescsImpl = NRI_ALLOCATE_SCRATCH(m_Device, BuildTopLevelAccelerationStructureDesc, buildTopLevelAccelerationStructureDescNum);
+    Scratch<BuildTopLevelAccelerationStructureDesc> buildTopLevelAccelerationStructureDescsImpl = OPENRHI_ALLOCATE_SCRATCH(m_Device, BuildTopLevelAccelerationStructureDesc, buildTopLevelAccelerationStructureDescNum);
 
     for (uint32_t i = 0; i < buildTopLevelAccelerationStructureDescNum; i++) {
         const BuildTopLevelAccelerationStructureDesc& in = buildTopLevelAccelerationStructureDescs[i];
         const BufferVal* instanceBufferVal = (BufferVal*)in.instanceBuffer;
         const BufferVal* scratchBufferVal = (BufferVal*)in.scratchBuffer;
 
-        NRI_RETURN_ON_FAILURE(&m_Device, in.dst, ReturnVoid(), "'[%u].dst' is NULL", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.instanceBuffer, ReturnVoid(), "'[%u].instanceBuffer' is NULL", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.scratchBuffer, ReturnVoid(), "'[%u].scratchBuffer' is NULL", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.instanceOffset <= instanceBufferVal->GetDesc().size, ReturnVoid(), "'[%u].instanceOffset=%" PRIu64 "' is out of bounds", i, in.instanceOffset);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.scratchOffset <= scratchBufferVal->GetDesc().size, ReturnVoid(), "'[%u].scratchOffset=%" PRIu64 "' is out of bounds", i, in.scratchOffset);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.dst, ReturnVoid(), "'[%u].dst' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.instanceBuffer, ReturnVoid(), "'[%u].instanceBuffer' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.scratchBuffer, ReturnVoid(), "'[%u].scratchBuffer' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.instanceOffset <= instanceBufferVal->GetDesc().size, ReturnVoid(), "'[%u].instanceOffset=%" PRIu64 "' is out of bounds", i, in.instanceOffset);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.scratchOffset <= scratchBufferVal->GetDesc().size, ReturnVoid(), "'[%u].scratchOffset=%" PRIu64 "' is out of bounds", i, in.scratchOffset);
 
         const AccelerationStructureVal& dstVal = *(AccelerationStructureVal*)in.dst;
 
         if (dstVal.GetType() != AccelerationStructureType::MAX_NUM) {
-            NRI_RETURN_ON_FAILURE(&m_Device, dstVal.GetType() == AccelerationStructureType::TOP_LEVEL, ReturnVoid(), "'[%u].dst' is not a top level acceleration structure", i);
-            NRI_RETURN_ON_FAILURE(&m_Device, in.instanceNum <= dstVal.GetGeometryOrInstanceNum(), ReturnVoid(), "'[%u].instanceNum=%u' exceeds 'geometryOrInstanceNum=%u' used at creation", i, in.instanceNum, dstVal.GetGeometryOrInstanceNum());
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, dstVal.GetType() == AccelerationStructureType::TOP_LEVEL, ReturnVoid(), "'[%u].dst' is not a top level acceleration structure", i);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, in.instanceNum <= dstVal.GetGeometryOrInstanceNum(), ReturnVoid(), "'[%u].instanceNum=%u' exceeds 'geometryOrInstanceNum=%u' used at creation", i, in.instanceNum, dstVal.GetGeometryOrInstanceNum());
 
             if (in.src)
-                NRI_RETURN_ON_FAILURE(&m_Device, dstVal.GetFlags() & AccelerationStructureBits::ALLOW_UPDATE, ReturnVoid(), "'[%u].src' is provided (update), but 'dst' is not created with 'ALLOW_UPDATE'", i);
+                OPENRHI_RETURN_ON_FAILURE(&m_Device, dstVal.GetFlags() & AccelerationStructureBits::ALLOW_UPDATE, ReturnVoid(), "'[%u].src' is provided (update), but 'dst' is not created with 'ALLOW_UPDATE'", i);
         }
 
         if (in.src) {
             const AccelerationStructureVal& srcVal = *(AccelerationStructureVal*)in.src;
 
             if (srcVal.GetType() != AccelerationStructureType::MAX_NUM) {
-                NRI_RETURN_ON_FAILURE(&m_Device, srcVal.GetType() == AccelerationStructureType::TOP_LEVEL, ReturnVoid(), "'[%u].src' is not a top level acceleration structure", i);
-                NRI_RETURN_ON_FAILURE(&m_Device, srcVal.GetFlags() & AccelerationStructureBits::ALLOW_UPDATE, ReturnVoid(), "'[%u].src' is not created with 'ALLOW_UPDATE'", i);
+                OPENRHI_RETURN_ON_FAILURE(&m_Device, srcVal.GetType() == AccelerationStructureType::TOP_LEVEL, ReturnVoid(), "'[%u].src' is not a top level acceleration structure", i);
+                OPENRHI_RETURN_ON_FAILURE(&m_Device, srcVal.GetFlags() & AccelerationStructureBits::ALLOW_UPDATE, ReturnVoid(), "'[%u].src' is not created with 'ALLOW_UPDATE'", i);
             }
         }
 
         auto& out = buildTopLevelAccelerationStructureDescsImpl[i];
         out = in;
-        out.dst = NRI_GET_IMPL(AccelerationStructure, in.dst);
-        out.src = NRI_GET_IMPL(AccelerationStructure, in.src);
-        out.instanceBuffer = NRI_GET_IMPL(Buffer, in.instanceBuffer);
-        out.scratchBuffer = NRI_GET_IMPL(Buffer, in.scratchBuffer);
+        out.dst = OPENRHI_GET_IMPL(AccelerationStructure, in.dst);
+        out.src = OPENRHI_GET_IMPL(AccelerationStructure, in.src);
+        out.instanceBuffer = OPENRHI_GET_IMPL(Buffer, in.instanceBuffer);
+        out.scratchBuffer = OPENRHI_GET_IMPL(Buffer, in.scratchBuffer);
     }
 
     GetRayTracingInterfaceImpl().CmdBuildTopLevelAccelerationStructures(*GetImpl(), buildTopLevelAccelerationStructureDescsImpl, buildTopLevelAccelerationStructureDescNum);
 }
 
-NRI_INLINE void CommandBufferVal::BuildBottomLevelAccelerationStructure(const BuildBottomLevelAccelerationStructureDesc* buildBottomLevelAccelerationStructureDescs, uint32_t buildBottomLevelAccelerationStructureDescNum) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::BuildBottomLevelAccelerationStructure(const BuildBottomLevelAccelerationStructureDesc* buildBottomLevelAccelerationStructureDescs, uint32_t buildBottomLevelAccelerationStructureDescNum) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
 
     uint32_t geometryTotalNum = 0;
     uint32_t micromapTotalNum = 0;
@@ -1280,18 +1280,18 @@ NRI_INLINE void CommandBufferVal::BuildBottomLevelAccelerationStructure(const Bu
     for (uint32_t i = 0; i < buildBottomLevelAccelerationStructureDescNum; i++) {
         const BuildBottomLevelAccelerationStructureDesc& desc = buildBottomLevelAccelerationStructureDescs[i];
 
-        NRI_RETURN_ON_FAILURE(&m_Device, desc.geometries, ReturnVoid(), "'[%u].geometries' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, desc.geometries, ReturnVoid(), "'[%u].geometries' is NULL", i);
 
         for (uint32_t j = 0; j < desc.geometryNum; j++) {
             const BottomLevelGeometryDesc& geometry = desc.geometries[j];
-            NRI_RETURN_ON_FAILURE(&m_Device, geometry.type < BottomLevelGeometryType::MAX_NUM, ReturnVoid(), "'[%u].geometries[%u].type' is invalid", i, j);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, geometry.type < BottomLevelGeometryType::MAX_NUM, ReturnVoid(), "'[%u].geometries[%u].type' is invalid", i, j);
             if (geometry.type == BottomLevelGeometryType::TRIANGLES) {
-                NRI_RETURN_ON_FAILURE(&m_Device, geometry.triangles.vertexFormat < Format::MAX_NUM, ReturnVoid(), "'[%u].geometries[%u].triangles.vertexFormat' is invalid", i, j);
-                NRI_RETURN_ON_FAILURE(&m_Device, geometry.triangles.indexType < IndexType::MAX_NUM, ReturnVoid(), "'[%u].geometries[%u].triangles.indexType' is invalid", i, j);
+                OPENRHI_RETURN_ON_FAILURE(&m_Device, geometry.triangles.vertexFormat < Format::MAX_NUM, ReturnVoid(), "'[%u].geometries[%u].triangles.vertexFormat' is invalid", i, j);
+                OPENRHI_RETURN_ON_FAILURE(&m_Device, geometry.triangles.indexType < IndexType::MAX_NUM, ReturnVoid(), "'[%u].geometries[%u].triangles.indexType' is invalid", i, j);
 
                 if (geometry.triangles.micromap) {
-                    NRI_RETURN_ON_FAILURE(&m_Device, m_Device.GetDesc().tiers.rayTracing >= 3, ReturnVoid(), "'[%u].geometries[%u].triangles.micromap' requires 'tiers.rayTracing >= 3'", i, j);
-                    NRI_RETURN_ON_FAILURE(&m_Device, geometry.triangles.micromap->indexType < IndexType::MAX_NUM, ReturnVoid(), "'[%u].geometries[%u].triangles.micromap->indexType' is invalid", i, j);
+                    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_Device.GetDesc().tiers.rayTracing >= 3, ReturnVoid(), "'[%u].geometries[%u].triangles.micromap' requires 'tiers.rayTracing >= 3'", i, j);
+                    OPENRHI_RETURN_ON_FAILURE(&m_Device, geometry.triangles.micromap->indexType < IndexType::MAX_NUM, ReturnVoid(), "'[%u].geometries[%u].triangles.micromap->indexType' is invalid", i, j);
                 }
             }
 
@@ -1302,9 +1302,9 @@ NRI_INLINE void CommandBufferVal::BuildBottomLevelAccelerationStructure(const Bu
         geometryTotalNum += desc.geometryNum;
     }
 
-    Scratch<BuildBottomLevelAccelerationStructureDesc> buildBottomLevelAccelerationStructureDescsImpl = NRI_ALLOCATE_SCRATCH(m_Device, BuildBottomLevelAccelerationStructureDesc, buildBottomLevelAccelerationStructureDescNum);
-    Scratch<BottomLevelGeometryDesc> geometriesImplScratch = NRI_ALLOCATE_SCRATCH(m_Device, BottomLevelGeometryDesc, geometryTotalNum);
-    Scratch<BottomLevelTrianglesMicromapDesc> micromapsImplScratch = NRI_ALLOCATE_SCRATCH(m_Device, BottomLevelTrianglesMicromapDesc, micromapTotalNum);
+    Scratch<BuildBottomLevelAccelerationStructureDesc> buildBottomLevelAccelerationStructureDescsImpl = OPENRHI_ALLOCATE_SCRATCH(m_Device, BuildBottomLevelAccelerationStructureDesc, buildBottomLevelAccelerationStructureDescNum);
+    Scratch<BottomLevelGeometryDesc> geometriesImplScratch = OPENRHI_ALLOCATE_SCRATCH(m_Device, BottomLevelGeometryDesc, geometryTotalNum);
+    Scratch<BottomLevelTrianglesMicromapDesc> micromapsImplScratch = OPENRHI_ALLOCATE_SCRATCH(m_Device, BottomLevelTrianglesMicromapDesc, micromapTotalNum);
 
     BottomLevelGeometryDesc* geometriesImpl = geometriesImplScratch;
     BottomLevelTrianglesMicromapDesc* micromapsImpl = micromapsImplScratch;
@@ -1313,35 +1313,35 @@ NRI_INLINE void CommandBufferVal::BuildBottomLevelAccelerationStructure(const Bu
         const BuildBottomLevelAccelerationStructureDesc& in = buildBottomLevelAccelerationStructureDescs[i];
         const BufferVal* scratchBufferVal = (BufferVal*)in.scratchBuffer;
 
-        NRI_RETURN_ON_FAILURE(&m_Device, in.dst, ReturnVoid(), "'[%u].dst' is NULL", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.scratchBuffer, ReturnVoid(), "'[%u].scratchBuffer' is NULL", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.geometries, ReturnVoid(), "'[%u].geometries' is NULL", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.scratchOffset <= scratchBufferVal->GetDesc().size, ReturnVoid(), "'[%u].scratchOffset=%" PRIu64 "' is out of bounds", i, in.scratchOffset);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.dst, ReturnVoid(), "'[%u].dst' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.scratchBuffer, ReturnVoid(), "'[%u].scratchBuffer' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.geometries, ReturnVoid(), "'[%u].geometries' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.scratchOffset <= scratchBufferVal->GetDesc().size, ReturnVoid(), "'[%u].scratchOffset=%" PRIu64 "' is out of bounds", i, in.scratchOffset);
 
         const AccelerationStructureVal& dstVal = *(AccelerationStructureVal*)in.dst;
 
         if (dstVal.GetType() != AccelerationStructureType::MAX_NUM) {
-            NRI_RETURN_ON_FAILURE(&m_Device, dstVal.GetType() == AccelerationStructureType::BOTTOM_LEVEL, ReturnVoid(), "'[%u].dst' is not a bottom level acceleration structure", i);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, dstVal.GetType() == AccelerationStructureType::BOTTOM_LEVEL, ReturnVoid(), "'[%u].dst' is not a bottom level acceleration structure", i);
 
             if (in.src)
-                NRI_RETURN_ON_FAILURE(&m_Device, dstVal.GetFlags() & AccelerationStructureBits::ALLOW_UPDATE, ReturnVoid(), "'[%u].src' is provided (update), but 'dst' is not created with 'ALLOW_UPDATE'", i);
+                OPENRHI_RETURN_ON_FAILURE(&m_Device, dstVal.GetFlags() & AccelerationStructureBits::ALLOW_UPDATE, ReturnVoid(), "'[%u].src' is provided (update), but 'dst' is not created with 'ALLOW_UPDATE'", i);
         }
 
         if (in.src) {
             const AccelerationStructureVal& srcVal = *(AccelerationStructureVal*)in.src;
 
             if (srcVal.GetType() != AccelerationStructureType::MAX_NUM) {
-                NRI_RETURN_ON_FAILURE(&m_Device, srcVal.GetType() == AccelerationStructureType::BOTTOM_LEVEL, ReturnVoid(), "'[%u].src' is not a bottom level acceleration structure", i);
-                NRI_RETURN_ON_FAILURE(&m_Device, srcVal.GetFlags() & AccelerationStructureBits::ALLOW_UPDATE, ReturnVoid(), "'[%u].src' is not created with 'ALLOW_UPDATE'", i);
+                OPENRHI_RETURN_ON_FAILURE(&m_Device, srcVal.GetType() == AccelerationStructureType::BOTTOM_LEVEL, ReturnVoid(), "'[%u].src' is not a bottom level acceleration structure", i);
+                OPENRHI_RETURN_ON_FAILURE(&m_Device, srcVal.GetFlags() & AccelerationStructureBits::ALLOW_UPDATE, ReturnVoid(), "'[%u].src' is not created with 'ALLOW_UPDATE'", i);
             }
         }
 
         auto& out = buildBottomLevelAccelerationStructureDescsImpl[i];
         out = in;
-        out.dst = NRI_GET_IMPL(AccelerationStructure, in.dst);
-        out.src = NRI_GET_IMPL(AccelerationStructure, in.src);
+        out.dst = OPENRHI_GET_IMPL(AccelerationStructure, in.dst);
+        out.src = OPENRHI_GET_IMPL(AccelerationStructure, in.src);
         out.geometries = geometriesImpl;
-        out.scratchBuffer = NRI_GET_IMPL(Buffer, in.scratchBuffer);
+        out.scratchBuffer = OPENRHI_GET_IMPL(Buffer, in.scratchBuffer);
 
         ConvertBottomLevelGeometries(in.geometries, in.geometryNum, geometriesImpl, micromapsImpl);
     }
@@ -1349,11 +1349,11 @@ NRI_INLINE void CommandBufferVal::BuildBottomLevelAccelerationStructure(const Bu
     GetRayTracingInterfaceImpl().CmdBuildBottomLevelAccelerationStructures(*GetImpl(), buildBottomLevelAccelerationStructureDescsImpl, buildBottomLevelAccelerationStructureDescNum);
 }
 
-NRI_INLINE void CommandBufferVal::BuildMicromaps(const BuildMicromapDesc* buildMicromapDescs, uint32_t buildMicromapDescNum) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+OPENRHI_INLINE void CommandBufferVal::BuildMicromaps(const BuildMicromapDesc* buildMicromapDescs, uint32_t buildMicromapDescNum) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
 
-    Scratch<BuildMicromapDesc> buildMicromapDescsImpl = NRI_ALLOCATE_SCRATCH(m_Device, BuildMicromapDesc, buildMicromapDescNum);
+    Scratch<BuildMicromapDesc> buildMicromapDescsImpl = OPENRHI_ALLOCATE_SCRATCH(m_Device, BuildMicromapDesc, buildMicromapDescNum);
 
     for (uint32_t i = 0; i < buildMicromapDescNum; i++) {
         const BuildMicromapDesc& in = buildMicromapDescs[i];
@@ -1361,161 +1361,161 @@ NRI_INLINE void CommandBufferVal::BuildMicromaps(const BuildMicromapDesc* buildM
         const BufferVal* triangleBufferVal = (BufferVal*)in.triangleBuffer;
         const BufferVal* scratchBufferVal = (BufferVal*)in.scratchBuffer;
 
-        NRI_RETURN_ON_FAILURE(&m_Device, in.dst, ReturnVoid(), "'[%u].dst' is NULL", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.dataBuffer, ReturnVoid(), "'[%u].dataBuffer' is NULL", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.triangleBuffer, ReturnVoid(), "'[%u].triangleBuffer' is NULL", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.scratchBuffer, ReturnVoid(), "'[%u].scratchBuffer' is NULL", i);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.dataOffset <= dataBufferVal->GetDesc().size, ReturnVoid(), "'[%u].dataOffset=%" PRIu64 "' is out of bounds", i, in.dataOffset);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.triangleOffset <= triangleBufferVal->GetDesc().size, ReturnVoid(), "'[%u].triangleOffset=%" PRIu64 "' is out of bounds", i, in.triangleOffset);
-        NRI_RETURN_ON_FAILURE(&m_Device, in.scratchOffset <= scratchBufferVal->GetDesc().size, ReturnVoid(), "'[%u].scratchOffset=%" PRIu64 "' is out of bounds", i, in.scratchOffset);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.dst, ReturnVoid(), "'[%u].dst' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.dataBuffer, ReturnVoid(), "'[%u].dataBuffer' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.triangleBuffer, ReturnVoid(), "'[%u].triangleBuffer' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.scratchBuffer, ReturnVoid(), "'[%u].scratchBuffer' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.dataOffset <= dataBufferVal->GetDesc().size, ReturnVoid(), "'[%u].dataOffset=%" PRIu64 "' is out of bounds", i, in.dataOffset);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.triangleOffset <= triangleBufferVal->GetDesc().size, ReturnVoid(), "'[%u].triangleOffset=%" PRIu64 "' is out of bounds", i, in.triangleOffset);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, in.scratchOffset <= scratchBufferVal->GetDesc().size, ReturnVoid(), "'[%u].scratchOffset=%" PRIu64 "' is out of bounds", i, in.scratchOffset);
 
         auto& out = buildMicromapDescsImpl[i];
         out = in;
-        out.dst = NRI_GET_IMPL(Micromap, in.dst);
-        out.dataBuffer = NRI_GET_IMPL(Buffer, in.dataBuffer);
-        out.triangleBuffer = NRI_GET_IMPL(Buffer, in.triangleBuffer);
-        out.scratchBuffer = NRI_GET_IMPL(Buffer, in.scratchBuffer);
+        out.dst = OPENRHI_GET_IMPL(Micromap, in.dst);
+        out.dataBuffer = OPENRHI_GET_IMPL(Buffer, in.dataBuffer);
+        out.triangleBuffer = OPENRHI_GET_IMPL(Buffer, in.triangleBuffer);
+        out.scratchBuffer = OPENRHI_GET_IMPL(Buffer, in.scratchBuffer);
     }
 
     GetRayTracingInterfaceImpl().CmdBuildMicromaps(*GetImpl(), buildMicromapDescsImpl, buildMicromapDescNum);
 }
 
-NRI_INLINE void CommandBufferVal::CopyMicromap(Micromap& dst, const Micromap& src, CopyMode copyMode) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, copyMode < CopyMode::MAX_NUM, ReturnVoid(), "'copyMode' is invalid");
+OPENRHI_INLINE void CommandBufferVal::CopyMicromap(Micromap& dst, const Micromap& src, CopyMode copyMode) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, copyMode < CopyMode::MAX_NUM, ReturnVoid(), "'copyMode' is invalid");
 
-    Micromap& dstImpl = *NRI_GET_IMPL(Micromap, &dst);
-    Micromap& srcImpl = *NRI_GET_IMPL(Micromap, &src);
+    Micromap& dstImpl = *OPENRHI_GET_IMPL(Micromap, &dst);
+    Micromap& srcImpl = *OPENRHI_GET_IMPL(Micromap, &src);
 
     GetRayTracingInterfaceImpl().CmdCopyMicromap(*GetImpl(), dstImpl, srcImpl, copyMode);
 }
 
-NRI_INLINE void CommandBufferVal::CopyAccelerationStructure(AccelerationStructure& dst, const AccelerationStructure& src, CopyMode copyMode) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, copyMode < CopyMode::MAX_NUM, ReturnVoid(), "'copyMode' is invalid");
+OPENRHI_INLINE void CommandBufferVal::CopyAccelerationStructure(AccelerationStructure& dst, const AccelerationStructure& src, CopyMode copyMode) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, copyMode < CopyMode::MAX_NUM, ReturnVoid(), "'copyMode' is invalid");
 
-    AccelerationStructure& dstImpl = *NRI_GET_IMPL(AccelerationStructure, &dst);
-    AccelerationStructure& srcImpl = *NRI_GET_IMPL(AccelerationStructure, &src);
+    AccelerationStructure& dstImpl = *OPENRHI_GET_IMPL(AccelerationStructure, &dst);
+    AccelerationStructure& srcImpl = *OPENRHI_GET_IMPL(AccelerationStructure, &src);
 
     GetRayTracingInterfaceImpl().CmdCopyAccelerationStructure(*GetImpl(), dstImpl, srcImpl, copyMode);
 }
 
-NRI_INLINE void CommandBufferVal::WriteMicromapSizes(const Micromap* const* micromaps, uint32_t micromapNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
+OPENRHI_INLINE void CommandBufferVal::WriteMicromapSizes(const Micromap* const* micromaps, uint32_t micromapNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
     const QueryPoolVal& queryPoolVal = (QueryPoolVal&)queryPool;
     bool isTypeValid = queryPoolVal.GetQueryType() == QueryType::MICROMAP_COMPACTED_SIZE;
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, isTypeValid, ReturnVoid(), "'queryPool' query type must be 'MICROMAP_COMPACTED_SIZE'");
-    NRI_RETURN_ON_FAILURE(&m_Device, micromapNum == 0 || micromaps, ReturnVoid(), "'micromaps' is NULL");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, isTypeValid, ReturnVoid(), "'queryPool' query type must be 'MICROMAP_COMPACTED_SIZE'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, micromapNum == 0 || micromaps, ReturnVoid(), "'micromaps' is NULL");
 
     if (!queryPoolVal.IsImported())
-        NRI_RETURN_ON_FAILURE(&m_Device, queryPoolOffset <= queryPoolVal.GetQueryNum() && micromapNum <= queryPoolVal.GetQueryNum() - queryPoolOffset, ReturnVoid(), "'queryPoolOffset=%u' + 'micromapNum=%u' must be <= query pool 'queryNum=%u'", queryPoolOffset, micromapNum, queryPoolVal.GetQueryNum());
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, queryPoolOffset <= queryPoolVal.GetQueryNum() && micromapNum <= queryPoolVal.GetQueryNum() - queryPoolOffset, ReturnVoid(), "'queryPoolOffset=%u' + 'micromapNum=%u' must be <= query pool 'queryNum=%u'", queryPoolOffset, micromapNum, queryPoolVal.GetQueryNum());
 
-    Scratch<Micromap*> micromapsImpl = NRI_ALLOCATE_SCRATCH(m_Device, Micromap*, micromapNum);
+    Scratch<Micromap*> micromapsImpl = OPENRHI_ALLOCATE_SCRATCH(m_Device, Micromap*, micromapNum);
     for (uint32_t i = 0; i < micromapNum; i++) {
-        NRI_RETURN_ON_FAILURE(&m_Device, micromaps[i], ReturnVoid(), "'micromaps[%u]' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, micromaps[i], ReturnVoid(), "'micromaps[%u]' is NULL", i);
 
-        micromapsImpl[i] = NRI_GET_IMPL(Micromap, micromaps[i]);
+        micromapsImpl[i] = OPENRHI_GET_IMPL(Micromap, micromaps[i]);
     }
 
-    QueryPool& queryPoolImpl = *NRI_GET_IMPL(QueryPool, &queryPool);
+    QueryPool& queryPoolImpl = *OPENRHI_GET_IMPL(QueryPool, &queryPool);
 
     GetRayTracingInterfaceImpl().CmdWriteMicromapSizes(*GetImpl(), micromapsImpl, micromapNum, queryPoolImpl, queryPoolOffset);
 }
 
-NRI_INLINE void CommandBufferVal::WriteAccelerationStructureSizes(const AccelerationStructure* const* accelerationStructures, uint32_t accelerationStructureNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
+OPENRHI_INLINE void CommandBufferVal::WriteAccelerationStructureSizes(const AccelerationStructure* const* accelerationStructures, uint32_t accelerationStructureNum, QueryPool& queryPool, uint32_t queryPoolOffset) {
     const QueryPoolVal& queryPoolVal = (QueryPoolVal&)queryPool;
     bool isTypeValid = queryPoolVal.GetQueryType() == QueryType::ACCELERATION_STRUCTURE_SIZE || queryPoolVal.GetQueryType() == QueryType::ACCELERATION_STRUCTURE_COMPACTED_SIZE;
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, isTypeValid, ReturnVoid(), "'queryPool' query type must be 'ACCELERATION_STRUCTURE_SIZE' or 'ACCELERATION_STRUCTURE_COMPACTED_SIZE'");
-    NRI_RETURN_ON_FAILURE(&m_Device, accelerationStructureNum == 0 || accelerationStructures, ReturnVoid(), "'accelerationStructures' is NULL");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, isTypeValid, ReturnVoid(), "'queryPool' query type must be 'ACCELERATION_STRUCTURE_SIZE' or 'ACCELERATION_STRUCTURE_COMPACTED_SIZE'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, accelerationStructureNum == 0 || accelerationStructures, ReturnVoid(), "'accelerationStructures' is NULL");
 
     if (!queryPoolVal.IsImported())
-        NRI_RETURN_ON_FAILURE(&m_Device, queryPoolOffset <= queryPoolVal.GetQueryNum() && accelerationStructureNum <= queryPoolVal.GetQueryNum() - queryPoolOffset, ReturnVoid(), "'queryPoolOffset=%u' + 'accelerationStructureNum=%u' must be <= query pool 'queryNum=%u'", queryPoolOffset, accelerationStructureNum, queryPoolVal.GetQueryNum());
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, queryPoolOffset <= queryPoolVal.GetQueryNum() && accelerationStructureNum <= queryPoolVal.GetQueryNum() - queryPoolOffset, ReturnVoid(), "'queryPoolOffset=%u' + 'accelerationStructureNum=%u' must be <= query pool 'queryNum=%u'", queryPoolOffset, accelerationStructureNum, queryPoolVal.GetQueryNum());
 
-    Scratch<AccelerationStructure*> accelerationStructuresImpl = NRI_ALLOCATE_SCRATCH(m_Device, AccelerationStructure*, accelerationStructureNum);
+    Scratch<AccelerationStructure*> accelerationStructuresImpl = OPENRHI_ALLOCATE_SCRATCH(m_Device, AccelerationStructure*, accelerationStructureNum);
     for (uint32_t i = 0; i < accelerationStructureNum; i++) {
-        NRI_RETURN_ON_FAILURE(&m_Device, accelerationStructures[i], ReturnVoid(), "'accelerationStructures[%u]' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, accelerationStructures[i], ReturnVoid(), "'accelerationStructures[%u]' is NULL", i);
 
-        accelerationStructuresImpl[i] = NRI_GET_IMPL(AccelerationStructure, accelerationStructures[i]);
+        accelerationStructuresImpl[i] = OPENRHI_GET_IMPL(AccelerationStructure, accelerationStructures[i]);
     }
 
-    QueryPool& queryPoolImpl = *NRI_GET_IMPL(QueryPool, &queryPool);
+    QueryPool& queryPoolImpl = *OPENRHI_GET_IMPL(QueryPool, &queryPool);
 
     GetRayTracingInterfaceImpl().CmdWriteAccelerationStructureSizes(*GetImpl(), accelerationStructuresImpl, accelerationStructureNum, queryPoolImpl, queryPoolOffset);
 }
 
-NRI_INLINE void CommandBufferVal::DispatchRays(const DispatchRaysDesc& dispatchRaysDesc) {
+OPENRHI_INLINE void CommandBufferVal::DispatchRays(const DispatchRaysDesc& dispatchRaysDesc) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
     uint64_t align = deviceDesc.memoryAlignment.shaderBindingTable;
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.raygenShaderRecord.buffer, ReturnVoid(), "'raygenShaderRecord.buffer' is NULL");
-    NRI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.raygenShaderRecord.size != 0, ReturnVoid(), "'raygenShaderRecord.size' is 0");
-    NRI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.raygenShaderRecord.offset % align == 0, ReturnVoid(), "'raygenShaderRecord.offset' is misaligned");
-    NRI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.missShaderBindingTable.offset % align == 0, ReturnVoid(), "'missShaderBindingTable.offset' is misaligned");
-    NRI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.hitShaderBindingTable.offset % align == 0, ReturnVoid(), "'hitShaderBindingTable.offset' is misaligned");
-    NRI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.callableShaderBindingTable.offset % align == 0, ReturnVoid(), "'callableShaderBindingTable.offset' is misaligned");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.raygenShaderRecord.buffer, ReturnVoid(), "'raygenShaderRecord.buffer' is NULL");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.raygenShaderRecord.size != 0, ReturnVoid(), "'raygenShaderRecord.size' is 0");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.raygenShaderRecord.offset % align == 0, ReturnVoid(), "'raygenShaderRecord.offset' is misaligned");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.missShaderBindingTable.offset % align == 0, ReturnVoid(), "'missShaderBindingTable.offset' is misaligned");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.hitShaderBindingTable.offset % align == 0, ReturnVoid(), "'hitShaderBindingTable.offset' is misaligned");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, dispatchRaysDesc.callableShaderBindingTable.offset % align == 0, ReturnVoid(), "'callableShaderBindingTable.offset' is misaligned");
 
     auto dispatchRaysDescImpl = dispatchRaysDesc;
-    dispatchRaysDescImpl.raygenShaderRecord.buffer = NRI_GET_IMPL(Buffer, dispatchRaysDesc.raygenShaderRecord.buffer);
-    dispatchRaysDescImpl.missShaderBindingTable.buffer = NRI_GET_IMPL(Buffer, dispatchRaysDesc.missShaderBindingTable.buffer);
-    dispatchRaysDescImpl.hitShaderBindingTable.buffer = NRI_GET_IMPL(Buffer, dispatchRaysDesc.hitShaderBindingTable.buffer);
-    dispatchRaysDescImpl.callableShaderBindingTable.buffer = NRI_GET_IMPL(Buffer, dispatchRaysDesc.callableShaderBindingTable.buffer);
+    dispatchRaysDescImpl.raygenShaderRecord.buffer = OPENRHI_GET_IMPL(Buffer, dispatchRaysDesc.raygenShaderRecord.buffer);
+    dispatchRaysDescImpl.missShaderBindingTable.buffer = OPENRHI_GET_IMPL(Buffer, dispatchRaysDesc.missShaderBindingTable.buffer);
+    dispatchRaysDescImpl.hitShaderBindingTable.buffer = OPENRHI_GET_IMPL(Buffer, dispatchRaysDesc.hitShaderBindingTable.buffer);
+    dispatchRaysDescImpl.callableShaderBindingTable.buffer = OPENRHI_GET_IMPL(Buffer, dispatchRaysDesc.callableShaderBindingTable.buffer);
 
     GetRayTracingInterfaceImpl().CmdDispatchRays(*GetImpl(), dispatchRaysDescImpl);
 }
 
-NRI_INLINE void CommandBufferVal::DispatchRaysIndirect(const Buffer& buffer, uint64_t offset) {
+OPENRHI_INLINE void CommandBufferVal::DispatchRaysIndirect(const Buffer& buffer, uint64_t offset) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
     const BufferDesc& bufferDesc = ((BufferVal&)buffer).GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, offset < bufferDesc.size, ReturnVoid(), "offset is greater than the buffer size");
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.tiers.rayTracing >= 2, ReturnVoid(), "'tiers.rayTracing' must be >= 2");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !m_IsRenderPass, ReturnVoid(), "must be called outside of 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, offset < bufferDesc.size, ReturnVoid(), "offset is greater than the buffer size");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.tiers.rayTracing >= 2, ReturnVoid(), "'tiers.rayTracing' must be >= 2");
 
-    Buffer* bufferImpl = NRI_GET_IMPL(Buffer, &buffer);
+    Buffer* bufferImpl = OPENRHI_GET_IMPL(Buffer, &buffer);
 
     GetRayTracingInterfaceImpl().CmdDispatchRaysIndirect(*GetImpl(), *bufferImpl, offset);
 }
 
-NRI_INLINE void CommandBufferVal::DrawMeshTasks(const DrawMeshTasksDesc& drawMeshTasksDesc) {
+OPENRHI_INLINE void CommandBufferVal::DrawMeshTasks(const DrawMeshTasksDesc& drawMeshTasksDesc) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.meshShader, ReturnVoid(), "'features.meshShader' is false");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.meshShader, ReturnVoid(), "'features.meshShader' is false");
 
     GetMeshShaderInterfaceImpl().CmdDrawMeshTasks(*GetImpl(), drawMeshTasksDesc);
 }
 
-NRI_INLINE void CommandBufferVal::DrawMeshTasksIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
+OPENRHI_INLINE void CommandBufferVal::DrawMeshTasksIndirect(const Buffer& buffer, uint64_t offset, uint32_t drawNum, uint32_t stride, const Buffer* countBuffer, uint64_t countBufferOffset) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
     const BufferDesc& bufferDesc = ((BufferVal&)buffer).GetDesc();
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.meshShader, ReturnVoid(), "'features.meshShader' is false");
-    NRI_RETURN_ON_FAILURE(&m_Device, !countBuffer || deviceDesc.features.drawIndirectCount, ReturnVoid(), "'countBuffer' is not supported");
-    NRI_RETURN_ON_FAILURE(&m_Device, offset < bufferDesc.size, ReturnVoid(), "'offset' is greater than the buffer size");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRenderPass, ReturnVoid(), "must be called inside 'CmdBeginRendering/CmdEndRendering'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.meshShader, ReturnVoid(), "'features.meshShader' is false");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !countBuffer || deviceDesc.features.drawIndirectCount, ReturnVoid(), "'countBuffer' is not supported");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, offset < bufferDesc.size, ReturnVoid(), "'offset' is greater than the buffer size");
 
-    Buffer* bufferImpl = NRI_GET_IMPL(Buffer, &buffer);
-    Buffer* countBufferImpl = NRI_GET_IMPL(Buffer, countBuffer);
+    Buffer* bufferImpl = OPENRHI_GET_IMPL(Buffer, &buffer);
+    Buffer* countBufferImpl = OPENRHI_GET_IMPL(Buffer, countBuffer);
 
     GetMeshShaderInterfaceImpl().CmdDrawMeshTasksIndirect(*GetImpl(), *bufferImpl, offset, drawNum, stride, countBufferImpl, countBufferOffset);
 }
 
-NRI_INLINE void CommandBufferVal::DecodeVideo(const VideoDecodeDesc& videoDecodeDesc) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_QueueType == QueueType::VIDEO_DECODE, ReturnVoid(), "the command buffer must belong to a VIDEO_DECODE queue");
-    NRI_RETURN_ON_FAILURE(&m_Device, videoDecodeDesc.session && videoDecodeDesc.parameters && videoDecodeDesc.bitstream.size && videoDecodeDesc.dstPicture, ReturnVoid(), "'session', 'parameters', 'bitstream.size' and 'dstPicture' must be valid");
+OPENRHI_INLINE void CommandBufferVal::DecodeVideo(const VideoDecodeDesc& videoDecodeDesc) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_QueueType == QueueType::VIDEO_DECODE, ReturnVoid(), "the command buffer must belong to a VIDEO_DECODE queue");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, videoDecodeDesc.session && videoDecodeDesc.parameters && videoDecodeDesc.bitstream.size && videoDecodeDesc.dstPicture, ReturnVoid(), "'session', 'parameters', 'bitstream.size' and 'dstPicture' must be valid");
 
     VideoSessionVal& sessionVal = *(VideoSessionVal*)videoDecodeDesc.session;
     VideoSessionParametersVal& parametersVal = *(VideoSessionParametersVal*)videoDecodeDesc.parameters;
@@ -1524,92 +1524,92 @@ NRI_INLINE void CommandBufferVal::DecodeVideo(const VideoDecodeDesc& videoDecode
     const bool useBitstreamBuffer = videoDecodeDesc.bitstream.buffer && (capabilities.decodeBitstreamSourceMask & VideoDecodeBitstreamSourceBits::BUFFER);
     const bool useBitstreamHost = videoDecodeDesc.bitstream.data && (capabilities.decodeBitstreamSourceMask & VideoDecodeBitstreamSourceBits::HOST);
 
-    NRI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().type == VideoSessionType::DECODE, ReturnVoid(), "'session' must be a decode session");
-    NRI_RETURN_ON_FAILURE(&m_Device, useBitstreamBuffer || useBitstreamHost, ReturnVoid(), "'bitstream' must provide a source supported by the video session");
-    NRI_RETURN_ON_FAILURE(&m_Device, IsAligned(videoDecodeDesc.bitstream.size, capabilities.bitstreamSizeAlignment) && videoDecodeDesc.bitstream.size <= capabilities.bitstreamSizeMax, ReturnVoid(), "'bitstream.size' must satisfy the video session limits");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().type == VideoSessionType::DECODE, ReturnVoid(), "'session' must be a decode session");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, useBitstreamBuffer || useBitstreamHost, ReturnVoid(), "'bitstream' must provide a source supported by the video session");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, IsAligned(videoDecodeDesc.bitstream.size, capabilities.bitstreamSizeAlignment) && videoDecodeDesc.bitstream.size <= capabilities.bitstreamSizeMax, ReturnVoid(), "'bitstream.size' must satisfy the video session limits");
 
     if (useBitstreamBuffer) {
         BufferVal& bitstreamVal = *(BufferVal*)videoDecodeDesc.bitstream.buffer;
         const BufferDesc& bitstreamDesc = bitstreamVal.GetDesc();
-        NRI_RETURN_ON_FAILURE(&m_Device, (bitstreamDesc.usage & BufferUsageBits::VIDEO_DECODE) != 0 && videoDecodeDesc.bitstream.offset < bitstreamDesc.size && videoDecodeDesc.bitstream.size <= bitstreamDesc.size - videoDecodeDesc.bitstream.offset && IsAligned(videoDecodeDesc.bitstream.offset, capabilities.bitstreamOffsetAlignment), ReturnVoid(), "'bitstream.buffer' must be an aligned VIDEO_DECODE buffer range");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, (bitstreamDesc.usage & BufferUsageBits::VIDEO_DECODE) != 0 && videoDecodeDesc.bitstream.offset < bitstreamDesc.size && videoDecodeDesc.bitstream.size <= bitstreamDesc.size - videoDecodeDesc.bitstream.offset && IsAligned(videoDecodeDesc.bitstream.offset, capabilities.bitstreamOffsetAlignment), ReturnVoid(), "'bitstream.buffer' must be an aligned VIDEO_DECODE buffer range");
     }
 
-    NRI_RETURN_ON_FAILURE(&m_Device, &parametersVal.GetSession() == &sessionVal, ReturnVoid(), "'parameters' must belong to 'session'");
-    NRI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(dstPictureVal, VideoPictureUsage::DECODE_OUTPUT, sessionVal.GetDesc()), ReturnVoid(), "'dstPicture' must have DECODE_OUTPUT usage and match the session format, codec and coded extent");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, &parametersVal.GetSession() == &sessionVal, ReturnVoid(), "'parameters' must belong to 'session'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(dstPictureVal, VideoPictureUsage::DECODE_OUTPUT, sessionVal.GetDesc()), ReturnVoid(), "'dstPicture' must have DECODE_OUTPUT usage and match the session format, codec and coded extent");
 
     bool isDpbAndOutputDistinct = false;
 
     if (videoDecodeDesc.setupPicture) {
         VideoPictureVal& setupPictureVal = *(VideoPictureVal*)videoDecodeDesc.setupPicture;
 
-        NRI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(setupPictureVal, VideoPictureUsage::DECODE_REFERENCE, sessionVal.GetDesc()), ReturnVoid(), "'setupPicture' must have decode reference usage and match the session format, codec and coded extent");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(setupPictureVal, VideoPictureUsage::DECODE_REFERENCE, sessionVal.GetDesc()), ReturnVoid(), "'setupPicture' must have decode reference usage and match the session format, codec and coded extent");
 
         isDpbAndOutputDistinct = !setupPictureVal.IsSameSubresource(dstPictureVal);
     }
 
-    NRI_RETURN_ON_FAILURE(&m_Device, isDpbAndOutputDistinct ? capabilities.decodeDpbAndOutputDistinct : capabilities.decodeDpbAndOutputCoincide, ReturnVoid(), "the video session does not support the requested decode output and DPB setup mode");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, isDpbAndOutputDistinct ? capabilities.decodeDpbAndOutputDistinct : capabilities.decodeDpbAndOutputCoincide, ReturnVoid(), "the video session does not support the requested decode output and DPB setup mode");
 
     if (videoDecodeDesc.argumentNum > 10) {
-        NRI_REPORT_ERROR(&m_Device, "'argumentNum' must be <= 10");
+        OPENRHI_REPORT_ERROR(&m_Device, "'argumentNum' must be <= 10");
         return;
     }
 
     if (videoDecodeDesc.referenceNum != 0 && !videoDecodeDesc.references) {
-        NRI_REPORT_ERROR(&m_Device, "'references' is NULL");
+        OPENRHI_REPORT_ERROR(&m_Device, "'references' is NULL");
         return;
     }
 
-    NRI_RETURN_ON_FAILURE(&m_Device, IsVideoDecodeDpbLayoutValid(videoDecodeDesc, sessionVal.GetDesc().maxReferenceNum), ReturnVoid(), "'references' exceed the session capacity or contain duplicate slots");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, IsVideoDecodeDpbLayoutValid(videoDecodeDesc, sessionVal.GetDesc().maxReferenceNum), ReturnVoid(), "'references' exceed the session capacity or contain duplicate slots");
 
     for (uint32_t i = 0; i < videoDecodeDesc.referenceNum; i++) {
-        NRI_RETURN_ON_FAILURE(&m_Device, videoDecodeDesc.references[i].picture, ReturnVoid(), "'references[%u].picture' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, videoDecodeDesc.references[i].picture, ReturnVoid(), "'references[%u].picture' is NULL", i);
 
         VideoPictureVal& pictureVal = *(VideoPictureVal*)videoDecodeDesc.references[i].picture;
-        NRI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(pictureVal, VideoPictureUsage::DECODE_REFERENCE, sessionVal.GetDesc()), ReturnVoid(), "'references[%u].picture' must have decode reference usage and match the session format, codec and coded extent", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(pictureVal, VideoPictureUsage::DECODE_REFERENCE, sessionVal.GetDesc()), ReturnVoid(), "'references[%u].picture' must have decode reference usage and match the session format, codec and coded extent", i);
     }
 
     const VideoPictureVal* effectiveSetupPictureVal = videoDecodeDesc.setupPicture ? (const VideoPictureVal*)videoDecodeDesc.setupPicture : &dstPictureVal;
-    NRI_RETURN_ON_FAILURE(&m_Device, IsVideoDpbTextureArrayValid(effectiveSetupPictureVal, videoDecodeDesc.references, videoDecodeDesc.referenceNum, capabilities), ReturnVoid(), "the session requires all decode DPB pictures to use a texture array with at least 'VideoCapabilities::dpbTextureArrayMinLayerNum' layers");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, IsVideoDpbTextureArrayValid(effectiveSetupPictureVal, videoDecodeDesc.references, videoDecodeDesc.referenceNum, capabilities), ReturnVoid(), "the session requires all decode DPB pictures to use a texture array with at least 'VideoCapabilities::dpbTextureArrayMinLayerNum' layers");
 
     if (videoDecodeDesc.argumentNum != 0 && !videoDecodeDesc.arguments) {
-        NRI_REPORT_ERROR(&m_Device, "'arguments' is NULL");
+        OPENRHI_REPORT_ERROR(&m_Device, "'arguments' is NULL");
         return;
     }
 
     const uint32_t neutralPictureDescNum = (videoDecodeDesc.h264PictureDesc ? 1u : 0u) + (videoDecodeDesc.h265PictureDesc ? 1u : 0u) + (videoDecodeDesc.av1PictureDesc ? 1u : 0u);
     if (videoDecodeDesc.argumentNum) {
-        NRI_RETURN_ON_FAILURE(&m_Device, capabilities.decodeNativeArgumentsSupported && neutralPictureDescNum == 0, ReturnVoid(), "native decode arguments are unsupported or mixed with a neutral picture description");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, capabilities.decodeNativeArgumentsSupported && neutralPictureDescNum == 0, ReturnVoid(), "native decode arguments are unsupported or mixed with a neutral picture description");
 
         for (uint32_t i = 0; i < videoDecodeDesc.argumentNum; i++)
-            NRI_RETURN_ON_FAILURE(&m_Device, videoDecodeDesc.arguments[i].data && videoDecodeDesc.arguments[i].size && videoDecodeDesc.arguments[i].type <= VideoDecodeArgumentType::SLICE_CONTROL, ReturnVoid(), "'arguments[%u]' has invalid data, size, or type", i);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, videoDecodeDesc.arguments[i].data && videoDecodeDesc.arguments[i].size && videoDecodeDesc.arguments[i].type <= VideoDecodeArgumentType::SLICE_CONTROL, ReturnVoid(), "'arguments[%u]' has invalid data, size, or type", i);
     } else {
         const bool isMatchingNeutralPictureDesc = neutralPictureDescNum == 1
             && ((sessionVal.GetDesc().codec == VideoCodec::H264 && videoDecodeDesc.h264PictureDesc)
                 || (sessionVal.GetDesc().codec == VideoCodec::H265 && videoDecodeDesc.h265PictureDesc)
                 || (sessionVal.GetDesc().codec == VideoCodec::AV1 && videoDecodeDesc.av1PictureDesc));
-        NRI_RETURN_ON_FAILURE(&m_Device, isMatchingNeutralPictureDesc, ReturnVoid(), "exactly one neutral picture description matching the session codec is required when native arguments are omitted");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, isMatchingNeutralPictureDesc, ReturnVoid(), "exactly one neutral picture description matching the session codec is required when native arguments are omitted");
     }
 
-    NRI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().codec != VideoCodec::H264 || !videoDecodeDesc.h264PictureDesc || parametersVal.IsH264ParameterSetValid(videoDecodeDesc.h264PictureDesc->sequenceParameterSetId, videoDecodeDesc.h264PictureDesc->pictureParameterSetId), ReturnVoid(), "'h264PictureDesc' must select a matching SPS/PPS pair from 'parameters'");
-    NRI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().codec != VideoCodec::H265 || !videoDecodeDesc.h265PictureDesc || parametersVal.IsH265ParameterSetValid(videoDecodeDesc.h265PictureDesc->videoParameterSetId, videoDecodeDesc.h265PictureDesc->sequenceParameterSetId, videoDecodeDesc.h265PictureDesc->pictureParameterSetId), ReturnVoid(), "'h265PictureDesc' must select a matching VPS/SPS/PPS chain from 'parameters'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().codec != VideoCodec::H264 || !videoDecodeDesc.h264PictureDesc || parametersVal.IsH264ParameterSetValid(videoDecodeDesc.h264PictureDesc->sequenceParameterSetId, videoDecodeDesc.h264PictureDesc->pictureParameterSetId), ReturnVoid(), "'h264PictureDesc' must select a matching SPS/PPS pair from 'parameters'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().codec != VideoCodec::H265 || !videoDecodeDesc.h265PictureDesc || parametersVal.IsH265ParameterSetValid(videoDecodeDesc.h265PictureDesc->videoParameterSetId, videoDecodeDesc.h265PictureDesc->sequenceParameterSetId, videoDecodeDesc.h265PictureDesc->pictureParameterSetId), ReturnVoid(), "'h265PictureDesc' must select a matching VPS/SPS/PPS chain from 'parameters'");
 
     if (videoDecodeDesc.h264PictureDesc) {
         const VideoH264DecodePictureDesc& desc = *videoDecodeDesc.h264PictureDesc;
-        NRI_RETURN_ON_FAILURE(&m_Device, desc.referenceNum <= 16 && desc.referenceNum == videoDecodeDesc.referenceNum && (!desc.referenceNum || desc.references), ReturnVoid(), "'h264PictureDesc->references' must describe all decode references");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, desc.referenceNum <= 16 && desc.referenceNum == videoDecodeDesc.referenceNum && (!desc.referenceNum || desc.references), ReturnVoid(), "'h264PictureDesc->references' must describe all decode references");
 
         for (uint32_t i = 0; i < videoDecodeDesc.referenceNum; i++)
-            NRI_RETURN_ON_FAILURE(&m_Device, video::FindReferenceDesc(desc.references, desc.referenceNum, videoDecodeDesc.references[i].slot), ReturnVoid(), "'h264PictureDesc->references' must include slot %u", videoDecodeDesc.references[i].slot);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, video::FindReferenceDesc(desc.references, desc.referenceNum, videoDecodeDesc.references[i].slot), ReturnVoid(), "'h264PictureDesc->references' must include slot %u", videoDecodeDesc.references[i].slot);
     }
 
     if (videoDecodeDesc.h265PictureDesc) {
         const VideoH265DecodePictureDesc& desc = *videoDecodeDesc.h265PictureDesc;
-        NRI_RETURN_ON_FAILURE(&m_Device, desc.referenceNum == videoDecodeDesc.referenceNum && (!desc.referenceNum || desc.references), ReturnVoid(), "'h265PictureDesc->references' must describe all decode references");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, desc.referenceNum == videoDecodeDesc.referenceNum && (!desc.referenceNum || desc.references), ReturnVoid(), "'h265PictureDesc->references' must describe all decode references");
 
         uint32_t beforeNum = 0;
         uint32_t afterNum = 0;
         uint32_t longTermNum = 0;
         for (uint32_t i = 0; i < videoDecodeDesc.referenceNum; i++) {
-            NRI_RETURN_ON_FAILURE(&m_Device, video::FindReferenceDesc(desc.references, desc.referenceNum, videoDecodeDesc.references[i].slot), ReturnVoid(), "'h265PictureDesc->references' must include slot %u", videoDecodeDesc.references[i].slot);
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, video::FindReferenceDesc(desc.references, desc.referenceNum, videoDecodeDesc.references[i].slot), ReturnVoid(), "'h265PictureDesc->references' must include slot %u", videoDecodeDesc.references[i].slot);
 
             const VideoH265ReferenceDesc& reference = desc.references[i];
             if (reference.longTerm)
@@ -1619,44 +1619,44 @@ NRI_INLINE void CommandBufferVal::DecodeVideo(const VideoDecodeDesc& videoDecode
             else if (reference.pictureOrderCount > desc.pictureOrderCount)
                 afterNum++;
             else {
-                NRI_REPORT_ERROR(&m_Device, "short-term H.265 references must not have the current picture order count");
+                OPENRHI_REPORT_ERROR(&m_Device, "short-term H.265 references must not have the current picture order count");
                 return;
             }
         }
 
-        NRI_RETURN_ON_FAILURE(&m_Device, beforeNum <= 8 && afterNum <= 8 && longTermNum <= 8, ReturnVoid(), "H.265 reference picture sets must contain at most 8 entries each");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, beforeNum <= 8 && afterNum <= 8 && longTermNum <= 8, ReturnVoid(), "H.265 reference picture sets must contain at most 8 entries each");
     }
 
     constexpr VideoH264DecodePictureBits h264FieldPictureBits = VideoH264DecodePictureBits::FIELD_PICTURE | VideoH264DecodePictureBits::BOTTOM_FIELD | VideoH264DecodePictureBits::COMPLEMENTARY_FIELD_PAIR;
     if (videoDecodeDesc.h264PictureDesc && (videoDecodeDesc.h264PictureDesc->flags & h264FieldPictureBits)) {
-        NRI_REPORT_ERROR(&m_Device, "H.264 field-picture decode is not supported by the fixed progressive session profile");
+        OPENRHI_REPORT_ERROR(&m_Device, "H.264 field-picture decode is not supported by the fixed progressive session profile");
         return;
     }
 
     if (videoDecodeDesc.h264PictureDesc && !AreVideoDecodeSliceOffsetsValid(videoDecodeDesc.h264PictureDesc->sliceOffsets, videoDecodeDesc.h264PictureDesc->sliceOffsetNum, videoDecodeDesc.bitstream.size)) {
-        NRI_REPORT_ERROR(&m_Device, "'h264PictureDesc->sliceOffsets' is invalid");
+        OPENRHI_REPORT_ERROR(&m_Device, "'h264PictureDesc->sliceOffsets' is invalid");
         return;
     }
 
     if (videoDecodeDesc.h265PictureDesc && !AreVideoDecodeSliceOffsetsValid(videoDecodeDesc.h265PictureDesc->sliceSegmentOffsets, videoDecodeDesc.h265PictureDesc->sliceSegmentOffsetNum, videoDecodeDesc.bitstream.size)) {
-        NRI_REPORT_ERROR(&m_Device, "'h265PictureDesc->sliceSegmentOffsets' is invalid");
+        OPENRHI_REPORT_ERROR(&m_Device, "'h265PictureDesc->sliceSegmentOffsets' is invalid");
         return;
     }
 
     if (videoDecodeDesc.av1PictureDesc && !IsVideoAV1DecodePictureDescValid(videoDecodeDesc)) {
-        NRI_REPORT_ERROR(&m_Device, "'av1PictureDesc' is invalid");
+        OPENRHI_REPORT_ERROR(&m_Device, "'av1PictureDesc' is invalid");
         return;
     }
 
     VideoDecodeDesc videoDecodeDescImpl = videoDecodeDesc;
     videoDecodeDescImpl.session = videoDecodeDesc.session ? ((VideoSessionVal*)videoDecodeDesc.session)->GetImpl() : nullptr;
     videoDecodeDescImpl.parameters = videoDecodeDesc.parameters ? ((VideoSessionParametersVal*)videoDecodeDesc.parameters)->GetImpl() : nullptr;
-    videoDecodeDescImpl.bitstream.buffer = useBitstreamBuffer ? NRI_GET_IMPL(Buffer, videoDecodeDesc.bitstream.buffer) : nullptr;
+    videoDecodeDescImpl.bitstream.buffer = useBitstreamBuffer ? OPENRHI_GET_IMPL(Buffer, videoDecodeDesc.bitstream.buffer) : nullptr;
     videoDecodeDescImpl.bitstream.data = useBitstreamHost ? videoDecodeDesc.bitstream.data : nullptr;
     videoDecodeDescImpl.dstPicture = videoDecodeDesc.dstPicture ? ((VideoPictureVal*)videoDecodeDesc.dstPicture)->GetImpl() : nullptr;
     videoDecodeDescImpl.setupPicture = videoDecodeDesc.setupPicture ? ((VideoPictureVal*)videoDecodeDesc.setupPicture)->GetImpl() : nullptr;
 
-    Scratch<VideoReference> references = NRI_ALLOCATE_SCRATCH(m_Device, VideoReference, videoDecodeDesc.references ? videoDecodeDesc.referenceNum : 0);
+    Scratch<VideoReference> references = OPENRHI_ALLOCATE_SCRATCH(m_Device, VideoReference, videoDecodeDesc.references ? videoDecodeDesc.referenceNum : 0);
     if (videoDecodeDesc.references) {
         for (uint32_t i = 0; i < videoDecodeDesc.referenceNum; i++) {
             references[i] = videoDecodeDesc.references[i];
@@ -1669,22 +1669,22 @@ NRI_INLINE void CommandBufferVal::DecodeVideo(const VideoDecodeDesc& videoDecode
     GetVideoInterfaceImpl().CmdDecodeVideo(*GetImpl(), videoDecodeDescImpl);
 }
 
-NRI_INLINE void CommandBufferVal::EncodeVideo(const VideoEncodeDesc& videoEncodeDesc) {
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, m_QueueType == QueueType::VIDEO_ENCODE, ReturnVoid(), "the command buffer must belong to a VIDEO_ENCODE queue");
+OPENRHI_INLINE void CommandBufferVal::EncodeVideo(const VideoEncodeDesc& videoEncodeDesc) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_QueueType == QueueType::VIDEO_ENCODE, ReturnVoid(), "the command buffer must belong to a VIDEO_ENCODE queue");
 
     if (videoEncodeDesc.rateControlDesc && !IsVideoEncodeRateControlDescValid(*videoEncodeDesc.rateControlDesc)) {
-        NRI_REPORT_ERROR(&m_Device, "'rateControlDesc' is invalid");
+        OPENRHI_REPORT_ERROR(&m_Device, "'rateControlDesc' is invalid");
         return;
     }
 
     if ((videoEncodeDesc.flags & VideoEncodeBits::FORCE_KEY_FRAME) && videoEncodeDesc.referenceNum) {
-        NRI_REPORT_ERROR(&m_Device, "'FORCE_KEY_FRAME' requires 'referenceNum' to be 0");
+        OPENRHI_REPORT_ERROR(&m_Device, "'FORCE_KEY_FRAME' requires 'referenceNum' to be 0");
         return;
     }
 
     if (!videoEncodeDesc.session || !videoEncodeDesc.parameters || !videoEncodeDesc.srcPicture || !videoEncodeDesc.dstBitstream.buffer || !videoEncodeDesc.dstBitstream.size) {
-        NRI_REPORT_ERROR(&m_Device, "'session', 'parameters', 'srcPicture', 'dstBitstream.buffer' and 'dstBitstream.size' must be valid");
+        OPENRHI_REPORT_ERROR(&m_Device, "'session', 'parameters', 'srcPicture', 'dstBitstream.buffer' and 'dstBitstream.size' must be valid");
         return;
     }
 
@@ -1694,7 +1694,7 @@ NRI_INLINE void CommandBufferVal::EncodeVideo(const VideoEncodeDesc& videoEncode
     BufferVal& dstBitstreamVal = *(BufferVal*)videoEncodeDesc.dstBitstream.buffer;
     BufferVal* metadataVal = (BufferVal*)videoEncodeDesc.metadata;
 
-    NRI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().type == VideoSessionType::ENCODE, ReturnVoid(), "'session' must be an encode session");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().type == VideoSessionType::ENCODE, ReturnVoid(), "'session' must be an encode session");
 
     const BufferDesc& dstBitstreamDesc = dstBitstreamVal.GetDesc();
     const VideoCapabilities& capabilities = sessionVal.GetCapabilities();
@@ -1706,68 +1706,68 @@ NRI_INLINE void CommandBufferVal::EncodeVideo(const VideoEncodeDesc& videoEncode
         && videoEncodeDesc.bitstreamMetadataSize <= videoEncodeDesc.dstBitstream.size
         && IsAligned(videoEncodeDesc.dstBitstream.offset, capabilities.bitstreamOffsetAlignment)
         && IsAligned(videoEncodeDesc.dstBitstream.size, capabilities.bitstreamSizeAlignment);
-    NRI_RETURN_ON_FAILURE(&m_Device, isDstBitstreamRangeValid, ReturnVoid(), "'dstBitstream' must be an aligned VIDEO_ENCODE buffer range containing 'bitstreamMetadataSize'; this session may require the range to extend to the end of the buffer");
-    NRI_RETURN_ON_FAILURE(&m_Device, !capabilities.metadataSize || metadataVal, ReturnVoid(), "'metadata' is required by the video session");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, isDstBitstreamRangeValid, ReturnVoid(), "'dstBitstream' must be an aligned VIDEO_ENCODE buffer range containing 'bitstreamMetadataSize'; this session may require the range to extend to the end of the buffer");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !capabilities.metadataSize || metadataVal, ReturnVoid(), "'metadata' is required by the video session");
 
     if (metadataVal) {
         const BufferDesc& metadataDesc = metadataVal->GetDesc();
-        NRI_RETURN_ON_FAILURE(&m_Device, (metadataDesc.usage & BufferUsageBits::VIDEO_ENCODE) != 0 && IsAligned(videoEncodeDesc.metadataOffset, capabilities.metadataOffsetAlignment) && IsVideoBufferRangeValid(metadataDesc.size, videoEncodeDesc.metadataOffset, capabilities.metadataSize), ReturnVoid(), "'metadata' must be an aligned VIDEO_ENCODE buffer range with the session-required size");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, (metadataDesc.usage & BufferUsageBits::VIDEO_ENCODE) != 0 && IsAligned(videoEncodeDesc.metadataOffset, capabilities.metadataOffsetAlignment) && IsVideoBufferRangeValid(metadataDesc.size, videoEncodeDesc.metadataOffset, capabilities.metadataSize), ReturnVoid(), "'metadata' must be an aligned VIDEO_ENCODE buffer range with the session-required size");
     }
 
-    NRI_RETURN_ON_FAILURE(&m_Device, &parametersVal.GetSession() == &sessionVal, ReturnVoid(), "'parameters' must belong to 'session'");
-    NRI_RETURN_ON_FAILURE(&m_Device, !videoEncodeDesc.h264PictureDesc || sessionVal.GetDesc().codec == VideoCodec::H264, ReturnVoid(), "'h264PictureDesc' requires an H.264 session");
-    NRI_RETURN_ON_FAILURE(&m_Device, !videoEncodeDesc.h265ReferenceDescs || sessionVal.GetDesc().codec == VideoCodec::H265, ReturnVoid(), "'h265ReferenceDescs' require an H.265 session");
-    NRI_RETURN_ON_FAILURE(&m_Device, !videoEncodeDesc.av1PictureDesc || sessionVal.GetDesc().codec == VideoCodec::AV1, ReturnVoid(), "'av1PictureDesc' requires an AV1 session");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, &parametersVal.GetSession() == &sessionVal, ReturnVoid(), "'parameters' must belong to 'session'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !videoEncodeDesc.h264PictureDesc || sessionVal.GetDesc().codec == VideoCodec::H264, ReturnVoid(), "'h264PictureDesc' requires an H.264 session");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !videoEncodeDesc.h265ReferenceDescs || sessionVal.GetDesc().codec == VideoCodec::H265, ReturnVoid(), "'h265ReferenceDescs' require an H.265 session");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !videoEncodeDesc.av1PictureDesc || sessionVal.GetDesc().codec == VideoCodec::AV1, ReturnVoid(), "'av1PictureDesc' requires an AV1 session");
     const uint8_t h264SequenceParameterSetId = videoEncodeDesc.h264PictureDesc ? videoEncodeDesc.h264PictureDesc->sequenceParameterSetId : 0;
     const uint8_t h264PictureParameterSetId = videoEncodeDesc.h264PictureDesc ? videoEncodeDesc.h264PictureDesc->pictureParameterSetId : 0;
-    NRI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().codec != VideoCodec::H264 || parametersVal.IsH264ParameterSetValid(h264SequenceParameterSetId, h264PictureParameterSetId), ReturnVoid(), "'h264PictureDesc' must select a matching SPS/PPS pair from 'parameters'");
-    NRI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(srcPictureVal, VideoPictureUsage::ENCODE_INPUT, sessionVal.GetDesc()), ReturnVoid(), "'srcPicture' must have ENCODE_INPUT usage and match the session format, codec and coded extent");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().codec != VideoCodec::H264 || parametersVal.IsH264ParameterSetValid(h264SequenceParameterSetId, h264PictureParameterSetId), ReturnVoid(), "'h264PictureDesc' must select a matching SPS/PPS pair from 'parameters'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(srcPictureVal, VideoPictureUsage::ENCODE_INPUT, sessionVal.GetDesc()), ReturnVoid(), "'srcPicture' must have ENCODE_INPUT usage and match the session format, codec and coded extent");
 
     if (videoEncodeDesc.reconstructedPicture) {
         VideoPictureVal& reconstructedPictureVal = *(VideoPictureVal*)videoEncodeDesc.reconstructedPicture;
 
-        NRI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(reconstructedPictureVal, VideoPictureUsage::ENCODE_REFERENCE, sessionVal.GetDesc()), ReturnVoid(), "'reconstructedPicture' must have ENCODE_REFERENCE usage and match the session format, codec and coded extent");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(reconstructedPictureVal, VideoPictureUsage::ENCODE_REFERENCE, sessionVal.GetDesc()), ReturnVoid(), "'reconstructedPicture' must have ENCODE_REFERENCE usage and match the session format, codec and coded extent");
     }
 
     if (videoEncodeDesc.resolvedMetadata) {
         BufferVal& resolvedMetadataVal = *(BufferVal*)videoEncodeDesc.resolvedMetadata;
 
-        NRI_RETURN_ON_FAILURE(&m_Device, capabilities.encodeFeedbackSupported && (resolvedMetadataVal.GetDesc().usage & BufferUsageBits::VIDEO_ENCODE) != 0 && sessionVal.IsResolvedMetadataRangeValid(resolvedMetadataVal, videoEncodeDesc.resolvedMetadataOffset), ReturnVoid(), "encode feedback must be supported and 'resolvedMetadata' must be an aligned VIDEO_ENCODE buffer range");
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, capabilities.encodeFeedbackSupported && (resolvedMetadataVal.GetDesc().usage & BufferUsageBits::VIDEO_ENCODE) != 0 && sessionVal.IsResolvedMetadataRangeValid(resolvedMetadataVal, videoEncodeDesc.resolvedMetadataOffset), ReturnVoid(), "encode feedback must be supported and 'resolvedMetadata' must be an aligned VIDEO_ENCODE buffer range");
     }
 
     if (videoEncodeDesc.bitstreamMetadataSize > UINT32_MAX) {
-        NRI_REPORT_ERROR(&m_Device, "'bitstreamMetadataSize' exceeds the video encode metadata range");
+        OPENRHI_REPORT_ERROR(&m_Device, "'bitstreamMetadataSize' exceeds the video encode metadata range");
         return;
     }
 
     if (videoEncodeDesc.referenceNum != 0 && !videoEncodeDesc.references) {
-        NRI_REPORT_ERROR(&m_Device, "'references' is NULL");
+        OPENRHI_REPORT_ERROR(&m_Device, "'references' is NULL");
         return;
     }
 
-    NRI_RETURN_ON_FAILURE(&m_Device, IsVideoEncodeDpbLayoutValid(videoEncodeDesc, sessionVal.GetDesc().maxReferenceNum), ReturnVoid(), "'references' exceed the session capacity or contain duplicate slots");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, IsVideoEncodeDpbLayoutValid(videoEncodeDesc, sessionVal.GetDesc().maxReferenceNum), ReturnVoid(), "'references' exceed the session capacity or contain duplicate slots");
 
     for (uint32_t i = 0; i < videoEncodeDesc.referenceNum; i++) {
-        NRI_RETURN_ON_FAILURE(&m_Device, videoEncodeDesc.references[i].picture, ReturnVoid(), "'references[%u].picture' is NULL", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, videoEncodeDesc.references[i].picture, ReturnVoid(), "'references[%u].picture' is NULL", i);
 
         VideoPictureVal& pictureVal = *(VideoPictureVal*)videoEncodeDesc.references[i].picture;
-        NRI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(pictureVal, VideoPictureUsage::ENCODE_REFERENCE, sessionVal.GetDesc()), ReturnVoid(), "'references[%u].picture' must have ENCODE_REFERENCE usage and match the session format, codec and coded extent", i);
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, IsVideoPictureValidForSession(pictureVal, VideoPictureUsage::ENCODE_REFERENCE, sessionVal.GetDesc()), ReturnVoid(), "'references[%u].picture' must have ENCODE_REFERENCE usage and match the session format, codec and coded extent", i);
     }
 
-    NRI_RETURN_ON_FAILURE(&m_Device, IsVideoDpbTextureArrayValid((const VideoPictureVal*)videoEncodeDesc.reconstructedPicture, videoEncodeDesc.references, videoEncodeDesc.referenceNum, capabilities), ReturnVoid(), "the session requires all encode DPB pictures to use a texture array with at least 'VideoCapabilities::dpbTextureArrayMinLayerNum' layers");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, IsVideoDpbTextureArrayValid((const VideoPictureVal*)videoEncodeDesc.reconstructedPicture, videoEncodeDesc.references, videoEncodeDesc.referenceNum, capabilities), ReturnVoid(), "the session requires all encode DPB pictures to use a texture array with at least 'VideoCapabilities::dpbTextureArrayMinLayerNum' layers");
 
     if (videoEncodeDesc.h264PictureDesc && videoEncodeDesc.h264PictureDesc->referenceNum != 0 && !videoEncodeDesc.h264PictureDesc->references) {
-        NRI_REPORT_ERROR(&m_Device, "'h264PictureDesc->references' is NULL");
+        OPENRHI_REPORT_ERROR(&m_Device, "'h264PictureDesc->references' is NULL");
         return;
     }
 
     if (videoEncodeDesc.av1PictureDesc && videoEncodeDesc.av1PictureDesc->referenceNum != 0 && !videoEncodeDesc.av1PictureDesc->references) {
-        NRI_REPORT_ERROR(&m_Device, "'av1PictureDesc->references' is NULL");
+        OPENRHI_REPORT_ERROR(&m_Device, "'av1PictureDesc->references' is NULL");
         return;
     }
 
     if (videoEncodeDesc.av1PictureDesc && (videoEncodeDesc.av1PictureDesc->referenceNum != 0) != (videoEncodeDesc.referenceNum != 0)) {
-        NRI_REPORT_ERROR(&m_Device, "'av1PictureDesc->referenceNum' must match whether 'references' are provided");
+        OPENRHI_REPORT_ERROR(&m_Device, "'av1PictureDesc->referenceNum' must match whether 'references' are provided");
         return;
     }
 
@@ -1777,47 +1777,47 @@ NRI_INLINE void CommandBufferVal::EncodeVideo(const VideoEncodeDesc& videoEncode
         frameType = VideoFrameType::IDR;
 
     if (!IsVideoFrameTypeValid(frameType)) {
-        NRI_REPORT_ERROR(&m_Device, "'pictureDesc->frameType' is invalid");
+        OPENRHI_REPORT_ERROR(&m_Device, "'pictureDesc->frameType' is invalid");
         return;
     }
 
     if (sessionVal.GetDesc().codec == VideoCodec::AV1 && IsVideoAV1InterFrameWithoutReferences(frameType, videoEncodeDesc.referenceNum)) {
-        NRI_REPORT_ERROR(&m_Device, "AV1 P and B frames require at least one reference");
+        OPENRHI_REPORT_ERROR(&m_Device, "AV1 P and B frames require at least one reference");
         return;
     }
 
     if ((sessionVal.GetDesc().codec == VideoCodec::H264 || sessionVal.GetDesc().codec == VideoCodec::H265) && frameType == VideoFrameType::B && videoEncodeDesc.referenceNum == 0) {
-        NRI_REPORT_ERROR(&m_Device, "H.264 and H.265 B frames require at least one List0 and one List1 reference");
+        OPENRHI_REPORT_ERROR(&m_Device, "H.264 and H.265 B frames require at least one List0 and one List1 reference");
         return;
     }
 
     if (sessionVal.GetDesc().codec == VideoCodec::H264 && videoEncodeDesc.referenceNum && !IsVideoEncodeH264ReferenceListValid(videoEncodeDesc, frameType)) {
-        NRI_REPORT_ERROR(&m_Device, "'h264PictureDesc->references' must describe every H.264 reference and B frames require List0 and List1 references");
+        OPENRHI_REPORT_ERROR(&m_Device, "'h264PictureDesc->references' must describe every H.264 reference and B frames require List0 and List1 references");
         return;
     }
 
     if (sessionVal.GetDesc().codec == VideoCodec::H265 && videoEncodeDesc.referenceNum && !IsVideoEncodeH265ReferenceListValid(videoEncodeDesc, frameType)) {
-        NRI_REPORT_ERROR(&m_Device, "'h265ReferenceDescs' must describe every H.265 reference and B frames require List0 and List1 references");
+        OPENRHI_REPORT_ERROR(&m_Device, "'h265ReferenceDescs' must describe every H.265 reference and B frames require List0 and List1 references");
         return;
     }
 
     if (videoEncodeDesc.av1PictureDesc && !IsVideoAV1EncodePictureDescValid(videoEncodeDesc)) {
-        NRI_REPORT_ERROR(&m_Device, "'av1PictureDesc' is invalid");
+        OPENRHI_REPORT_ERROR(&m_Device, "'av1PictureDesc' is invalid");
         return;
     }
 
-    NRI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().codec != VideoCodec::AV1 || videoEncodeDesc.av1PictureDesc || !sessionVal.GetDesc().maxReferenceNum || videoEncodeDesc.reconstructedPicture, ReturnVoid(), "default AV1 key frames in sessions with DPB slots require 'reconstructedPicture'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, sessionVal.GetDesc().codec != VideoCodec::AV1 || videoEncodeDesc.av1PictureDesc || !sessionVal.GetDesc().maxReferenceNum || videoEncodeDesc.reconstructedPicture, ReturnVoid(), "default AV1 key frames in sessions with DPB slots require 'reconstructedPicture'");
 
     VideoEncodeDesc videoEncodeDescImpl = videoEncodeDesc;
     videoEncodeDescImpl.session = videoEncodeDesc.session ? ((VideoSessionVal*)videoEncodeDesc.session)->GetImpl() : nullptr;
     videoEncodeDescImpl.parameters = videoEncodeDesc.parameters ? ((VideoSessionParametersVal*)videoEncodeDesc.parameters)->GetImpl() : nullptr;
     videoEncodeDescImpl.srcPicture = videoEncodeDesc.srcPicture ? ((VideoPictureVal*)videoEncodeDesc.srcPicture)->GetImpl() : nullptr;
-    videoEncodeDescImpl.dstBitstream.buffer = NRI_GET_IMPL(Buffer, videoEncodeDesc.dstBitstream.buffer);
+    videoEncodeDescImpl.dstBitstream.buffer = OPENRHI_GET_IMPL(Buffer, videoEncodeDesc.dstBitstream.buffer);
     videoEncodeDescImpl.reconstructedPicture = videoEncodeDesc.reconstructedPicture ? ((VideoPictureVal*)videoEncodeDesc.reconstructedPicture)->GetImpl() : nullptr;
-    videoEncodeDescImpl.metadata = NRI_GET_IMPL(Buffer, videoEncodeDesc.metadata);
-    videoEncodeDescImpl.resolvedMetadata = NRI_GET_IMPL(Buffer, videoEncodeDesc.resolvedMetadata);
+    videoEncodeDescImpl.metadata = OPENRHI_GET_IMPL(Buffer, videoEncodeDesc.metadata);
+    videoEncodeDescImpl.resolvedMetadata = OPENRHI_GET_IMPL(Buffer, videoEncodeDesc.resolvedMetadata);
 
-    Scratch<VideoReference> references = NRI_ALLOCATE_SCRATCH(m_Device, VideoReference, videoEncodeDesc.references ? videoEncodeDesc.referenceNum : 0);
+    Scratch<VideoReference> references = OPENRHI_ALLOCATE_SCRATCH(m_Device, VideoReference, videoEncodeDesc.references ? videoEncodeDesc.referenceNum : 0);
     if (videoEncodeDesc.references) {
         for (uint32_t i = 0; i < videoEncodeDesc.referenceNum; i++) {
             references[i] = videoEncodeDesc.references[i];
@@ -1830,16 +1830,16 @@ NRI_INLINE void CommandBufferVal::EncodeVideo(const VideoEncodeDesc& videoEncode
     GetVideoInterfaceImpl().CmdEncodeVideo(*GetImpl(), videoEncodeDescImpl);
 }
 
-NRI_INLINE void CommandBufferVal::ResolveVideoEncodeFeedback(VideoSession& videoSession, Buffer& resolvedMetadata, uint64_t resolvedMetadataOffset) {
+OPENRHI_INLINE void CommandBufferVal::ResolveVideoEncodeFeedback(VideoSession& videoSession, Buffer& resolvedMetadata, uint64_t resolvedMetadataOffset) {
     VideoSessionVal& videoSessionVal = (VideoSessionVal&)videoSession;
     BufferVal& resolvedMetadataVal = (BufferVal&)resolvedMetadata;
 
-    NRI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
-    NRI_RETURN_ON_FAILURE(&m_Device, videoSessionVal.GetDesc().type == VideoSessionType::ENCODE, ReturnVoid(), "'videoSession' must be an encode session");
-    NRI_RETURN_ON_FAILURE(&m_Device, videoSessionVal.GetCapabilities().encodeFeedbackSupported, ReturnVoid(), "encode feedback is unsupported by the video session");
-    NRI_RETURN_ON_FAILURE(&m_Device, !videoSessionVal.GetCapabilities().encodeFeedbackResolveRequired || m_QueueType == videoSessionVal.GetCapabilities().resolvedMetadataQueueType, ReturnVoid(), "the command buffer queue does not match 'VideoCapabilities::resolvedMetadataQueueType'");
-    NRI_RETURN_ON_FAILURE(&m_Device, (resolvedMetadataVal.GetDesc().usage & BufferUsageBits::VIDEO_ENCODE) != 0, ReturnVoid(), "'resolvedMetadata' must have VIDEO_ENCODE usage");
-    NRI_RETURN_ON_FAILURE(&m_Device, videoSessionVal.IsResolvedMetadataRangeValid(resolvedMetadataVal, resolvedMetadataOffset), ReturnVoid(), "'resolvedMetadata' must be an aligned buffer range with the session-required size");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_IsRecordingStarted, ReturnVoid(), "the command buffer must be in the recording state");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, videoSessionVal.GetDesc().type == VideoSessionType::ENCODE, ReturnVoid(), "'videoSession' must be an encode session");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, videoSessionVal.GetCapabilities().encodeFeedbackSupported, ReturnVoid(), "encode feedback is unsupported by the video session");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !videoSessionVal.GetCapabilities().encodeFeedbackResolveRequired || m_QueueType == videoSessionVal.GetCapabilities().resolvedMetadataQueueType, ReturnVoid(), "the command buffer queue does not match 'VideoCapabilities::resolvedMetadataQueueType'");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, (resolvedMetadataVal.GetDesc().usage & BufferUsageBits::VIDEO_ENCODE) != 0, ReturnVoid(), "'resolvedMetadata' must have VIDEO_ENCODE usage");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, videoSessionVal.IsResolvedMetadataRangeValid(resolvedMetadataVal, resolvedMetadataOffset), ReturnVoid(), "'resolvedMetadata' must be an aligned buffer range with the session-required size");
 
     GetVideoInterfaceImpl().CmdResolveVideoEncodeFeedback(*GetImpl(), *videoSessionVal.GetImpl(), *resolvedMetadataVal.GetImpl(), resolvedMetadataOffset);
 }

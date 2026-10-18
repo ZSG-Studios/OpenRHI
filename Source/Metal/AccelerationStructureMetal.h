@@ -5,9 +5,9 @@
 #include <Metal/MTL4AccelerationStructure.hpp>
 #include "BufferMetal.h"
 
-namespace nri {
+namespace openrhi {
 
-// "IRRaytracingAccelerationStructureGPUHeader" (64 bytes), followed by per-instance hit group contributions
+// Native acceleration-structure header (64 bytes), followed by per-instance hit group contributions
 constexpr uint64_t TOP_LEVEL_HEADER_SIZE = 64;
 
 struct AccelerationStructureMetal final : public DebugNameBase {
@@ -61,12 +61,11 @@ struct AccelerationStructureMetal final : public DebugNameBase {
         return GetShaderBindingHeaderAddress() + TOP_LEVEL_HEADER_SIZE;
     }
 
-
     Result Create(const AccelerationStructureDesc& desc);
     Result Create(const AccelerationStructureDesc& desc, MemoryLocation location); // committed
     Result Bind(MemoryMetal& memory, uint64_t offset);
     void GetMemoryDesc(MemoryLocation memoryLocation, MemoryDesc& memoryDesc) const;
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     // The returned descriptor is owned by the caller and must be released after command encoding
     MTL4::AccelerationStructureDescriptor* CreateBuildDescriptor(const BottomLevelGeometryDesc* geometries, uint32_t geometryNum, MTL::GPUAddress convertedInstanceAddress = 0, uint32_t instanceNum = 0) const;
@@ -76,7 +75,7 @@ private:
     void Release();
 
     DeviceMetal& m_Device;
-    BufferMetal m_BarrierBuffer; // NRI exposes this only as a barrier identity, Metal AS storage is not an "MTLBuffer"
+    BufferMetal m_BarrierBuffer; // OpenRHI exposes this only as a barrier identity, Metal AS storage is not an "MTLBuffer"
     MTL::AccelerationStructure* m_AccelerationStructure = nullptr;
     MTL::Buffer* m_ShaderBindingHeader = nullptr;
     MTL::AccelerationStructureSizes m_Sizes = {};
@@ -89,4 +88,4 @@ private:
     bool m_IsCommitted = false;
 };
 
-} // namespace nri
+} // namespace openrhi

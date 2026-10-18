@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct SwapChainVal final : public ObjectVal {
     SwapChainVal(DeviceVal& device, SwapChain* swapChain, const SwapChainDesc& swapChainDesc)
@@ -18,7 +18,7 @@ struct SwapChainVal final : public ObjectVal {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Texture* const* GetTextures(uint32_t& textureNum);
@@ -37,4 +37,4 @@ private:
     Vector<TextureVal*> m_Textures;
 };
 
-} // namespace nri
+} // namespace openrhi

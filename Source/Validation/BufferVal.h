@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct BufferVal final : public ObjectVal {
     BufferVal(DeviceVal& device, Buffer* buffer, bool isBoundToMemory)
@@ -35,7 +35,7 @@ struct BufferVal final : public ObjectVal {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     void* Map(uint64_t offset, uint64_t size);
@@ -49,4 +49,4 @@ private:
     bool m_IsMapped = false;
 };
 
-} // namespace nri
+} // namespace openrhi

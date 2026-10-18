@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct BufferMetal final : public DebugNameBase {
     inline BufferMetal(DeviceMetal& device) : m_Device(device) {
@@ -33,7 +33,7 @@ struct BufferMetal final : public DebugNameBase {
     void GetMemoryDesc(MemoryLocation location, MemoryDesc& memoryDesc) const;
     void* Map(uint64_t offset, uint64_t size);
     void Unmap();
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     void Release();
@@ -47,4 +47,4 @@ private:
     bool m_IsResident = false;
 };
 
-} // namespace nri
+} // namespace openrhi

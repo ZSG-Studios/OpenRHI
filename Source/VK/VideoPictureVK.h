@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct VideoPictureVK final : public DebugNameBase {
     inline VideoPictureVK(DeviceVK& device)
@@ -27,12 +27,12 @@ struct VideoPictureVK final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
         m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_IMAGE_VIEW, (uint64_t)m_ImageView, name);
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result Create(const VideoPictureDesc& videoPictureDesc);
@@ -45,4 +45,4 @@ private:
     uint32_t m_Layer = 0;
 };
 
-} // namespace nri
+} // namespace openrhi

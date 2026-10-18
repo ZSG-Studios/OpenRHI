@@ -7,9 +7,9 @@ constexpr std::array<D3D12_COMMAND_LIST_TYPE, (size_t)QueueType::MAX_NUM> g_Comm
     D3D12_COMMAND_LIST_TYPE_VIDEO_DECODE, // VIDEO_DECODE,
     D3D12_COMMAND_LIST_TYPE_VIDEO_ENCODE, // VIDEO_ENCODE,
 };
-NRI_VALIDATE_ARRAY(g_CommandListTypes);
+OPENRHI_VALIDATE_ARRAY(g_CommandListTypes);
 
-D3D12_COMMAND_LIST_TYPE nri::GetCommandListType(QueueType queueType) {
+D3D12_COMMAND_LIST_TYPE openrhi::GetCommandListType(QueueType queueType) {
     return g_CommandListTypes[(size_t)queueType];
 }
 
@@ -18,9 +18,9 @@ constexpr std::array<D3D12_RESOURCE_DIMENSION, (size_t)TextureType::MAX_NUM> g_R
     D3D12_RESOURCE_DIMENSION_TEXTURE2D, // TEXTURE_2D,
     D3D12_RESOURCE_DIMENSION_TEXTURE3D, // TEXTURE_3D,
 };
-NRI_VALIDATE_ARRAY(g_ResourceDimensions);
+OPENRHI_VALIDATE_ARRAY(g_ResourceDimensions);
 
-D3D12_RESOURCE_DIMENSION nri::GetResourceDimension(TextureType textureType) {
+D3D12_RESOURCE_DIMENSION openrhi::GetResourceDimension(TextureType textureType) {
     return g_ResourceDimensions[(size_t)textureType];
 }
 
@@ -38,9 +38,9 @@ constexpr std::array<D3D12_DESCRIPTOR_RANGE_TYPE, (size_t)DescriptorType::MAX_NU
     D3D12_DESCRIPTOR_RANGE_TYPE_SRV,     // ACCELERATION_STRUCTURE
 };
 
-// NRI_VALIDATE_ARRAY(g_DescriptorRangeTypes); // TODO: 0 is expected for ACCELERATION_STRUCTURE
+// OPENRHI_VALIDATE_ARRAY(g_DescriptorRangeTypes); // TODO: 0 is expected for ACCELERATION_STRUCTURE
 
-D3D12_DESCRIPTOR_RANGE_TYPE nri::GetDescriptorRangesType(DescriptorType descriptorType) {
+D3D12_DESCRIPTOR_RANGE_TYPE openrhi::GetDescriptorRangesType(DescriptorType descriptorType) {
     return g_DescriptorRangeTypes[(size_t)descriptorType];
 }
 
@@ -56,9 +56,9 @@ constexpr std::array<D3D12_PRIMITIVE_TOPOLOGY_TYPE, (size_t)Topology::MAX_NUM> g
     D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, // TRIANGLE_STRIP_WITH_ADJACENCY
     D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH     // PATCH_LIST
 };
-NRI_VALIDATE_ARRAY(g_PrimitiveTopologyTypes);
+OPENRHI_VALIDATE_ARRAY(g_PrimitiveTopologyTypes);
 
-D3D12_PRIMITIVE_TOPOLOGY_TYPE nri::GetPrimitiveTopologyType(Topology topology) {
+D3D12_PRIMITIVE_TOPOLOGY_TYPE openrhi::GetPrimitiveTopologyType(Topology topology) {
     return g_PrimitiveTopologyTypes[(size_t)topology];
 }
 
@@ -73,9 +73,9 @@ constexpr std::array<D3D_PRIMITIVE_TOPOLOGY, (size_t)Topology::MAX_NUM - 1> g_Pr
     D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ, // TRIANGLE_LIST_WITH_ADJACENCY
     D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ // TRIANGLE_STRIP_WITH_ADJACENCY
 };
-NRI_VALIDATE_ARRAY(g_PrimitiveTopologyTypes);
+OPENRHI_VALIDATE_ARRAY(g_PrimitiveTopologyTypes);
 
-D3D_PRIMITIVE_TOPOLOGY nri::GetPrimitiveTopology(Topology topology, uint8_t tessControlPointNum) {
+D3D_PRIMITIVE_TOPOLOGY openrhi::GetPrimitiveTopology(Topology topology, uint8_t tessControlPointNum) {
     if (topology == Topology::PATCH_LIST)
         return (D3D_PRIMITIVE_TOPOLOGY)((uint8_t)D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ + tessControlPointNum);
     else
@@ -86,9 +86,9 @@ constexpr std::array<D3D12_FILL_MODE, (size_t)FillMode::MAX_NUM> g_FillModes = {
     D3D12_FILL_MODE_SOLID,    // SOLID
     D3D12_FILL_MODE_WIREFRAME // WIREFRAME
 };
-NRI_VALIDATE_ARRAY(g_FillModes);
+OPENRHI_VALIDATE_ARRAY(g_FillModes);
 
-D3D12_FILL_MODE nri::GetFillMode(FillMode fillMode) {
+D3D12_FILL_MODE openrhi::GetFillMode(FillMode fillMode) {
     return g_FillModes[(size_t)fillMode];
 }
 
@@ -97,14 +97,14 @@ constexpr std::array<D3D12_CULL_MODE, (size_t)CullMode::MAX_NUM> g_CullModes = {
     D3D12_CULL_MODE_FRONT, // FRONT
     D3D12_CULL_MODE_BACK   // BACK
 };
-NRI_VALIDATE_ARRAY(g_CullModes);
+OPENRHI_VALIDATE_ARRAY(g_CullModes);
 
-D3D12_CULL_MODE nri::GetCullMode(CullMode cullMode) {
+D3D12_CULL_MODE openrhi::GetCullMode(CullMode cullMode) {
     return g_CullModes[(size_t)cullMode];
 }
 
 constexpr std::array<D3D12_COMPARISON_FUNC, (size_t)CompareOp::MAX_NUM> g_ComparisonFuncs = {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     D3D12_COMPARISON_FUNC_NONE, // NONE
 #else
     D3D12_COMPARISON_FUNC(0), // NONE
@@ -118,9 +118,9 @@ constexpr std::array<D3D12_COMPARISON_FUNC, (size_t)CompareOp::MAX_NUM> g_Compar
     D3D12_COMPARISON_FUNC_GREATER,       // GREATER
     D3D12_COMPARISON_FUNC_GREATER_EQUAL, // GREATER_EQUAL
 };
-NRI_VALIDATE_ARRAY(g_ComparisonFuncs);
+OPENRHI_VALIDATE_ARRAY(g_ComparisonFuncs);
 
-D3D12_COMPARISON_FUNC nri::GetCompareOp(CompareOp compareOp) {
+D3D12_COMPARISON_FUNC openrhi::GetCompareOp(CompareOp compareOp) {
     return g_ComparisonFuncs[(size_t)compareOp];
 }
 
@@ -134,9 +134,9 @@ constexpr std::array<D3D12_STENCIL_OP, (size_t)StencilOp::MAX_NUM> g_StencilOps 
     D3D12_STENCIL_OP_INCR,     // INCREMENT_AND_WRAP
     D3D12_STENCIL_OP_DECR      // DECREMENT_AND_WRAP
 };
-NRI_VALIDATE_ARRAY(g_StencilOps);
+OPENRHI_VALIDATE_ARRAY(g_StencilOps);
 
-D3D12_STENCIL_OP nri::GetStencilOp(StencilOp stencilFunc) {
+D3D12_STENCIL_OP openrhi::GetStencilOp(StencilOp stencilFunc) {
     return g_StencilOps[(size_t)stencilFunc];
 }
 
@@ -158,9 +158,9 @@ constexpr std::array<D3D12_LOGIC_OP, (size_t)LogicOp::MAX_NUM> g_LogicOps = {
     D3D12_LOGIC_OP_NAND,          // NAND
     D3D12_LOGIC_OP_SET            // SET
 };
-NRI_VALIDATE_ARRAY(g_LogicOps);
+OPENRHI_VALIDATE_ARRAY(g_LogicOps);
 
-D3D12_LOGIC_OP nri::GetLogicOp(LogicOp logicOp) {
+D3D12_LOGIC_OP openrhi::GetLogicOp(LogicOp logicOp) {
     return g_LogicOps[(size_t)logicOp];
 }
 
@@ -177,7 +177,7 @@ constexpr std::array<D3D12_BLEND, (size_t)BlendFactor::MAX_NUM> g_BlendFactors =
     D3D12_BLEND_INV_DEST_ALPHA,   // ONE_MINUS_DST_ALPHA
     D3D12_BLEND_BLEND_FACTOR,     // CONSTANT_COLOR
     D3D12_BLEND_INV_BLEND_FACTOR, // ONE_MINUS_CONSTANT_COLOR
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     D3D12_BLEND_ALPHA_FACTOR,     // CONSTANT_ALPHA
     D3D12_BLEND_INV_ALPHA_FACTOR, // ONE_MINUS_CONSTANT_ALPHA
 #else
@@ -191,10 +191,10 @@ constexpr std::array<D3D12_BLEND, (size_t)BlendFactor::MAX_NUM> g_BlendFactors =
     D3D12_BLEND_SRC1_ALPHA,     // SRC1_ALPHA
     D3D12_BLEND_INV_SRC1_ALPHA  // ONE_MINUS_SRC1_ALPHA
 };
-NRI_VALIDATE_ARRAY(g_BlendFactors);
+OPENRHI_VALIDATE_ARRAY(g_BlendFactors);
 
-D3D12_BLEND nri::GetBlend(BlendFactor blendFactor, bool isAlphaBlend) {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+D3D12_BLEND openrhi::GetBlend(BlendFactor blendFactor, bool isAlphaBlend) {
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     if (isAlphaBlend && blendFactor == BlendFactor::CONSTANT_ALPHA)
         return D3D12_BLEND_BLEND_FACTOR;
     if (isAlphaBlend && blendFactor == BlendFactor::ONE_MINUS_CONSTANT_ALPHA)
@@ -213,13 +213,13 @@ constexpr std::array<D3D12_BLEND_OP, (size_t)BlendOp::MAX_NUM> g_BlendOps = {
     D3D12_BLEND_OP_MIN,          // MIN
     D3D12_BLEND_OP_MAX           // MAX
 };
-NRI_VALIDATE_ARRAY(g_BlendOps);
+OPENRHI_VALIDATE_ARRAY(g_BlendOps);
 
-D3D12_BLEND_OP nri::GetBlendOp(BlendOp blendFunc) {
+D3D12_BLEND_OP openrhi::GetBlendOp(BlendOp blendFunc) {
     return g_BlendOps[(size_t)blendFunc];
 }
 
-D3D12_TEXTURE_ADDRESS_MODE nri::GetAddressMode(AddressMode addressMode) {
+D3D12_TEXTURE_ADDRESS_MODE openrhi::GetAddressMode(AddressMode addressMode) {
     return (D3D12_TEXTURE_ADDRESS_MODE)(D3D12_TEXTURE_ADDRESS_MODE_WRAP + (uint32_t)addressMode);
 }
 
@@ -232,9 +232,9 @@ constexpr std::array<D3D12_SHADING_RATE, (size_t)ShadingRate::MAX_NUM> g_Shading
     D3D12_SHADING_RATE_4X2, // FRAGMENT_SIZE_4X2,
     D3D12_SHADING_RATE_4X4, // FRAGMENT_SIZE_4X4
 };
-NRI_VALIDATE_ARRAY(g_ShadingRates);
+OPENRHI_VALIDATE_ARRAY(g_ShadingRates);
 
-D3D12_SHADING_RATE nri::GetShadingRate(ShadingRate shadingRate) {
+D3D12_SHADING_RATE openrhi::GetShadingRate(ShadingRate shadingRate) {
     return g_ShadingRates[(size_t)shadingRate];
 }
 
@@ -245,13 +245,13 @@ constexpr std::array<D3D12_SHADING_RATE_COMBINER, (size_t)ShadingRateCombiner::M
     D3D12_SHADING_RATE_COMBINER_MAX,         // MAX,
     D3D12_SHADING_RATE_COMBINER_SUM,         // SUM,
 };
-NRI_VALIDATE_ARRAY(g_ShadingRateCombiners);
+OPENRHI_VALIDATE_ARRAY(g_ShadingRateCombiners);
 
-D3D12_SHADING_RATE_COMBINER nri::GetShadingRateCombiner(ShadingRateCombiner shadingRateCombiner) {
+D3D12_SHADING_RATE_COMBINER openrhi::GetShadingRateCombiner(ShadingRateCombiner shadingRateCombiner) {
     return g_ShadingRateCombiners[(size_t)shadingRateCombiner];
 }
 
-D3D12_FILTER nri::GetFilter(const SamplerDesc& samplerDesc) {
+D3D12_FILTER openrhi::GetFilter(const SamplerDesc& samplerDesc) {
     bool anisotropy = samplerDesc.anisotropy > 1 ? true : false;
     bool comparison = samplerDesc.compareOp != CompareOp::NONE;
 
@@ -277,22 +277,22 @@ D3D12_FILTER nri::GetFilter(const SamplerDesc& samplerDesc) {
     return (D3D12_FILTER)filter;
 }
 
-UINT8 nri::GetRenderTargetWriteMask(ColorWriteBits colorWriteMask) {
+UINT8 openrhi::GetRenderTargetWriteMask(ColorWriteBits colorWriteMask) {
     return colorWriteMask & ColorWriteBits::RGBA;
 }
 
-D3D12_DESCRIPTOR_HEAP_TYPE nri::GetDescriptorHeapType(DescriptorType descriptorType) {
+D3D12_DESCRIPTOR_HEAP_TYPE openrhi::GetDescriptorHeapType(DescriptorType descriptorType) {
     return descriptorType == DescriptorType::SAMPLER ? D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER : D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 }
 
-D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE nri::GetAccelerationStructureType(AccelerationStructureType accelerationStructureType) {
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE openrhi::GetAccelerationStructureType(AccelerationStructureType accelerationStructureType) {
     static_assert(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL == (uint32_t)AccelerationStructureType::TOP_LEVEL, "Enum mismatch");
     static_assert(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL == (uint32_t)AccelerationStructureType::BOTTOM_LEVEL, "Enum mismatch");
 
     return (D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE)accelerationStructureType;
 }
 
-D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS nri::GetAccelerationStructureFlags(AccelerationStructureBits accelerationStructureBits) {
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS openrhi::GetAccelerationStructureFlags(AccelerationStructureBits accelerationStructureBits) {
     uint32_t flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
 
     if (accelerationStructureBits & AccelerationStructureBits::ALLOW_UPDATE)
@@ -301,7 +301,7 @@ D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS nri::GetAccelerationStructur
     if (accelerationStructureBits & AccelerationStructureBits::ALLOW_COMPACTION)
         flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;
 
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
     if (accelerationStructureBits & AccelerationStructureBits::ALLOW_DATA_ACCESS)
         flags |= NVAPI_D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_DATA_ACCESS_EX;
 
@@ -324,7 +324,7 @@ D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS nri::GetAccelerationStructur
     return (D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS)flags;
 }
 
-D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS nri::GetMicromapFlags(MicromapBits micromapBits) {
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS openrhi::GetMicromapFlags(MicromapBits micromapBits) {
     uint32_t flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
 
     if (micromapBits & MicromapBits::ALLOW_COMPACTION)
@@ -339,32 +339,32 @@ D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS nri::GetMicromapFlags(Microm
     return (D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS)flags;
 }
 
-D3D12_RAYTRACING_GEOMETRY_TYPE nri::GetGeometryType(BottomLevelGeometryType geometryType) {
+D3D12_RAYTRACING_GEOMETRY_TYPE openrhi::GetGeometryType(BottomLevelGeometryType geometryType) {
     static_assert(D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES == (uint32_t)BottomLevelGeometryType::TRIANGLES, "Enum mismatch");
     static_assert(D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS == (uint32_t)BottomLevelGeometryType::AABBS, "Enum mismatch");
 
     return (D3D12_RAYTRACING_GEOMETRY_TYPE)geometryType;
 }
 
-D3D12_RAYTRACING_GEOMETRY_FLAGS nri::GetGeometryFlags(BottomLevelGeometryBits bottomLevelGeometryBits) {
+D3D12_RAYTRACING_GEOMETRY_FLAGS openrhi::GetGeometryFlags(BottomLevelGeometryBits bottomLevelGeometryBits) {
     static_assert(D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE == (uint32_t)BottomLevelGeometryBits::OPAQUE_GEOMETRY, "Enum mismatch");
     static_assert(D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION == (uint32_t)BottomLevelGeometryBits::NO_DUPLICATE_ANY_HIT_INVOCATION, "Enum mismatch");
 
     return (D3D12_RAYTRACING_GEOMETRY_FLAGS)bottomLevelGeometryBits;
 }
 
-D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE nri::GetCopyMode(CopyMode copyMode) {
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE openrhi::GetCopyMode(CopyMode copyMode) {
     static_assert(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_CLONE == (uint32_t)CopyMode::CLONE, "Enum mismatch");
     static_assert(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT == (uint32_t)CopyMode::COMPACT, "Enum mismatch");
 
     return (D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE)copyMode;
 }
 
-uint64_t nri::GetMemorySizeD3D12(const MemoryD3D12Desc& memoryD3D12Desc) {
+uint64_t openrhi::GetMemorySizeD3D12(const MemoryD3D12Desc& memoryD3D12Desc) {
     return memoryD3D12Desc.d3d12Heap->GetDesc().SizeInBytes;
 }
 
-D3D12_RESIDENCY_PRIORITY nri::ConvertPriority(float priority) {
+D3D12_RESIDENCY_PRIORITY openrhi::ConvertPriority(float priority) {
     if (priority == 0.0f)
         return (D3D12_RESIDENCY_PRIORITY)0;
 
@@ -398,7 +398,7 @@ D3D12_RESIDENCY_PRIORITY nri::ConvertPriority(float priority) {
     return (D3D12_RESIDENCY_PRIORITY)result;
 }
 
-bool nri::GetTextureDesc(const TextureD3D12Desc& textureD3D12Desc, TextureDesc& textureDesc) {
+bool openrhi::GetTextureDesc(const TextureD3D12Desc& textureD3D12Desc, TextureDesc& textureDesc) {
     textureDesc = {};
 
     ID3D12Resource* resource = textureD3D12Desc.d3d12Resource;
@@ -410,7 +410,7 @@ bool nri::GetTextureDesc(const TextureD3D12Desc& textureD3D12Desc, TextureDesc& 
         return false;
 
     textureDesc.type = (TextureType)(desc.Dimension - D3D12_RESOURCE_DIMENSION_TEXTURE1D);
-    textureDesc.format = DXGIFormatToNRIFormat(desc.Format);
+    textureDesc.format = DXGIFormatToOpenRHIFormat(desc.Format);
     textureDesc.width = (Dim_t)desc.Width;
     textureDesc.height = (Dim_t)desc.Height;
     textureDesc.depth = textureDesc.type == TextureType::TEXTURE_3D ? (Dim_t)desc.DepthOrArraySize : 1;
@@ -433,12 +433,12 @@ bool nri::GetTextureDesc(const TextureD3D12Desc& textureD3D12Desc, TextureDesc& 
         textureDesc.usage |= TextureUsageBits::VIDEO_ENCODE | TextureUsageBits::VIDEO_REFERENCE_ONLY;
 
     if (textureD3D12Desc.format)
-        textureDesc.format = DXGIFormatToNRIFormat(textureD3D12Desc.format);
+        textureDesc.format = DXGIFormatToOpenRHIFormat(textureD3D12Desc.format);
 
     return true;
 }
 
-bool nri::GetBufferDesc(const BufferD3D12Desc& bufferD3D12Desc, BufferDesc& bufferDesc) {
+bool openrhi::GetBufferDesc(const BufferD3D12Desc& bufferD3D12Desc, BufferDesc& bufferDesc) {
     bufferDesc = {};
 
     ID3D12Resource* resource = bufferD3D12Desc.d3d12Resource;
@@ -463,7 +463,7 @@ bool nri::GetBufferDesc(const BufferD3D12Desc& bufferD3D12Desc, BufferDesc& buff
     return true;
 }
 
-void nri::ConvertBottomLevelGeometries(const BottomLevelGeometryDesc* geometries, uint32_t geometryNum,
+void openrhi::ConvertBottomLevelGeometries(const BottomLevelGeometryDesc* geometries, uint32_t geometryNum,
     D3D12_RAYTRACING_GEOMETRY_DESC* geometryDescs,
     D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC* triangleDescs,
     D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC* micromapDescs) {
@@ -481,7 +481,7 @@ void nri::ConvertBottomLevelGeometries(const BottomLevelGeometryDesc* geometries
             const BottomLevelTrianglesDesc& triangles = in.triangles;
             D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC* outTriangles = &out.Triangles;
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
             if (in.triangles.micromap) {
                 const BottomLevelTrianglesMicromapDesc& micromapDesc = *in.triangles.micromap;
 

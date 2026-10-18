@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct VideoSessionVal final : public ObjectVal {
     VideoSessionVal(DeviceVal& device, VideoSession* impl, const VideoSessionDesc& desc, const VideoCapabilities& capabilities);
@@ -16,4 +16,4 @@ private:
     VideoSessionDesc m_Desc = {};
     VideoCapabilities m_Capabilities = {};
 };
-} // namespace nri
+} // namespace openrhi

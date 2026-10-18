@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 /*
 TODO: inheritance is a bit tricky:
@@ -10,16 +10,16 @@ TODO: inheritance is a bit tricky:
 - "Device => DeviceBase => DebugNameBaseVal"
 - "ObjectVal => DebugNameBaseVal"
 Why?
-- validation objects should always have names (they ignore "NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS" state)
-- non-validation objects should get "-8" bytes to their sizes if "NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS = 0" (-1 virtual function)
+- validation objects should always have names (they ignore "OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS" state)
+- non-validation objects should get "-8" bytes to their sizes if "OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS = 0" (-1 virtual function)
 Notes:
 - "DebugNameBaseVal" is used only inside validation
-- "DebugNameBase" is used only inside implementations (gets transformed to NOP if "NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS = 0")
-- implementations don't call "SetDebugName" from base classes if "NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS = 0"
-- "DebugNameBaseVal" can be cast to "DebugNameBase" if "NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS = 1" (it happens for device in implementations)
+- "DebugNameBase" is used only inside implementations (gets transformed to NOP if "OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS = 0")
+- implementations don't call "SetDebugName" from base classes if "OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS = 0"
+- "DebugNameBaseVal" can be cast to "DebugNameBase" if "OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS = 1" (it happens for device in implementations)
 */
-#if NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS
-#    define NRI_DEBUG_NAME_OVERRIDE override
+#if OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS
+#    define OPENRHI_DEBUG_NAME_OVERRIDE override
 
 struct DebugNameBase {
     virtual void SetDebugName(const char*) {
@@ -27,7 +27,7 @@ struct DebugNameBase {
 };
 
 #else
-#    define NRI_DEBUG_NAME_OVERRIDE
+#    define OPENRHI_DEBUG_NAME_OVERRIDE
 
 struct DebugNameBase {
 };
@@ -58,6 +58,9 @@ struct DeviceBase : public DebugNameBaseVal {
     inline const AllocationCallbacks& GetAllocationCallbacks() const {
         return m_AllocationCallbacks;
     }
+
+    inline const DeviceProfileDesc& GetDeviceProfile() const { return m_DeviceProfile; }
+    inline void InitializeDeviceProfile(const DeviceProfileDesc& profile) { m_DeviceProfile = profile; }
 
     void ReportMessage(Message messageType, Result result, const char* file, uint32_t line, const char* format, ...) const;
 
@@ -119,10 +122,6 @@ struct DeviceBase : public DebugNameBaseVal {
         return Result::UNSUPPORTED;
     }
 
-    virtual Result FillFunctionTable(WrapperD3D11Interface&) const {
-        return Result::UNSUPPORTED;
-    }
-
     virtual Result FillFunctionTable(WrapperD3D12Interface&) const {
         return Result::UNSUPPORTED;
     }
@@ -142,6 +141,9 @@ protected:
     CallbackInterface m_CallbackInterface = {};
     AllocationCallbacks m_AllocationCallbacks = {};
     StdAllocator<uint8_t> m_StdAllocator;
+
+private:
+    DeviceProfileDesc m_DeviceProfile = {};
 };
 
 template <typename T>
@@ -154,4 +156,4 @@ inline void Destroy(T* object) {
     }
 }
 
-} // namespace nri
+} // namespace openrhi

@@ -1,0 +1,50 @@
+Microsoft (R) COFF/PE Dumper Version 14.51.36260.0
+Copyright (C) Microsoft Corporation.  All rights reserved.
+
+
+Dump of file _Bin\Release\OpenRHI.dll
+
+File Type: DLL
+
+  Section contains the following exports for OpenRHI.dll
+
+    00000000 characteristics
+    FFFFFFFF time date stamp
+        0.00 version
+           1 ordinal base
+          22 number of functions
+          22 number of names
+
+    ordinal hint RVA      name
+
+          1    0 0002A3D0 openrhiAnnotation = openrhiAnnotation
+          2    1 0002A420 openrhiBeginAnnotation = openrhiBeginAnnotation
+          3    2 0002A470 openrhiConvertDXGIFormatToOpenRHI = openrhiConvertDXGIFormatToOpenRHI
+          4    3 0002A480 openrhiConvertOpenRHIFormatToDXGI = openrhiConvertOpenRHIFormatToDXGI
+          5    4 0002A490 openrhiConvertOpenRHIFormatToVK = ?GetAllocationListBegin@BlockMetadata_Linear@D3D12MA@@UEBA_KXZ (public: virtual unsigned __int64 __cdecl D3D12MA::BlockMetadata_Linear::GetAllocationListBegin(void)const )
+          6    5 0002A4A0 openrhiConvertVKFormatToOpenRHI = openrhiConvertVKFormatToOpenRHI
+          7    6 0002A4B0 openrhiCreateDevice = openrhiCreateDevice
+          8    7 0002AB10 openrhiCreateDeviceFromD3D12Device = openrhiCreateDeviceFromD3D12Device
+          9    8 0002AF20 openrhiDestroyDevice = openrhiDestroyDevice
+         10    9 0002AF30 openrhiEndAnnotation = openrhiEndAnnotation
+         11    A 0002AF40 openrhiEnumerateAdapters = openrhiEnumerateAdapters
+         12    B 0002B120 openrhiEvaluateDeviceSupport = openrhiEvaluateDeviceSupport
+         13    C 0002B130 openrhiFitPipelineLayoutSettingsIntoDeviceLimits = openrhiFitPipelineLayoutSettingsIntoDeviceLimits
+         14    D 00028B50 openrhiGetDeviceProfile = ?AccessNext@CommittedAllocationListItemTraits@D3D12MA@@SAAEAPEAVAllocation@2@PEAV32@@Z (public: static class D3D12MA::Allocation * & __cdecl D3D12MA::CommittedAllocationListItemTraits::AccessNext(class D3D12MA::Allocation *))
+         15    E 0002B360 openrhiGetFormatProps = openrhiGetFormatProps
+         16    F 0002B370 openrhiGetGraphicsAPIString = openrhiGetGraphicsAPIString
+         17   10 0002B3B0 openrhiGetInterface = openrhiGetInterface
+         18   11 0002B8F0 openrhiGetPlatformRequirements = openrhiGetPlatformRequirements
+         19   12 0002B940 openrhiQueryAdapterSupport = openrhiQueryAdapterSupport
+         20   13 0002BA20 openrhiReportDeviceLostInfo = openrhiReportDeviceLostInfo
+         21   14 0002BA30 openrhiReportLiveObjects = openrhiReportLiveObjects
+         22   15 0002BA90 openrhiSetThreadName = openrhiSetThreadName
+
+  Summary
+
+        3000 .data
+        E000 .pdata
+       42000 .rdata
+        1000 .reloc
+        1000 .rsrc
+       ED000 .text

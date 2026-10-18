@@ -2,7 +2,7 @@
 
 #include <cstdarg> // va_start, va_end
 
-#if (NRI_ENABLE_D3D11_SUPPORT || NRI_ENABLE_D3D12_SUPPORT)
+#if (OPENRHI_ENABLE_D3D12_SUPPORT)
 
 constexpr std::array<DxgiFormat, (size_t)Format::MAX_NUM> g_dxgiFormats = {{
     {DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_UNKNOWN},                            // UNKNOWN
@@ -115,7 +115,7 @@ constexpr std::array<DxgiFormat, (size_t)Format::MAX_NUM> g_dxgiFormats = {{
     {DXGI_FORMAT_R24G8_TYPELESS, DXGI_FORMAT_D24_UNORM_S8_UINT},           // D24_UNORM_S8_UINT
     {DXGI_FORMAT_R32G8X24_TYPELESS, DXGI_FORMAT_D32_FLOAT_S8X24_UINT},     // D32_SFLOAT_S8_UINT
 }};
-NRI_VALIDATE_ARRAY_BY_FIELD(g_dxgiFormats, typeless);
+OPENRHI_VALIDATE_ARRAY_BY_FIELD(g_dxgiFormats, typeless);
 
 // Compute the overlay area of two rectangles, A and B:
 //  (ax1, ay1) = left-top coordinates of A; (ax2, ay2) = right-bottom coordinates of A
@@ -250,11 +250,11 @@ static float GetSdrLuminance(void* hMonitor) {
     return nits;
 }
 
-const DxgiFormat& nri::GetDxgiFormat(Format format) {
+const DxgiFormat& openrhi::GetDxgiFormat(Format format) {
     return g_dxgiFormats[(size_t)format];
 }
 
-Result nri::GetResultFromHRESULT(long result) {
+Result openrhi::GetResultFromHRESULT(long result) {
     if (SUCCEEDED(result))
         return Result::SUCCESS;
 
@@ -292,7 +292,7 @@ Result nri::GetResultFromHRESULT(long result) {
     }
 }
 
-uint32_t nri::NRIFormatToDXGIFormat(Format format) {
+uint32_t openrhi::ConvertFormatToDXGI(Format format) {
     return g_dxgiFormats[(size_t)format].typed;
 }
 
@@ -404,7 +404,7 @@ Result DisplayDescHelper::GetDisplayDesc(void* hwnd, DisplayDesc& displayDesc) {
     return Result::SUCCESS;
 }
 
-bool nri::HasOutput() {
+bool openrhi::HasOutput() {
     ComPtr<IDXGIFactory> factory;
     HRESULT hr = CreateDXGIFactory(IID_PPV_ARGS(&factory));
     if (FAILED(hr))
@@ -428,7 +428,7 @@ bool nri::HasOutput() {
     return false;
 }
 
-Result nri::QueryVideoMemoryInfoDXGI(uint64_t luid, MemoryLocation memoryLocation, VideoMemoryInfo& videoMemoryInfo) {
+Result openrhi::QueryVideoMemoryInfoDXGI(uint64_t luid, MemoryLocation memoryLocation, VideoMemoryInfo& videoMemoryInfo) {
     videoMemoryInfo = {};
 
     ComPtr<IDXGIFactory4> dxgifactory;
@@ -453,7 +453,7 @@ Result nri::QueryVideoMemoryInfoDXGI(uint64_t luid, MemoryLocation memoryLocatio
 
 #else
 
-uint32_t NRIFormatToDXGIFormat(Format) {
+uint32_t ConvertFormatToDXGI(Format) {
     return 0;
 }
 
@@ -611,18 +611,18 @@ constexpr std::array<FormatProps, (size_t)Format::MAX_NUM> g_formatProps = {{
     {"D24_UNORM_S8_UINT",       Format::D24_UNORM_S8_UINT,         24, 8,  0,  0,  4,  1,  1,  _, _, X, _, _, _, X, X, _, _, X}, // D24_UNORM_S8_UINT
     {"D32_SFLOAT_S8_UINT",      Format::D32_SFLOAT_S8_UINT,        32, 8,  0,  0,  8,  1,  1,  _, _, X, _, X, _, X, _, X, _, X}, // D32_SFLOAT_S8_UINT
 }};
-NRI_VALIDATE_ARRAY_BY_FIELD(g_formatProps, name);
+OPENRHI_VALIDATE_ARRAY_BY_FIELD(g_formatProps, name);
 
 #undef _
 #undef X
 
 // clang-format on
 
-const FormatProps& nri::GetFormatProps(Format format) {
+const FormatProps& openrhi::GetFormatProps(Format format) {
     return g_formatProps[(size_t)format];
 }
 
-constexpr std::array<Format, 116> NRI_FORMAT_TABLE = {
+constexpr std::array<Format, 116> OPENRHI_FORMAT_TABLE = {
     Format::UNKNOWN,                // DXGI_FORMAT_UNKNOWN = 0
     Format::RGBA32_SFLOAT,          // DXGI_FORMAT_R32G32B32A32_TYPELESS = 1
     Format::RGBA32_SFLOAT,          // DXGI_FORMAT_R32G32B32A32_FLOAT = 2
@@ -741,12 +741,12 @@ constexpr std::array<Format, 116> NRI_FORMAT_TABLE = {
     Format::B4_G4_R4_A4_UNORM,      // DXGI_FORMAT_B4G4R4A4_UNORM = 115
 };
 
-Format nri::DXGIFormatToNRIFormat(uint32_t dxgiFormat) {
+Format openrhi::DXGIFormatToOpenRHIFormat(uint32_t dxgiFormat) {
     MaybeUnused(dxgiFormat);
 
-#if (NRI_ENABLE_D3D11_SUPPORT || NRI_ENABLE_D3D12_SUPPORT)
-    if (dxgiFormat < NRI_FORMAT_TABLE.size())
-        return NRI_FORMAT_TABLE[dxgiFormat];
+#if (OPENRHI_ENABLE_D3D12_SUPPORT)
+    if (dxgiFormat < OPENRHI_FORMAT_TABLE.size())
+        return OPENRHI_FORMAT_TABLE[dxgiFormat];
 #endif
 
     return Format::UNKNOWN;
@@ -886,10 +886,10 @@ constexpr std::array<Format, 131> VK_FORMAT_TABLE = {
     Format::D32_SFLOAT_S8_UINT,     // VK_FORMAT_D32_SFLOAT_S8_UINT = 130
 };
 
-Format nri::VKFormatToNRIFormat(uint32_t format) {
+Format openrhi::VKFormatToOpenRHIFormat(uint32_t format) {
     MaybeUnused(format);
 
-#if NRI_ENABLE_VK_SUPPORT
+#if OPENRHI_ENABLE_VK_SUPPORT
     if (format < VK_FORMAT_TABLE.size())
         return VK_FORMAT_TABLE[format];
     else if (format == VK_FORMAT_G8_B8R8_2PLANE_420_UNORM)
@@ -908,12 +908,12 @@ Format nri::VKFormatToNRIFormat(uint32_t format) {
 void DeviceBase::ReportMessage(Message messageType, Result result, const char* file, uint32_t line, const char* format, ...) const {
     // Report message
     const DeviceDesc& desc = GetDesc();
-    const char* graphicsAPIName = nriGetGraphicsAPIString(desc.graphicsAPI);
+    const char* graphicsAPIName = openrhiGetGraphicsAPIString(desc.graphicsAPI);
 
-    const char* temp = strrchr(file, NRI_FILE_SEPARATOR);
+    const char* temp = strrchr(file, OPENRHI_FILE_SEPARATOR);
     file = temp ? temp + 1 : file;
 
-    char buf[NRI_MAX_MESSAGE_LENGTH];
+    char buf[OPENRHI_MAX_MESSAGE_LENGTH];
     int32_t written = snprintf(buf, sizeof(buf), "%s::%s - ", graphicsAPIName, *desc.adapterDesc.name == '\0' ? "Unknown" : desc.adapterDesc.name);
 
     va_list argptr;
@@ -928,7 +928,7 @@ void DeviceBase::ReportMessage(Message messageType, Result result, const char* f
         m_CallbackInterface.AbortExecution(m_CallbackInterface.userArg);
 }
 
-void nri::ConvertCharToWchar(const char* in, wchar_t* out, size_t outLength) {
+void openrhi::ConvertCharToWchar(const char* in, wchar_t* out, size_t outLength) {
     if (outLength == 0)
         return;
 
@@ -938,7 +938,7 @@ void nri::ConvertCharToWchar(const char* in, wchar_t* out, size_t outLength) {
     *out = 0;
 }
 
-void nri::ConvertWcharToChar(const wchar_t* in, char* out, size_t outLength) {
+void openrhi::ConvertWcharToChar(const wchar_t* in, char* out, size_t outLength) {
     if (outLength == 0)
         return;
 

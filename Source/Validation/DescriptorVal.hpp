@@ -29,7 +29,7 @@ DescriptorVal::DescriptorVal(DeviceVal& device, Descriptor* descriptor, const Bu
             m_Type = DescriptorTypeExt::CONSTANT_BUFFER;
             break;
         default:
-            NRI_CHECK(false, "Unexpected 'bufferViewDesc.type'");
+            OPENRHI_CHECK(false, "Unexpected 'bufferViewDesc.type'");
             break;
     }
 }
@@ -62,7 +62,7 @@ DescriptorVal::DescriptorVal(DeviceVal& device, Descriptor* descriptor, const Te
             m_Type = DescriptorTypeExt::SHADING_RATE_ATTACHMENT;
             break;
         default:
-            NRI_CHECK(false, "Unexpected 'textureViewDesc.type'");
+            OPENRHI_CHECK(false, "Unexpected 'textureViewDesc.type'");
             break;
     }
 }

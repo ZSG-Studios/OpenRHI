@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct TexViewDescVK {
     const TextureVK* texture;
@@ -100,7 +100,7 @@ struct DescriptorVK final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     DeviceVK& m_Device;
@@ -125,4 +125,4 @@ private:
     TextureView m_TextureView = TextureView::TEXTURE;
 };
 
-} // namespace nri
+} // namespace openrhi

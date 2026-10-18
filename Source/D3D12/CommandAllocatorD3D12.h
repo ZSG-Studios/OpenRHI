@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct CommandAllocatorD3D12 final : public DebugNameBase {
     inline CommandAllocatorD3D12(DeviceD3D12& device)
@@ -26,12 +26,12 @@ struct CommandAllocatorD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(m_CommandAllocator, name);
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(m_CommandAllocator, name);
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result CreateCommandBuffer(CommandBuffer*& commandBuffer);
@@ -44,4 +44,4 @@ private:
     Lock m_Lock;
 };
 
-} // namespace nri
+} // namespace openrhi

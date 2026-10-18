@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct QueueVK final : public DebugNameBase {
     inline QueueVK(DeviceVK& device)
@@ -35,10 +35,10 @@ struct QueueVK final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     void BeginAnnotation(const char* name, uint32_t bgra);
@@ -57,4 +57,4 @@ private:
     Lock m_OwnLock; // storage used when this wrapper owns the lock
 };
 
-} // namespace nri
+} // namespace openrhi

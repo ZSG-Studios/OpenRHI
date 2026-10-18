@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct RenderPassAttachmentDesc {
     bool operator==(const RenderPassAttachmentDesc& other) const {
@@ -237,7 +237,7 @@ struct DeviceVK final : public DeviceBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
     // DeviceBase
@@ -261,12 +261,12 @@ struct DeviceVK final : public DeviceBase {
     Result FillFunctionTable(UpscalerInterface& table) const override;
     Result FillFunctionTable(WrapperVKInterface& table) const override;
 
-#if NRI_ENABLE_IMGUI_EXTENSION
+#if OPENRHI_ENABLE_IMGUI_EXTENSION
     Result FillFunctionTable(ImguiInterface& table) const override;
 #endif
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     void CopyDescriptorRanges(const CopyDescriptorRangeDesc* copyDescriptorRangeDescs, uint32_t copyDescriptorRangeDescNum);
@@ -338,4 +338,4 @@ private:
     Lock m_DeviceLostLock;
 };
 
-} // namespace nri
+} // namespace openrhi

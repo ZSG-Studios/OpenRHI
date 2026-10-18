@@ -2,11 +2,11 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct HelperDataUpload {
-    inline HelperDataUpload(const CoreInterface& NRI, Device& device, Queue& queue)
-        : m_iCore(NRI)
+    inline HelperDataUpload(const CoreInterface& OpenRHI, Device& device, Queue& queue)
+        : m_iCore(OpenRHI)
         , m_Device(device)
         , m_Queue(queue) {
     }
@@ -35,7 +35,7 @@ private:
 };
 
 struct HelperDeviceMemoryAllocator {
-    HelperDeviceMemoryAllocator(const CoreInterface& NRI, Device& device);
+    HelperDeviceMemoryAllocator(const CoreInterface& OpenRHI, Device& device);
 
     uint32_t CalculateAllocationNumber(const ResourceGroupDesc& resourceGroupDesc);
     Result AllocateAndBindMemory(const ResourceGroupDesc& resourceGroupDesc, Memory** allocations);
@@ -70,4 +70,4 @@ private:
     Vector<BindTextureMemoryDesc> m_TextureBindingDescs;
 };
 
-} // namespace nri
+} // namespace openrhi

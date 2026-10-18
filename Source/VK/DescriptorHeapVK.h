@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorHeapVK final : public DebugNameBase {
     inline DescriptorHeapVK(DeviceVK& device)
@@ -21,7 +21,7 @@ struct DescriptorHeapVK final : public DebugNameBase {
     Result WriteSamplerDescriptors(const WriteSamplerDescriptorsDesc* writeDescs, uint32_t writeDescNum);
     void Bind(VkCommandBuffer commandBuffer) const;
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     Result CreateHeap(BufferVK*& heap, VkBindHeapInfoEXT& bindInfo, uint64_t descriptorNum, uint64_t descriptorSize, uint64_t reservedSize, uint64_t alignment);
@@ -41,4 +41,4 @@ private:
     Lock m_SamplerLock;
 };
 
-} // namespace nri
+} // namespace openrhi

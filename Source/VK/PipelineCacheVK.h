@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct PipelineCacheVK final : public DebugNameBase {
     inline PipelineCacheVK(DeviceVK& device)
@@ -23,10 +23,10 @@ struct PipelineCacheVK final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result Create(const PipelineCacheDesc& pipelineCacheDesc);
@@ -37,4 +37,4 @@ private:
     VkPipelineCache m_Handle = VK_NULL_HANDLE;
 };
 
-} // namespace nri
+} // namespace openrhi

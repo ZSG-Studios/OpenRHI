@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct TextureMetal final : public DebugNameBase {
     inline TextureMetal(DeviceMetal& device) : m_Device(device) {
@@ -33,7 +33,7 @@ struct TextureMetal final : public DebugNameBase {
     void GetMemoryDesc(MemoryLocation location, MemoryDesc& memoryDesc) const;
     void SetDrawableTexture(MTL::Texture* texture, const TextureDesc& desc);
     MTL::Texture* GetDrawableView(MTL::PixelFormat format); // the current drawable texture, viewed as "format"
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     struct DrawableView {
@@ -58,4 +58,4 @@ private:
     bool m_IsDrawable = false;
 };
 
-} // namespace nri
+} // namespace openrhi

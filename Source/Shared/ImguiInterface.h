@@ -2,9 +2,9 @@
 
 #pragma once
 
-#if NRI_ENABLE_IMGUI_EXTENSION
+#if OPENRHI_ENABLE_IMGUI_EXTENSION
 
-namespace nri {
+namespace openrhi {
 
 struct ImguiPipeline {
     Pipeline* pipeline = nullptr;
@@ -18,9 +18,9 @@ struct ImguiTexture {
 };
 
 struct ImguiImpl final : public DebugNameBase {
-    inline ImguiImpl(Device& device, const CoreInterface& NRI)
+    inline ImguiImpl(Device& device, const CoreInterface& OpenRHI)
         : m_Device(device)
-        , m_iCore(NRI)
+        , m_iCore(OpenRHI)
         , m_Textures(((DeviceBase&)device).GetStdAllocator())
         , m_Pipelines(((DeviceBase&)device).GetStdAllocator())
         , m_DescriptorSets1(((DeviceBase&)device).GetStdAllocator()) {
@@ -40,7 +40,7 @@ struct ImguiImpl final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
         m_iCore.SetDebugName(m_Sampler, name);
         m_iCore.SetDebugName(m_DescriptorPool, name);
         m_iCore.SetDebugName(m_PipelineLayout, name);
@@ -65,6 +65,6 @@ private:
     static Lock s_TextureLock;
 };
 
-} // namespace nri
+} // namespace openrhi
 
 #endif

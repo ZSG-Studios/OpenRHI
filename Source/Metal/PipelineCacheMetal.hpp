@@ -4,23 +4,17 @@
 #include <unistd.h>
 
 // "newArchiveWithURL" can crash on malformed data, thus data without a valid header is rejected as "OUT_OF_DATE".
-// Layout: header, archives ("uint64_t" size followed by the archive), converted shaders ("ConvertedShaderEntryMetal" followed by the container)
+// Layout: header, archives ("uint64_t" size followed by the archive)
 struct PipelineCacheHeaderMetal {
     uint32_t magic;
     uint32_t version;
     uint64_t archiveSize; // all archives
-    uint64_t convertedShaderSize;
-    uint64_t hash; // of the following data
+    uint64_t hash;        // of the following data
 };
 
-struct ConvertedShaderEntryMetal {
-    uint64_t key;
-    uint64_t size;
-};
-
-constexpr uint32_t PIPELINE_CACHE_MAGIC = 0x4D34524E; // "NR4M"
-constexpr uint32_t PIPELINE_CACHE_VERSION = 3;
-constexpr char TEMP_FILE_NAME[] = "nri-cache-XXXXXX";
+constexpr uint32_t PIPELINE_CACHE_MAGIC = 0x4D34524F; // "OR4M"
+constexpr uint32_t PIPELINE_CACHE_VERSION = 4;
+constexpr char TEMP_FILE_NAME[] = "openrhi-cache-XXXXXX";
 
 // Reserves a unique file in the user's temporary directory
 static inline bool CreateTempFile(char (&path)[PATH_MAX], const void* data, size_t size) {
@@ -54,47 +48,6 @@ static inline bool CreateTempFile(char (&path)[PATH_MAX], const void* data, size
     return !fclose(file) && written;
 }
 
-// Cached containers come from "PipelineMetal::ConvertShader", but the blob is untrusted
-static inline bool IsConvertedShaderValid(const uint8_t* container, uint64_t size) {
-    ConvertedShaderHeaderMetal header = {};
-
-    if (size < sizeof(header))
-        return false;
-
-    memcpy(&header, container, sizeof(header));
-
-    if (header.magic != CONVERTED_SHADER_MAGIC || header.version != CONVERTED_SHADER_VERSION || header.size != size)
-        return false;
-
-    const bool isThreadGroupStage = header.stage == StageBits::COMPUTE_SHADER || header.stage == StageBits::MESH_SHADER || header.stage == StageBits::TASK_SHADER;
-
-    if (!isThreadGroupStage && header.stage != StageBits::VERTEX_SHADER && header.stage != StageBits::FRAGMENT_SHADER)
-        return false;
-
-    if (isThreadGroupStage && (!header.threadGroupSize[0] || !header.threadGroupSize[1] || !header.threadGroupSize[2]))
-        return false;
-
-    auto isStringValid = [&](uint32_t offset) {
-        return offset < size && memchr(container + offset, 0, size - offset) != nullptr;
-    };
-
-    if (!isStringValid(header.entryPointOffset) || !isStringValid(header.functionNameOffset))
-        return false;
-
-    if (header.vertexInputOffset % sizeof(uint32_t) || (header.vertexInputOffset + (uint64_t)header.vertexInputNum * sizeof(ConvertedVertexInputMetal)) > size)
-        return false;
-
-    for (uint32_t i = 0; i < header.vertexInputNum; i++) {
-        ConvertedVertexInputMetal input = {};
-        memcpy(&input, container + header.vertexInputOffset + i * sizeof(input), sizeof(input));
-
-        if (!isStringValid(input.nameOffset) || input.attributeIndex >= CONVERTED_VERTEX_ATTRIBUTE_NUM)
-            return false;
-    }
-
-    return header.metallibSize && (header.metallibOffset + (uint64_t)header.metallibSize) <= size;
-}
-
 static inline NS::URL* GetFileUrl(const char* path) {
     return NS::URL::fileURLWithPath(NS::String::string(path, NS::UTF8StringEncoding));
 }
@@ -111,7 +64,7 @@ static inline void ReleasePendingPipeline(const PendingPipelineMetal& pendingPip
 }
 
 PipelineCacheMetal::PipelineCacheMetal(DeviceMetal& device)
-    : m_Device(device), m_Archives(device.GetStdAllocator()), m_ArchiveFiles(device.GetStdAllocator()), m_PendingPipelines(device.GetStdAllocator()), m_ConvertedShaders(device.GetStdAllocator()) {
+    : m_Device(device), m_Archives(device.GetStdAllocator()), m_ArchiveFiles(device.GetStdAllocator()), m_PendingPipelines(device.GetStdAllocator()) {
 }
 
 PipelineCacheMetal::~PipelineCacheMetal() {
@@ -150,7 +103,7 @@ Result PipelineCacheMetal::Create(const PipelineCacheDesc& desc) {
     compilerDesc->release();
 
     if (!m_Compiler) {
-        NRI_REPORT_ERROR(&m_Device, "newCompiler() failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
+        OPENRHI_REPORT_ERROR(&m_Device, "newCompiler() failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
 
         return Result::FAILURE;
     }
@@ -168,7 +121,7 @@ Result PipelineCacheMetal::Create(const PipelineCacheDesc& desc) {
     const uint8_t* archives = (const uint8_t*)desc.data + sizeof(header);
     const size_t dataSize = desc.size - sizeof(header);
 
-    if (header.magic != PIPELINE_CACHE_MAGIC || header.version != PIPELINE_CACHE_VERSION || header.archiveSize > dataSize || header.convertedShaderSize != (dataSize - header.archiveSize) || header.hash != Fnv1a64(FNV_INIT, archives, dataSize))
+    if (header.magic != PIPELINE_CACHE_MAGIC || header.version != PIPELINE_CACHE_VERSION || header.archiveSize != dataSize || header.hash != Fnv1a64(FNV_INIT, archives, dataSize))
         return Result::OUT_OF_DATE;
 
     for (size_t offset = 0; offset < header.archiveSize;) {
@@ -184,26 +137,6 @@ Result PipelineCacheMetal::Create(const PipelineCacheDesc& desc) {
             return Result::OUT_OF_DATE;
 
         offset += archiveSize;
-    }
-
-    const uint8_t* convertedShaders = archives + header.archiveSize;
-
-    for (size_t offset = 0; offset < header.convertedShaderSize;) {
-        ConvertedShaderEntryMetal entry = {};
-
-        if (header.convertedShaderSize - offset < sizeof(entry))
-            return Result::OUT_OF_DATE;
-
-        memcpy(&entry, convertedShaders + offset, sizeof(entry));
-        offset += sizeof(entry);
-
-        const uint8_t* container = convertedShaders + offset;
-
-        if (entry.size > (header.convertedShaderSize - offset) || !IsConvertedShaderValid(container, entry.size))
-            return Result::OUT_OF_DATE;
-
-        m_ConvertedShaders.emplace(entry.key, Vector<uint8_t>(container, container + entry.size, m_Device.GetStdAllocator()));
-        offset += entry.size;
     }
 
     for (size_t offset = 0; offset < header.archiveSize;) {
@@ -222,11 +155,11 @@ Result PipelineCacheMetal::Create(const PipelineCacheDesc& desc) {
             return Result::FAILURE;
         }
 
-        // Incompatible archives (i.e. from another OS version) are reported via "error" and dropped. Converted shaders are still usable
+        // Incompatible archives (i.e. from another OS version) are reported via "error" and dropped
         MTL4::Archive* archive = m_Device.GetNativeObject()->newArchive(GetFileUrl(file.path), &error);
 
         if (!archive) {
-            NRI_REPORT_WARNING(&m_Device, "Pipeline cache archive is out of date: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
+            OPENRHI_REPORT_WARNING(&m_Device, "Pipeline cache archive is out of date: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
             unlink(file.path);
 
             continue;
@@ -281,33 +214,12 @@ bool PipelineCacheMetal::CapturePendingPipelines() const {
             pipeline->release();
             m_IsCaptured = true;
         } else // the pipeline is not cached
-            NRI_REPORT_WARNING(&m_Device, "Pipeline cache update failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
+            OPENRHI_REPORT_WARNING(&m_Device, "Pipeline cache update failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
 
         ReleasePendingPipeline(pendingPipeline);
     }
 
     return m_IsCaptured;
-}
-
-bool PipelineCacheMetal::FindConvertedShader(uint64_t key, const uint8_t*& data, size_t& size) const {
-    ExclusiveScope lock(m_ConvertedShaderLock);
-
-    const auto it = m_ConvertedShaders.find(key);
-
-    if (it == m_ConvertedShaders.end())
-        return false;
-
-    data = it->second.data();
-    size = it->second.size();
-
-    return true;
-}
-
-void PipelineCacheMetal::AddConvertedShader(uint64_t key, const uint8_t* data, size_t size) {
-    Vector<uint8_t> container(data, data + size, m_Device.GetStdAllocator());
-
-    ExclusiveScope lock(m_ConvertedShaderLock);
-    m_ConvertedShaders.emplace(key, std::move(container));
 }
 
 MTL::ComputePipelineState* PipelineCacheMetal::NewComputePipeline(const MTL4::ComputePipelineDescriptor* desc, const MTL4::PipelineStageDynamicLinkingDescriptor* linking, bool failOnMiss, NS::Error** error) {
@@ -343,7 +255,7 @@ MTL::RenderPipelineState* PipelineCacheMetal::NewRenderPipeline(const MTL4::Pipe
     return pipeline;
 }
 
-NRI_INLINE Result PipelineCacheMetal::GetData(void* dst, uint64_t& size) const {
+OPENRHI_INLINE Result PipelineCacheMetal::GetData(void* dst, uint64_t& size) const {
     ExclusiveScope lock(m_Lock);
 
     // "Flush" clears captured pipelines, thus each serialization is a new archive. The serializer refuses to serialize if nothing has been captured
@@ -358,7 +270,7 @@ NRI_INLINE Result PipelineCacheMetal::GetData(void* dst, uint64_t& size) const {
                 if (file.path[0])
                     unlink(file.path);
 
-                NRI_REPORT_ERROR(&m_Device, "Pipeline cache serialization failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
+                OPENRHI_REPORT_ERROR(&m_Device, "Pipeline cache serialization failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
 
                 return Result::FAILURE;
             }
@@ -379,29 +291,8 @@ NRI_INLINE Result PipelineCacheMetal::GetData(void* dst, uint64_t& size) const {
         archiveSize += sizeof(uint64_t) + (uint64_t)fileStat.st_size;
     }
 
-    // Converted shaders follow the archives
     uint8_t* archives = dst ? (uint8_t*)dst + sizeof(PipelineCacheHeaderMetal) : nullptr;
-    uint64_t convertedShaderSize = 0;
-    uint64_t dataSize = 0;
-    {
-        ExclusiveScope convertedShaderLock(m_ConvertedShaderLock);
-
-        for (const auto& it : m_ConvertedShaders)
-            convertedShaderSize += sizeof(ConvertedShaderEntryMetal) + it.second.size();
-
-        dataSize = (archiveSize || convertedShaderSize) ? sizeof(PipelineCacheHeaderMetal) + archiveSize + convertedShaderSize : 0;
-
-        if (archives && dataSize && size >= dataSize) {
-            uint8_t* convertedShaders = archives + archiveSize;
-
-            for (const auto& it : m_ConvertedShaders) {
-                const ConvertedShaderEntryMetal entry = {it.first, it.second.size()};
-                memcpy(convertedShaders, &entry, sizeof(entry));
-                memcpy(convertedShaders + sizeof(entry), it.second.data(), it.second.size());
-                convertedShaders += sizeof(entry) + it.second.size();
-            }
-        }
-    }
+    const uint64_t dataSize = archiveSize ? sizeof(PipelineCacheHeaderMetal) + archiveSize : 0;
 
     size_t offset = 0;
 
@@ -437,7 +328,6 @@ NRI_INLINE Result PipelineCacheMetal::GetData(void* dst, uint64_t& size) const {
             header.magic = PIPELINE_CACHE_MAGIC;
             header.version = PIPELINE_CACHE_VERSION;
             header.archiveSize = archiveSize;
-            header.convertedShaderSize = convertedShaderSize;
             header.hash = Fnv1a64(FNV_INIT, archives, (size_t)(dataSize - sizeof(header)));
 
             memcpy(dst, &header, sizeof(header));
@@ -453,7 +343,7 @@ DeviceMetal& PipelineCacheMetal::GetDevice() const {
     return m_Device;
 }
 
-NRI_INLINE void PipelineCacheMetal::SetDebugName(const char* name) {
+OPENRHI_INLINE void PipelineCacheMetal::SetDebugName(const char* name) {
     // The compiler label is immutable, archive ones aren't
     NS::String* label = NS::String::alloc()->init(name, NS::UTF8StringEncoding);
 

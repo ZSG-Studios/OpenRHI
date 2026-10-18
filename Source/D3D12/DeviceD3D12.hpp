@@ -2,7 +2,7 @@
 
 static uint8_t QueryLatestInterface(ComPtr<ID3D12Device>& in, ComPtr<ID3D12DeviceBest>& out) {
     static const IID versions[] = {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         __uuidof(ID3D12Device15),
         __uuidof(ID3D12Device14),
         __uuidof(ID3D12Device13),
@@ -31,13 +31,13 @@ static uint8_t QueryLatestInterface(ComPtr<ID3D12Device>& in, ComPtr<ID3D12Devic
             break;
     }
 
-    NRI_CHECK(n > i, "Unexpected");
+    OPENRHI_CHECK(n > i, "Unexpected");
 
     return n - i - 1;
 }
 
 static inline uint64_t HashRootSignatureAndStride(ID3D12RootSignature* rootSignature, uint32_t stride) {
-    NRI_CHECK(stride < 4096, "Only stride < 4096 supported by encoding");
+    OPENRHI_CHECK(stride < 4096, "Only stride < 4096 supported by encoding");
     return ((uint64_t)stride << 52ull) | ((uint64_t)rootSignature & ((1ull << 52) - 1));
 }
 
@@ -148,7 +148,7 @@ static const char* GetDredBreadcrumbOpName(D3D12_AUTO_BREADCRUMB_OP op) {
             return "EncodeFrame";
         case D3D12_AUTO_BREADCRUMB_OP_RESOLVEENCODEROUTPUTMETADATA:
             return "ResolveEncoderOutputMetadata";
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         case D3D12_AUTO_BREADCRUMB_OP_BARRIER:
             return "Barrier";
         case D3D12_AUTO_BREADCRUMB_OP_BEGIN_COMMAND_LIST:
@@ -185,7 +185,7 @@ static const char* GetDredObjectName(const char* ansiName, const wchar_t* wideNa
     return "<unnamed>";
 }
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 typedef ID3D12InfoQueue1 ID3D12InfoQueueBest;
 
 static void __stdcall MessageCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR message, void* context) {
@@ -207,7 +207,7 @@ static void __stdcall MessageCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MES
 typedef ID3D12InfoQueue ID3D12InfoQueueBest;
 #endif
 
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
 
 static void __stdcall NvapiMessageCallback(void* context, NVAPI_D3D12_RAYTRACING_VALIDATION_MESSAGE_SEVERITY severity, const char* messageCode, const char* message, const char* messageDetails) {
     Message messageType = Message::INFO;
@@ -450,14 +450,14 @@ DeviceD3D12::DeviceD3D12(const CallbackInterface& callbacks, const AllocationCal
     m_FreeDescriptors.resize(D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES, Vector<DescriptorHandle>(GetStdAllocator()));
 
     m_Desc.graphicsAPI = GraphicsAPI::D3D12;
-    m_Desc.nriVersion = NRI_VERSION;
+    m_Desc.openrhiVersion = OPENRHI_VERSION;
 }
 
 DeviceD3D12::~DeviceD3D12() {
     if (!m_Device)
         return;
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     ComPtr<ID3D12InfoQueueBest> pInfoQueue;
     HRESULT hr = m_Device->QueryInterface(&pInfoQueue);
     if (SUCCEEDED(hr))
@@ -472,12 +472,12 @@ DeviceD3D12::~DeviceD3D12() {
             Destroy<QueueD3D12>(queue);
     }
 
-#if NRI_ENABLE_AMDAGS
+#if OPENRHI_ENABLE_AMDAGS
     if (HasAmdExt() && !m_IsWrapped)
         m_AmdExt.DestroyDeviceD3D12(m_AmdExt.context, m_Device, nullptr);
 #endif
 
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
     if (HasNvExt() && m_CallbackHandle)
         NvAPI_D3D12_UnregisterRaytracingValidationMessageCallback(m_Device, m_CallbackHandle);
 #endif
@@ -499,11 +499,40 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
     { // Get adapter
         ComPtr<IDXGIFactory4> dxgiFactory;
         HRESULT hr = CreateDXGIFactory2(desc.enableGraphicsAPIValidation ? DXGI_CREATE_FACTORY_DEBUG : 0, IID_PPV_ARGS(&dxgiFactory));
-        NRI_RETURN_ON_BAD_HRESULT(this, hr, "CreateDXGIFactory2");
+        OPENRHI_RETURN_ON_BAD_HRESULT(this, hr, "CreateDXGIFactory2");
 
         LUID luid = *(LUID*)&desc.adapterDesc->uid.low;
         hr = dxgiFactory->EnumAdapterByLuid(luid, IID_PPV_ARGS(&m_Adapter));
-        NRI_RETURN_ON_BAD_HRESULT(this, hr, "IDXGIFactory4::EnumAdapterByLuid");
+        OPENRHI_RETURN_ON_BAD_HRESULT(this, hr, "IDXGIFactory4::EnumAdapterByLuid");
+    }
+
+    // Identity used by profiles is refreshed from the selected native adapter
+    ComPtr<IDXGIAdapter1> identifiedAdapter;
+    HRESULT identityResult = m_Adapter->QueryInterface(IID_PPV_ARGS(&identifiedAdapter));
+    OPENRHI_RETURN_ON_BAD_HRESULT(this, identityResult, "IDXGIAdapter::QueryInterface");
+    DXGI_ADAPTER_DESC1 identity = {};
+    identityResult = identifiedAdapter->GetDesc1(&identity);
+    OPENRHI_RETURN_ON_BAD_HRESULT(this, identityResult, "IDXGIAdapter1::GetDesc1");
+    OPENRHI_RETURN_ON_FAILURE(this, desc.adapterDesc->uid.high == 0, Result::INVALID_ARGUMENT, "D3D12 adapter UID must be a LUID");
+    m_Desc.adapterDesc.vendorId = identity.VendorId;
+    m_Desc.adapterDesc.deviceId = identity.DeviceId;
+    m_Desc.adapterDesc.revisionId = identity.Revision;
+    m_Desc.adapterDesc.revisionIdKnown = true;
+    m_Desc.adapterDesc.vendor = GetVendorFromID(identity.VendorId);
+    m_Desc.adapterDesc.videoMemorySize = identity.DedicatedVideoMemory + identity.DedicatedSystemMemory;
+    m_Desc.adapterDesc.sharedSystemMemorySize = identity.SharedSystemMemory;
+    wcstombs(m_Desc.adapterDesc.name, identity.Description, sizeof(m_Desc.adapterDesc.name) - 1);
+    LARGE_INTEGER driverVersion = {};
+    if (SUCCEEDED(m_Adapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &driverVersion))) {
+        m_Desc.adapterDesc.driverVersion = driverVersion.LowPart;
+        m_Desc.adapterDesc.nativeDriverVersion = uint64_t(driverVersion.QuadPart);
+    }
+    VideoMemoryInfo budget = {};
+    m_Desc.adapterDesc.memoryBudget = 0;
+    m_Desc.adapterDesc.memoryBudgetKnown = false;
+    if (QueryVideoMemoryInfoDXGI(m_Desc.adapterDesc.uid.low, MemoryLocation::DEVICE, budget) == Result::SUCCESS) {
+        m_Desc.adapterDesc.memoryBudget = budget.budgetSize > budget.usageSize ? budget.budgetSize - budget.usageSize : 0;
+        m_Desc.adapterDesc.memoryBudgetKnown = true;
     }
 
     // Extensions
@@ -517,7 +546,7 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
         ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
         HRESULT hr = D3D12GetDebugInterface(IID_PPV_ARGS(&dredSettings));
         if (FAILED(hr) || !dredSettings)
-            NRI_REPORT_WARNING(this, "DRED is not supported, device lost diagnostics disabled");
+            OPENRHI_REPORT_WARNING(this, "DRED is not supported, device lost diagnostics disabled");
         else {
             dredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
             dredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
@@ -530,46 +559,76 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
                     contextEnablement = D3D12_DRED_ENABLEMENT_FORCED_ON;
                 dredSettings1->SetBreadcrumbContextEnablement(contextEnablement);
             } else if (desc.deviceLostInfoLevel == DeviceLostInfoLevel::VERBOSE)
-                NRI_REPORT_WARNING(this, "DRED breadcrumb contexts are not supported, using BASIC device lost diagnostics");
+                OPENRHI_REPORT_WARNING(this, "DRED breadcrumb contexts are not supported, using BASIC device lost diagnostics");
         }
     }
 
     // Device
+    // Failed native creation still provides queried baseline diagnostics for the selected adapter
+    auto reportNativeFailure = [&](Result failure) {
+        ComPtr<ID3D12Device> probe;
+        if (FAILED(D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&probe))))
+            return failure;
+
+        const D3D_FEATURE_LEVEL level = D3D_FEATURE_LEVEL_12_2;
+        D3D12_FEATURE_DATA_FEATURE_LEVELS levels = {1, &level, D3D_FEATURE_LEVEL_11_0};
+        if (SUCCEEDED(probe->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &levels, sizeof(levels))) && levels.MaxSupportedFeatureLevel >= level)
+            m_Desc.nativeCapabilities |= DeviceCapabilityBits::D3D12_FEATURE_LEVEL_12_2;
+        for (uint32_t model = 0x69; model >= uint32_t(D3D_SHADER_MODEL_6_0); model--) {
+            D3D12_FEATURE_DATA_SHADER_MODEL shader = {D3D_SHADER_MODEL(model)};
+            if (SUCCEEDED(probe->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shader, sizeof(shader)))) {
+                const uint32_t supported = uint32_t(shader.HighestShaderModel);
+                m_Desc.shaderModel = uint16_t((supported >> 4) * 100 + (supported & 0xf));
+                break;
+            }
+        }
+        if (m_Desc.shaderModel >= OpenRhiShaderModel(6, 6))
+            m_Desc.nativeCapabilities |= DeviceCapabilityBits::SHADER_MODEL_6_6;
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
+        D3D12_FEATURE_DATA_D3D12_OPTIONS12 barriers = {};
+        if (!desc.disableD3D12EnhancedBarriers && SUCCEEDED(probe->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &barriers, sizeof(barriers))) && barriers.EnhancedBarriersSupported)
+            m_Desc.nativeCapabilities |= DeviceCapabilityBits::ENHANCED_BARRIERS;
+#endif
+        Result compatibility = CheckDeviceRequirements(desc, m_Desc);
+        return compatibility == Result::SUCCESS ? failure : compatibility;
+    };
     ComPtr<ID3D12Device> deviceTemp = (ID3D12Device*)descD3D12.d3d12Device;
     if (!m_IsWrapped) {
         bool isShaderAtomicsI64Supported = false;
         bool isShaderClockSupported = false;
 
-        uint32_t d3dShaderExtRegister = desc.d3dShaderExtRegister ? desc.d3dShaderExtRegister : NRI_SHADER_EXT_REGISTER;
+        uint32_t d3dShaderExtRegister = desc.d3dShaderExtRegister ? desc.d3dShaderExtRegister : SHADER_EXT_REGISTER;
         MaybeUnused(d3dShaderExtRegister);
 
         if (HasAmdExt()) {
-#if NRI_ENABLE_AMDAGS
+#if OPENRHI_ENABLE_AMDAGS
             AGSDX12DeviceCreationParams deviceCreationParams = {};
             deviceCreationParams.pAdapter = m_Adapter;
             deviceCreationParams.iid = __uuidof(ID3D12DeviceBest);
-            deviceCreationParams.FeatureLevel = D3D_FEATURE_LEVEL_11_0;
+            deviceCreationParams.FeatureLevel = D3D_FEATURE_LEVEL_12_2;
 
             AGSDX12ExtensionParams extensionsParams = {};
             extensionsParams.uavSlot = d3dShaderExtRegister;
 
             AGSDX12ReturnedParams agsParams = {};
             AGSReturnCode result = m_AmdExt.CreateDeviceD3D12(m_AmdExt.context, &deviceCreationParams, &extensionsParams, &agsParams);
-            NRI_RETURN_ON_FAILURE(this, result == AGS_SUCCESS, Result::FAILURE, "agsDriverExtensionsDX12_CreateDevice() failed: %d", (int32_t)result);
+            if (result != AGS_SUCCESS)
+                return reportNativeFailure(Result::FAILURE);
 
             deviceTemp = agsParams.pDevice;
             isShaderAtomicsI64Supported = agsParams.extensionsSupported.intrinsics19;
             isShaderClockSupported = agsParams.extensionsSupported.shaderClock;
 #endif
         } else {
-            HRESULT hr = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&deviceTemp));
-            NRI_RETURN_ON_BAD_HRESULT(this, hr, "D3D12CreateDevice");
+            HRESULT hr = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_2, IID_PPV_ARGS(&deviceTemp));
+            if (FAILED(hr))
+                return reportNativeFailure(GetResultFromHRESULT(hr));
 
             if (HasNvExt()) {
-#if NRI_ENABLE_NVAPI
-                NRI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_SetNvShaderExtnSlotSpace(deviceTemp, d3dShaderExtRegister, 0));
-                NRI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_IsNvShaderExtnOpCodeSupported(deviceTemp, NV_EXTN_OP_UINT64_ATOMIC, &isShaderAtomicsI64Supported));
-                NRI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_IsNvShaderExtnOpCodeSupported(deviceTemp, NV_EXTN_OP_GET_SPECIAL, &isShaderClockSupported));
+#if OPENRHI_ENABLE_NVAPI
+                OPENRHI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_SetNvShaderExtnSlotSpace(deviceTemp, d3dShaderExtRegister, 0));
+                OPENRHI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_IsNvShaderExtnOpCodeSupported(deviceTemp, NV_EXTN_OP_UINT64_ATOMIC, &isShaderAtomicsI64Supported));
+                OPENRHI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_IsNvShaderExtnOpCodeSupported(deviceTemp, NV_EXTN_OP_GET_SPECIAL, &isShaderClockSupported));
 #endif
             }
         }
@@ -581,7 +640,7 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
 
     // Query latest interface
     m_Version = QueryLatestInterface(deviceTemp, m_Device);
-    NRI_REPORT_INFO(this, "Using ID3D12Device%u", m_Version);
+    OPENRHI_REPORT_INFO(this, "Using ID3D12Device%u", m_Version);
 
     if (desc.enableGraphicsAPIValidation) {
         ComPtr<ID3D12InfoQueueBest> pInfoQueue;
@@ -589,10 +648,10 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
 
         if (SUCCEEDED(hr)) {
             hr = pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-            NRI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12InfoQueue::SetBreakOnSeverity");
+            OPENRHI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12InfoQueue::SetBreakOnSeverity");
 
             hr = pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
-            NRI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12InfoQueue::SetBreakOnSeverity");
+            OPENRHI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12InfoQueue::SetBreakOnSeverity");
 
             // TODO: this code is currently needed to disable known false-positive errors reported by the debug layer
             D3D12_MESSAGE_ID disableMessageIDs[] = {
@@ -600,7 +659,7 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
                 D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
                 D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
                 D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_INVALIDLIBRARYBLOB,
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
                 // Barrier-only command lists are needed for layout transitions around synchronous host copies.
                 // Replacing their synchronization scopes with NONE / NO_ACCESS triggers invalid barrier access validation after a copy.
                 D3D12_MESSAGE_ID_NON_OPTIMAL_BARRIER_ONLY_EXECUTE_COMMAND_LISTS,
@@ -614,11 +673,11 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
             filter.DenyList.pIDList = disableMessageIDs;
             filter.DenyList.NumIDs = GetCountOf(disableMessageIDs);
             hr = pInfoQueue->AddStorageFilterEntries(&filter);
-            NRI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12InfoQueue::AddStorageFilterEntries");
+            OPENRHI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12InfoQueue::AddStorageFilterEntries");
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
             hr = pInfoQueue->RegisterMessageCallback(MessageCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, this, &m_CallbackCookie);
-            NRI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12InfoQueue1::RegisterMessageCallback");
+            OPENRHI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12InfoQueue1::RegisterMessageCallback");
 #endif
         }
     }
@@ -664,11 +723,11 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
     }
 
     // NV-specific ray tracing features
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
     if (HasNvExt()) {
         { // Check position fetch support
             bool isSupported = false;
-            NRI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_IsNvShaderExtnOpCodeSupported(m_Device, NV_EXTN_OP_RT_TRIANGLE_OBJECT_POSITIONS, &isSupported));
+            OPENRHI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_IsNvShaderExtnOpCodeSupported(m_Device, NV_EXTN_OP_RT_TRIANGLE_OBJECT_POSITIONS, &isSupported));
             m_Desc.shaderFeatures.rayTracingPositionFetch = isSupported;
         }
 
@@ -676,7 +735,7 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
         if (desc.enableD3D12RayTracingValidation) {
             NvAPI_Status status = NvAPI_D3D12_EnableRaytracingValidation(m_Device, NVAPI_D3D12_RAYTRACING_VALIDATION_FLAG_NONE);
             if (status == NVAPI_OK)
-                NRI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_RegisterRaytracingValidationMessageCallback(m_Device, NvapiMessageCallback, this, &m_CallbackHandle));
+                OPENRHI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_RegisterRaytracingValidationMessageCallback(m_Device, NvapiMessageCallback, this, &m_CallbackHandle));
 
             // TODO: if enabled, call "NvAPI_D3D12_FlushRaytracingValidationMessages()" after each submit? present? DEVICE_LOST?
         }
@@ -686,7 +745,7 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
     { // Create zero buffer
         D3D12_RESOURCE_DESC zeroBufferDesc = {};
         zeroBufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        zeroBufferDesc.Width = desc.d3dZeroBufferSize ? desc.d3dZeroBufferSize : NRI_ZERO_BUFFER_SIZE;
+        zeroBufferDesc.Width = desc.d3dZeroBufferSize ? desc.d3dZeroBufferSize : OPENRHI_ZERO_BUFFER_SIZE;
         zeroBufferDesc.Height = 1;
         zeroBufferDesc.DepthOrArraySize = 1;
         zeroBufferDesc.MipLevels = 1;
@@ -702,13 +761,27 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
         heapProps.VisibleNodeMask = NODE_MASK;
 
         HRESULT hr = m_Device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &zeroBufferDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_ZeroBuffer)); // yes, create zero-ed
-        NRI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12Device::CreateCommittedResource");
+        OPENRHI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12Device::CreateCommittedResource");
     }
 
     // Fill desc
     m_IsMemoryZeroInitializationEnabled = desc.enableMemoryZeroInitialization;
 
     FillDesc(desc.disableD3D12EnhancedBarriers);
+    D3D12_FEATURE_DATA_ARCHITECTURE architecture = {};
+    if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &architecture, sizeof(architecture))))
+        m_Desc.adapterDesc.architecture = architecture.UMA ? Architecture::INTEGRATED : Architecture::DISCRETE;
+    const D3D_FEATURE_LEVEL requiredFeatureLevel = D3D_FEATURE_LEVEL_12_2;
+    D3D12_FEATURE_DATA_FEATURE_LEVELS featureLevels = {1, &requiredFeatureLevel, D3D_FEATURE_LEVEL_11_0};
+    if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &featureLevels, sizeof(featureLevels))) && featureLevels.MaxSupportedFeatureLevel >= requiredFeatureLevel)
+        m_Desc.nativeCapabilities |= DeviceCapabilityBits::D3D12_FEATURE_LEVEL_12_2;
+    if (m_Desc.shaderModel >= OpenRhiShaderModel(6, 6))
+        m_Desc.nativeCapabilities |= DeviceCapabilityBits::SHADER_MODEL_6_6;
+    if (m_Desc.features.enhancedBarriers)
+        m_Desc.nativeCapabilities |= DeviceCapabilityBits::ENHANCED_BARRIERS;
+    Result compatibility = CheckDeviceRequirements(desc, m_Desc);
+    if (compatibility != Result::SUCCESS)
+        return compatibility;
 
     // Create indirect command signatures
     m_DispatchCommandSignature = CreateCommandSignature(D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH, sizeof(DispatchDesc), nullptr, ROOT_CONSTANT_UNUSED, ROOT_CONSTANT_UNUSED);
@@ -717,24 +790,24 @@ Result DeviceD3D12::Create(const DeviceCreationDesc& desc, const DeviceCreationD
 
     // Create VMA
     HRESULT hr = CreateVma();
-    NRI_RETURN_ON_BAD_HRESULT(this, hr, "D3D12MA::CreateAllocator");
+    OPENRHI_RETURN_ON_BAD_HRESULT(this, hr, "D3D12MA::CreateAllocator");
 
     // Is device lost?
     hr = m_Device->GetDeviceRemovedReason() == S_OK ? S_OK : DXGI_ERROR_DEVICE_REMOVED;
-    NRI_RETURN_ON_BAD_HRESULT(this, hr, "Create");
+    OPENRHI_RETURN_ON_BAD_HRESULT(this, hr, "Create");
 
     return FillFunctionTable(m_iCore);
 }
 
 HRESULT DeviceD3D12::CreateVma() {
     uint32_t flags = (IsMemoryZeroInitializationEnabled() ? 0 : D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED)
-        // NRI uses "tight alignment" under the hood
+        // OpenRHI uses "tight alignment" under the hood
         | (m_TightAlignmentTier != 0 ? D3D12MA::ALLOCATOR_FLAG_DONT_PREFER_SMALL_BUFFERS_COMMITTED : 0)
         // TODO: the doc says "you should always use this flag", but D3D12MA could do better and respect "heap alignment" in "D3D12MA::AllocateMemory"
         // The presence of this flag can trigger a "wrong alignment" issue if a "Memory" is created via "AllocateMemory(useVMA = true)" and a big MSAA texture gets placed into it.
         // "D3D12MA::ALLOCATION_FLAG_COMMITTED" could be applied on an allocation inside "AllocateMemory", but it ruins the idea of using VMA for "AllocateMemory"
         // | D3D12MA::ALLOCATOR_FLAG_MSAA_TEXTURES_ALWAYS_COMMITTED
-        // TODO: currently broken on D3D12MA side. Most likely not needed at all, because NRI passes proper "alignment" and "tight alignment" flag
+        // TODO: currently broken on D3D12MA side. Most likely not needed at all, because OpenRHI passes proper "alignment" and "tight alignment" flag
         | D3D12MA::ALLOCATOR_FLAG_DONT_USE_TIGHT_ALIGNMENT;
 
     D3D12MA::ALLOCATION_CALLBACKS allocationCallbacks = {};
@@ -760,90 +833,90 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
     D3D12_FEATURE_DATA_D3D12_OPTIONS options = {};
     HRESULT hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof(options));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options) failed, result = 0x%08X!", hr);
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS1 options1 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &options1, sizeof(options1));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options1) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options1) failed, result = 0x%08X!", hr);
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS2 options2 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &options2, sizeof(options2));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options2) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options2) failed, result = 0x%08X!", hr);
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS3 options3 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, &options3, sizeof(options3));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options3) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options3) failed, result = 0x%08X!", hr);
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS4 options4 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &options4, sizeof(options4));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options4) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options4) failed, result = 0x%08X!", hr);
 
     // Windows 10 1809 (build 17763)
     D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options5) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options5) failed, result = 0x%08X!", hr);
 
     // Windows 10 1903 (build 18362)
     D3D12_FEATURE_DATA_D3D12_OPTIONS6 options6 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &options6, sizeof(options6));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options6) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options6) failed, result = 0x%08X!", hr);
 
     D3D12_FEATURE_DATA_SHADER_CACHE shaderCache = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_CACHE, &shaderCache, sizeof(shaderCache));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(shaderCache) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(shaderCache) failed, result = 0x%08X!", hr);
     const bool isPipelineLibrarySupported = (shaderCache.SupportFlags & D3D12_SHADER_CACHE_SUPPORT_LIBRARY) != 0;
 
     // Windows 10 2004 (build 19041)
     D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &options7, sizeof(options7));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options7) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options7) failed, result = 0x%08X!", hr);
 
     // Windows Server 2022 / Windows 10 LTSC (build 20348)
     D3D12_FEATURE_DATA_D3D12_OPTIONS8 options8 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS8, &options8, sizeof(options8));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options8) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options8) failed, result = 0x%08X!", hr);
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     // Agility 1.4
     D3D12_FEATURE_DATA_D3D12_OPTIONS9 options9 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS9, &options9, sizeof(options9));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options9) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options9) failed, result = 0x%08X!", hr);
     m_Desc.features.meshShaderPipelineStats = options9.MeshShaderPipelineStatsSupported;
     m_Desc.shaderFeatures.atomicsI64 = options9.AtomicInt64OnGroupSharedSupported || options9.AtomicInt64OnTypedResourceSupported; // overwriting is safe
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS10 options10 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS10, &options10, sizeof(options10));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options10) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options10) failed, result = 0x%08X!", hr);
     m_Desc.features.sumShadingRateCombiner = options10.VariableRateShadingSumCombinerSupported;
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS11 options11 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS11, &options11, sizeof(options11));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options11) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options11) failed, result = 0x%08X!", hr);
 
     // Agility 1.602
     D3D12_FEATURE_DATA_D3D12_OPTIONS12 options12 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &options12, sizeof(options12));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options12) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options12) failed, result = 0x%08X!", hr);
     m_Desc.features.enhancedBarriers = options12.EnhancedBarriersSupported && !disableD3D12EnhancedBarrier;
 
     // Agility 1.606
     D3D12_FEATURE_DATA_D3D12_OPTIONS13 options13 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS13, &options13, sizeof(options13));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options13) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options13) failed, result = 0x%08X!", hr);
     m_Desc.memoryAlignment.uploadBufferTextureRow = options13.UnrestrictedBufferTextureCopyPitchSupported ? 1 : D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
     m_Desc.memoryAlignment.uploadBufferTextureSlice = options13.UnrestrictedBufferTextureCopyPitchSupported ? 1 : D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT;
     m_Desc.features.constantAlphaBlendFactors = options13.AlphaBlendFactorSupported;
@@ -853,19 +926,19 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
     D3D12_FEATURE_DATA_D3D12_OPTIONS14 options14 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS14, &options14, sizeof(options14));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options14) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options14) failed, result = 0x%08X!", hr);
     m_Desc.features.independentFrontAndBackStencilReferenceAndMasks = options14.IndependentFrontAndBackStencilRefMaskSupported ? true : false;
 
     // Agility 1.610
     D3D12_FEATURE_DATA_D3D12_OPTIONS15 options15 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS15, &options15, sizeof(options15));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options15) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options15) failed, result = 0x%08X!", hr);
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS16 options16 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS16, &options16, sizeof(options16));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options16) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options16) failed, result = 0x%08X!", hr);
     m_Desc.memory.deviceUploadHeapSize = options16.GPUUploadHeapSupported ? m_Desc.adapterDesc.videoMemorySize : 0;
     m_Desc.features.dynamicDepthBias = options16.DynamicDepthBiasSupported;
 
@@ -873,42 +946,42 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
     D3D12_FEATURE_DATA_D3D12_OPTIONS17 options17 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS17, &options17, sizeof(options17));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options17) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options17) failed, result = 0x%08X!", hr);
     m_Desc.shaderFeatures.unnormalizedCoordinates = options17.NonNormalizedCoordinateSamplersSupported;
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS18 options18 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS18, &options18, sizeof(options18));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options18) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options18) failed, result = 0x%08X!", hr);
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS19 options19 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS19, &options19, sizeof(options19));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options19) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options19) failed, result = 0x%08X!", hr);
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS20 options20 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS20, &options20, sizeof(options20));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options20) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options20) failed, result = 0x%08X!", hr);
 
     D3D12_FEATURE_DATA_D3D12_OPTIONS21 options21 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS21, &options21, sizeof(options21));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options21) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options21) failed, result = 0x%08X!", hr);
     m_Desc.shaderFeatures.drawIndex = options21.ExecuteIndirectTier >= D3D12_EXECUTE_INDIRECT_TIER_1_1;
 
     // Agility 1.618
     D3D12_FEATURE_DATA_TIGHT_ALIGNMENT tightAlignment = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_TIGHT_ALIGNMENT, &tightAlignment, sizeof(tightAlignment));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(tightAlignment) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(tightAlignment) failed, result = 0x%08X!", hr);
     m_TightAlignmentTier = (uint8_t)tightAlignment.SupportTier;
 
     // Agility 1.619
     D3D12_FEATURE_DATA_D3D12_OPTIONS22 options22 = {};
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS22, &options22, sizeof(options22));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options22) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(options22) failed, result = 0x%08X!", hr);
     m_Desc.shaderStage.compute.dispatchMaxDim[0] = options22.Max1DDispatchSize;
     m_Desc.shaderStage.task.dispatchMaxDim[0] = options22.Max1DDispatchMeshSize;
 
@@ -931,7 +1004,7 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
     levels.pFeatureLevelsRequested = levelsList.data();
     hr = m_Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &levels, sizeof(levels));
     if (FAILED(hr))
-        NRI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS) failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_WARNING(this, "ID3D12Device::CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS) failed, result = 0x%08X!", hr);
 
     // Timestamp frequency
     uint64_t timestampFrequency = 0;
@@ -995,7 +1068,7 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
     m_Desc.memoryAlignment.constantBufferOffset = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
     m_Desc.memoryAlignment.scratchBufferOffset = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT;
     m_Desc.memoryAlignment.accelerationStructureOffset = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT;
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     m_Desc.memoryAlignment.micromapOffset = D3D12_RAYTRACING_OPACITY_MICROMAP_ARRAY_BYTE_ALIGNMENT;
 #endif
 
@@ -1116,7 +1189,7 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
     m_Desc.accelerationStructure.primitiveMaxNum = D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
     m_Desc.accelerationStructure.geometryMaxNum = D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE;
     m_Desc.accelerationStructure.instanceMaxNum = D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE;
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     m_Desc.accelerationStructure.micromapSubdivisionMaxLevel = D3D12_RAYTRACING_OPACITY_MICROMAP_OC1_MAX_SUBDIVISION_LEVEL;
 #endif
 
@@ -1124,15 +1197,15 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
     m_Desc.wave.laneMaxNum = options1.WaveLaneCountMax;
 
     m_Desc.wave.derivativeOpsStages = StageBits::FRAGMENT_SHADER;
-    if (m_Desc.shaderModel >= NriShaderModel(6, 6)) {
+    if (m_Desc.shaderModel >= OpenRhiShaderModel(6, 6)) {
         m_Desc.wave.derivativeOpsStages |= StageBits::COMPUTE_SHADER;
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         if (options9.DerivativesInMeshAndAmplificationShadersSupported)
             m_Desc.wave.derivativeOpsStages |= StageBits::TASK_SHADER | StageBits::MESH_SHADER;
 #endif
     }
 
-    if (m_Desc.shaderModel >= NriShaderModel(6, 0) && options1.WaveOps) {
+    if (m_Desc.shaderModel >= OpenRhiShaderModel(6, 0) && options1.WaveOps) {
         m_Desc.wave.waveOpsStages = StageBits::ALL_SHADERS;
         m_Desc.wave.quadOpsStages = StageBits::FRAGMENT_SHADER | StageBits::COMPUTE_SHADER;
     }
@@ -1178,7 +1251,6 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
     m_Desc.features.layerBasedMultiview = options3.ViewInstancingTier != D3D12_VIEW_INSTANCING_TIER_NOT_SUPPORTED;
     m_Desc.features.viewportBasedMultiview = options3.ViewInstancingTier != D3D12_VIEW_INSTANCING_TIER_NOT_SUPPORTED;
     m_Desc.features.textureCompressionBC = true;
-    m_Desc.features.shaderBytecodeDXBC = true;
     m_Desc.features.shaderBytecodeDXIL = true;
     m_Desc.features.occlusion = true;
     m_Desc.features.timestamp = true;
@@ -1225,7 +1297,7 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
         m_Desc.videoFeatures.decode.H265 = IsVideoDecodeCodecSupported(videoDevice, VideoCodec::H265);
         m_Desc.videoFeatures.decode.AV1 = IsVideoDecodeCodecSupported(videoDevice, VideoCodec::AV1);
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         m_Desc.videoFeatures.encode.H264 = IsVideoEncodeCodecSupported(videoDevice, VideoCodec::H264);
         m_Desc.videoFeatures.encode.H265 = IsVideoEncodeCodecSupported(videoDevice, VideoCodec::H265);
         m_Desc.videoFeatures.encode.AV1 = IsVideoEncodeCodecSupported(videoDevice, VideoCodec::AV1);
@@ -1234,21 +1306,21 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
 
     bool isShaderAtomicsF16Supported = false;
     bool isShaderAtomicsF32Supported = false;
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
     if (HasNvExt()) {
-        NRI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_IsNvShaderExtnOpCodeSupported(m_Device, NV_EXTN_OP_FP16_ATOMIC, &isShaderAtomicsF16Supported));
-        NRI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_IsNvShaderExtnOpCodeSupported(m_Device, NV_EXTN_OP_FP32_ATOMIC, &isShaderAtomicsF32Supported));
+        OPENRHI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_IsNvShaderExtnOpCodeSupported(m_Device, NV_EXTN_OP_FP16_ATOMIC, &isShaderAtomicsF16Supported));
+        OPENRHI_REPORT_ERROR_ON_BAD_NVAPI_STATUS(this, NvAPI_D3D12_IsNvShaderExtnOpCodeSupported(m_Device, NV_EXTN_OP_FP32_ATOMIC, &isShaderAtomicsF32Supported));
     }
 #endif
 
-    m_Desc.shaderFeatures.nativeI8 = m_Desc.shaderModel >= NriShaderModel(6, 2); // TODO: ?
+    m_Desc.shaderFeatures.nativeI8 = m_Desc.shaderModel >= OpenRhiShaderModel(6, 2); // TODO: ?
     m_Desc.shaderFeatures.nativeI16 = options4.Native16BitShaderOpsSupported;
     m_Desc.shaderFeatures.nativeF16 = options4.Native16BitShaderOpsSupported;
     m_Desc.shaderFeatures.nativeI64 = options1.Int64ShaderOps;
     m_Desc.shaderFeatures.nativeF64 = options.DoublePrecisionFloatShaderOps;
     m_Desc.shaderFeatures.atomicsF16 = isShaderAtomicsF16Supported;
     m_Desc.shaderFeatures.atomicsF32 = isShaderAtomicsF32Supported;
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     m_Desc.shaderFeatures.atomicsI64 = m_Desc.shaderFeatures.atomicsI64 || options9.AtomicInt64OnTypedResourceSupported || options9.AtomicInt64OnGroupSharedSupported || options11.AtomicInt64OnDescriptorHeapResourceSupported;
 #endif
 
@@ -1268,25 +1340,25 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
     m_Desc.shaderFeatures.layerIndex = options.VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation;
     m_Desc.shaderFeatures.rasterizedOrderedView = options.ROVsSupported;
     m_Desc.shaderFeatures.barycentric = options3.BarycentricsSupported;
-    m_Desc.shaderFeatures.integerDotProduct = m_Desc.shaderModel >= NriShaderModel(6, 4);
+    m_Desc.shaderFeatures.integerDotProduct = m_Desc.shaderModel >= OpenRhiShaderModel(6, 4);
     m_Desc.shaderFeatures.inputAttachments = true;
     m_Desc.shaderFeatures.drawParameters = true;
 }
 
 void DeviceD3D12::InitializeNvExt(bool disableNVAPIInitialization, bool isImported) {
     MaybeUnused(disableNVAPIInitialization, isImported);
-#if NRI_ENABLE_NVAPI
+#if OPENRHI_ENABLE_NVAPI
     if (GetModuleHandleA("renderdoc.dll") != nullptr) {
-        NRI_REPORT_WARNING(this, "NVAPI is disabled, because RenderDoc library has been loaded");
+        OPENRHI_REPORT_WARNING(this, "NVAPI is disabled, because RenderDoc library has been loaded");
         return;
     }
 
     if (isImported && !disableNVAPIInitialization)
-        NRI_REPORT_WARNING(this, "NVAPI is disabled, because it's not loaded on the application side");
+        OPENRHI_REPORT_WARNING(this, "NVAPI is disabled, because it's not loaded on the application side");
     else {
         NvAPI_Status status = NvAPI_Initialize();
         if (status != NVAPI_OK)
-            NRI_REPORT_ERROR(this, "NvAPI_Initialize(): failed, result=%d!", (int32_t)status);
+            OPENRHI_REPORT_ERROR(this, "NvAPI_Initialize(): failed, result=%d!", (int32_t)status);
         m_NvExt.available = (status == NVAPI_OK);
     }
 #endif
@@ -1294,16 +1366,16 @@ void DeviceD3D12::InitializeNvExt(bool disableNVAPIInitialization, bool isImport
 
 void DeviceD3D12::InitializeAmdExt(AGSContext* agsContext, bool isImported) {
     MaybeUnused(agsContext, isImported);
-#if NRI_ENABLE_AMDAGS
+#if OPENRHI_ENABLE_AMDAGS
     if (isImported && !agsContext) {
-        NRI_REPORT_WARNING(this, "AMDAGS is disabled, because 'agsContext' is not provided");
+        OPENRHI_REPORT_WARNING(this, "AMDAGS is disabled, because 'agsContext' is not provided");
         return;
     }
 
     // Load library
     Library* agsLibrary = LoadSharedLibrary("amd_ags_x64.dll");
     if (!agsLibrary) {
-        NRI_REPORT_WARNING(this, "AMDAGS is disabled, because 'amd_ags_x64' is not found");
+        OPENRHI_REPORT_WARNING(this, "AMDAGS is disabled, because 'amd_ags_x64' is not found");
         return;
     }
 
@@ -1321,7 +1393,7 @@ void DeviceD3D12::InitializeAmdExt(AGSContext* agsContext, bool isImported) {
         ;
 
     if (i != functionArraySize) {
-        NRI_REPORT_WARNING(this, "AMDAGS is disabled, because not all functions are found in the DLL");
+        OPENRHI_REPORT_WARNING(this, "AMDAGS is disabled, because not all functions are found in the DLL");
         UnloadSharedLibrary(*agsLibrary);
 
         return;
@@ -1333,7 +1405,7 @@ void DeviceD3D12::InitializeAmdExt(AGSContext* agsContext, bool isImported) {
     if (!agsContext) {
         const AGSReturnCode result = m_AmdExt.Initialize(AGS_CURRENT_VERSION, &config, &agsContext, &gpuInfo);
         if (result != AGS_SUCCESS || !agsContext) {
-            NRI_REPORT_ERROR(this, "Failed to initialize AMDAGS: %d", (int32_t)result);
+            OPENRHI_REPORT_ERROR(this, "Failed to initialize AMDAGS: %d", (int32_t)result);
             UnloadSharedLibrary(*agsLibrary);
 
             return;
@@ -1367,7 +1439,7 @@ void DeviceD3D12::InitializePixExt() {
         ;
 
     if (i != functionArraySize) {
-        NRI_REPORT_WARNING(this, "PIX is disabled, because not all functions are found in the DLL");
+        OPENRHI_REPORT_WARNING(this, "PIX is disabled, because not all functions are found in the DLL");
         UnloadSharedLibrary(*pixLibrary);
 
         return;
@@ -1400,7 +1472,7 @@ Result DeviceD3D12::GetDescriptorHandle(D3D12_DESCRIPTOR_HEAP_TYPE type, Descrip
 
         ComPtr<ID3D12DescriptorHeap> descriptorHeap;
         HRESULT hr = m_Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap));
-        NRI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12Device::CreateDescriptorHeap");
+        OPENRHI_RETURN_ON_BAD_HRESULT(this, hr, "ID3D12Device::CreateDescriptorHeap");
 
         DescriptorHeapDescD3D12 descriptorHeapDesc = {};
         descriptorHeapDesc.heap = descriptorHeap;
@@ -1446,7 +1518,7 @@ DescriptorHandleCPU DeviceD3D12::GetDescriptorHandleCPU(const DescriptorHandle& 
 
 constexpr std::array<D3D12_HEAP_TYPE, (size_t)MemoryLocation::MAX_NUM> g_HeapTypes = {
     D3D12_HEAP_TYPE_DEFAULT, // DEVICE
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     D3D12_HEAP_TYPE_GPU_UPLOAD, // DEVICE_UPLOAD (Prerequisite: D3D12_FEATURE_D3D12_OPTIONS16)
 #else
     D3D12_HEAP_TYPE_UPLOAD, // DEVICE_UPLOAD (silent fallback to HOST_UPLOAD)
@@ -1454,7 +1526,7 @@ constexpr std::array<D3D12_HEAP_TYPE, (size_t)MemoryLocation::MAX_NUM> g_HeapTyp
     D3D12_HEAP_TYPE_UPLOAD,   // HOST_UPLOAD
     D3D12_HEAP_TYPE_READBACK, // HOST_READBACK
 };
-NRI_VALIDATE_ARRAY(g_HeapTypes);
+OPENRHI_VALIDATE_ARRAY(g_HeapTypes);
 
 D3D12_HEAP_TYPE DeviceD3D12::GetHeapType(MemoryLocation memoryLocation) const {
     if (memoryLocation == MemoryLocation::DEVICE_UPLOAD && m_Desc.memory.deviceUploadHeapSize == 0)
@@ -1474,7 +1546,7 @@ void DeviceD3D12::GetResourceDesc(const BufferDesc& bufferDesc, D3D12_RESOURCE_D
     desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     desc.Flags = GetBufferFlags(bufferDesc.usage);
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     if (m_TightAlignmentTier != 0)
         desc.Flags |= D3D12_RESOURCE_FLAG_USE_TIGHT_ALIGNMENT;
 #endif
@@ -1499,7 +1571,7 @@ void DeviceD3D12::GetResourceDesc(const TextureDesc& textureDesc, D3D12_RESOURCE
         desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
 
     // https://github.com/microsoft/DirectX-Specs/blob/master/d3d/D3D12TightPlacedResourceAlignment.md
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     if (m_TightAlignmentTier > 1)
         desc.Flags |= D3D12_RESOURCE_FLAG_USE_TIGHT_ALIGNMENT;
     else
@@ -1530,7 +1602,7 @@ void DeviceD3D12::GetMemoryDesc(MemoryLocation memoryLocation, const D3D12_RESOU
     // Not "2" - "D3D12_RESOURCE_DESC1" is not in use
     // Not "3" - no castable formats
     D3D12_RESOURCE_ALLOCATION_INFO resourceAllocationInfo = m_Device->GetResourceAllocationInfo(NODE_MASK, 1, (D3D12_RESOURCE_DESC*)&resourceDesc);
-    NRI_CHECK(resourceAllocationInfo.SizeInBytes != UINT64_MAX, "Invalid arg?");
+    OPENRHI_CHECK(resourceAllocationInfo.SizeInBytes != UINT64_MAX, "Invalid arg?");
 
     MemoryTypeInfo memoryTypeInfo = {};
     memoryTypeInfo.heapFlags = (uint16_t)heapFlags;
@@ -1559,9 +1631,9 @@ void DeviceD3D12::GetAccelerationStructurePrebuildInfo(const AccelerationStructu
         }
     }
 
-    Scratch<D3D12_RAYTRACING_GEOMETRY_DESC> geometryDescs = NRI_ALLOCATE_SCRATCH(*this, D3D12_RAYTRACING_GEOMETRY_DESC, geometryNum);
-    Scratch<D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC> trianglesDescs = NRI_ALLOCATE_SCRATCH(*this, D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC, micromapNum);
-    Scratch<D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC> ommDescs = NRI_ALLOCATE_SCRATCH(*this, D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC, micromapNum);
+    Scratch<D3D12_RAYTRACING_GEOMETRY_DESC> geometryDescs = OPENRHI_ALLOCATE_SCRATCH(*this, D3D12_RAYTRACING_GEOMETRY_DESC, geometryNum);
+    Scratch<D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC> trianglesDescs = OPENRHI_ALLOCATE_SCRATCH(*this, D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC, micromapNum);
+    Scratch<D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC> ommDescs = OPENRHI_ALLOCATE_SCRATCH(*this, D3D12_RAYTRACING_GEOMETRY_OMM_LINKAGE_DESC, micromapNum);
 
     // Get prebuild info
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS accelerationStructureInputs = {};
@@ -1579,8 +1651,8 @@ void DeviceD3D12::GetAccelerationStructurePrebuildInfo(const AccelerationStructu
 }
 
 void DeviceD3D12::GetMicromapPrebuildInfo(const MicromapDesc& micromapDesc, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO& prebuildInfo) const {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
-    Scratch<D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY> usages = NRI_ALLOCATE_SCRATCH(*this, D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY, micromapDesc.usageNum);
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
+    Scratch<D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY> usages = OPENRHI_ALLOCATE_SCRATCH(*this, D3D12_RAYTRACING_OPACITY_MICROMAP_HISTOGRAM_ENTRY, micromapDesc.usageNum);
     for (uint32_t i = 0; i < micromapDesc.usageNum; i++) {
         const MicromapUsageDesc& in = micromapDesc.usages[i];
 
@@ -1611,7 +1683,7 @@ void DeviceD3D12::GetMicromapPrebuildInfo(const MicromapDesc& micromapDesc, D3D1
 ComPtr<ID3D12CommandSignature> DeviceD3D12::CreateCommandSignature(D3D12_INDIRECT_ARGUMENT_TYPE type, uint32_t stride, ID3D12RootSignature* rootSignature, uint32_t drawParametersRootConstantIndex, uint32_t drawIndexRootConstantIndex) {
     bool isDrawArgument = type == D3D12_INDIRECT_ARGUMENT_TYPE_DRAW || type == D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
     bool enableDrawParametersEmulation = isDrawArgument && drawParametersRootConstantIndex != ROOT_CONSTANT_UNUSED;
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     bool enableDrawIndexEmulation = isDrawArgument && drawIndexRootConstantIndex != ROOT_CONSTANT_UNUSED;
 #else
     bool enableDrawIndexEmulation = false;
@@ -1630,7 +1702,7 @@ ComPtr<ID3D12CommandSignature> DeviceD3D12::CreateCommandSignature(D3D12_INDIREC
         indirectArgumentNum++;
     }
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     if (enableDrawIndexEmulation) {
         indirectArgumentDescs[indirectArgumentNum].Type = D3D12_INDIRECT_ARGUMENT_TYPE_INCREMENTING_CONSTANT;
         indirectArgumentDescs[indirectArgumentNum].Constant.RootParameterIndex = drawIndexRootConstantIndex;
@@ -1652,7 +1724,7 @@ ComPtr<ID3D12CommandSignature> DeviceD3D12::CreateCommandSignature(D3D12_INDIREC
     ComPtr<ID3D12CommandSignature> commandSignature = nullptr;
     HRESULT hr = m_Device->CreateCommandSignature(&commandSignatureDesc, enableDrawParametersEmulation || enableDrawIndexEmulation ? rootSignature : nullptr, IID_PPV_ARGS(&commandSignature));
     if (FAILED(hr))
-        NRI_REPORT_ERROR(this, "ID3D12Device::CreateCommandSignature() failed, result = 0x%08X!", hr);
+        OPENRHI_REPORT_ERROR(this, "ID3D12Device::CreateCommandSignature() failed, result = 0x%08X!", hr);
 
     return commandSignature;
 }
@@ -1752,8 +1824,8 @@ ID3D12CommandSignature* DeviceD3D12::GetDispatchCommandSignature() const {
 void DeviceD3D12::ReportDredAllocationList(const char* listName, const D3D12_DRED_ALLOCATION_NODE1* head) const {
     uint32_t index = 0;
     for (const D3D12_DRED_ALLOCATION_NODE1* node = head; node; node = node->pNext, index++) {
-        char allocationName[NRI_MAX_MESSAGE_LENGTH];
-        NRI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] %s[%u]: type=%u name=%s", listName, index, (uint32_t)node->AllocationType, GetDredObjectName(node->ObjectNameA, node->ObjectNameW, allocationName, sizeof(allocationName)));
+        char allocationName[OPENRHI_MAX_MESSAGE_LENGTH];
+        OPENRHI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] %s[%u]: type=%u name=%s", listName, index, (uint32_t)node->AllocationType, GetDredObjectName(node->ObjectNameA, node->ObjectNameW, allocationName, sizeof(allocationName)));
     }
 }
 
@@ -1765,7 +1837,7 @@ void DeviceD3D12::ReportDred(ID3D12Device* nativeDevice) const {
     ComPtr<ID3D12DeviceRemovedExtendedData2> dred2;
     if (SUCCEEDED(nativeDevice->QueryInterface(IID_PPV_ARGS(&dred2))) && dred2) {
         D3D12_DRED_DEVICE_STATE deviceState = dred2->GetDeviceState();
-        NRI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] Device state: %s", GetDredDeviceStateName(deviceState));
+        OPENRHI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] Device state: %s", GetDredDeviceStateName(deviceState));
     }
 
     D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 breadcrumbs = {};
@@ -1773,9 +1845,9 @@ void DeviceD3D12::ReportDred(ID3D12Device* nativeDevice) const {
         uint32_t nodeIndex = 0;
         for (const D3D12_AUTO_BREADCRUMB_NODE1* node = breadcrumbs.pHeadAutoBreadcrumbNode; node; node = node->pNext, nodeIndex++) {
             uint32_t completedBreadcrumb = node->pLastBreadcrumbValue ? *node->pLastBreadcrumbValue : 0;
-            char queueName[NRI_MAX_MESSAGE_LENGTH];
-            char commandListName[NRI_MAX_MESSAGE_LENGTH];
-            NRI_REPORT_DEVICE_LOST_INFO(this,
+            char queueName[OPENRHI_MAX_MESSAGE_LENGTH];
+            char commandListName[OPENRHI_MAX_MESSAGE_LENGTH];
+            OPENRHI_REPORT_DEVICE_LOST_INFO(this,
                 "[DeviceLost] BreadcrumbNode[%u]: queue=%s commandList=%s completed=%u/%u",
                 nodeIndex,
                 GetDredObjectName(node->pCommandQueueDebugNameA, node->pCommandQueueDebugNameW, queueName, sizeof(queueName)),
@@ -1791,7 +1863,7 @@ void DeviceD3D12::ReportDred(ID3D12Device* nativeDevice) const {
             start = std::max(start, firstRetainedBreadcrumb);
             uint32_t end = (uint32_t)std::min<uint64_t>(node->BreadcrumbCount, (uint64_t)completedBreadcrumb + DRED_BREADCRUMB_RADIUS + 1);
             for (uint32_t breadcrumbIndex = start; breadcrumbIndex < end; breadcrumbIndex++)
-                NRI_REPORT_DEVICE_LOST_INFO(this,
+                OPENRHI_REPORT_DEVICE_LOST_INFO(this,
                     "[DeviceLost]   op[%u]%s %s",
                     breadcrumbIndex,
                     (completedBreadcrumb != 0 && breadcrumbIndex == completedBreadcrumb - 1) ? " <- last completed" : "",
@@ -1800,14 +1872,14 @@ void DeviceD3D12::ReportDred(ID3D12Device* nativeDevice) const {
             for (uint32_t contextIndex = 0; contextIndex < node->BreadcrumbContextsCount; contextIndex++) {
                 const D3D12_DRED_BREADCRUMB_CONTEXT& context = node->pBreadcrumbContexts[contextIndex];
                 if (context.BreadcrumbIndex >= start && context.BreadcrumbIndex < end) {
-                    char contextString[NRI_MAX_MESSAGE_LENGTH];
+                    char contextString[OPENRHI_MAX_MESSAGE_LENGTH];
                     const char* contextName = "<unnamed>";
                     if (context.pContextString) {
                         ConvertWcharToChar(context.pContextString, contextString, sizeof(contextString));
                         contextName = contextString;
                     }
 
-                    NRI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost]   context[%u]: %s", context.BreadcrumbIndex, contextName);
+                    OPENRHI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost]   context[%u]: %s", context.BreadcrumbIndex, contextName);
                 }
             }
         }
@@ -1816,7 +1888,7 @@ void DeviceD3D12::ReportDred(ID3D12Device* nativeDevice) const {
     if (dred2) {
         D3D12_DRED_PAGE_FAULT_OUTPUT2 pageFault = {};
         if (SUCCEEDED(dred2->GetPageFaultAllocationOutput2(&pageFault))) {
-            NRI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] PageFaultVA=0x%016llX flags=%u", (unsigned long long)pageFault.PageFaultVA, (uint32_t)pageFault.PageFaultFlags);
+            OPENRHI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] PageFaultVA=0x%016llX flags=%u", (unsigned long long)pageFault.PageFaultVA, (uint32_t)pageFault.PageFaultFlags);
             ReportDredAllocationList("ExistingAllocation", pageFault.pHeadExistingAllocationNode);
             ReportDredAllocationList("RecentFreedAllocation", pageFault.pHeadRecentFreedAllocationNode);
         }
@@ -1826,7 +1898,7 @@ void DeviceD3D12::ReportDred(ID3D12Device* nativeDevice) const {
 
     D3D12_DRED_PAGE_FAULT_OUTPUT1 pageFault = {};
     if (SUCCEEDED(dred1->GetPageFaultAllocationOutput1(&pageFault))) {
-        NRI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] PageFaultVA=0x%016llX", (unsigned long long)pageFault.PageFaultVA);
+        OPENRHI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] PageFaultVA=0x%016llX", (unsigned long long)pageFault.PageFaultVA);
         ReportDredAllocationList("ExistingAllocation", pageFault.pHeadExistingAllocationNode);
         ReportDredAllocationList("RecentFreedAllocation", pageFault.pHeadRecentFreedAllocationNode);
     }
@@ -1838,7 +1910,7 @@ Result DeviceD3D12::ReportDeviceLostInfo(DeviceLostDump& deviceLostDump) {
     ID3D12Device* nativeDevice = GetNativeObject();
     HRESULT deviceRemovedReason = nativeDevice->GetDeviceRemovedReason();
     if (deviceRemovedReason != S_OK) {
-        NRI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] GetDeviceRemovedReason: 0x%08X, result=%d", (uint32_t)deviceRemovedReason, (int32_t)GetResultFromHRESULT(deviceRemovedReason));
+        OPENRHI_REPORT_DEVICE_LOST_INFO(this, "[DeviceLost] GetDeviceRemovedReason: 0x%08X, result=%d", (uint32_t)deviceRemovedReason, (int32_t)GetResultFromHRESULT(deviceRemovedReason));
         ReportDred(nativeDevice);
     }
 
@@ -1849,7 +1921,7 @@ void DeviceD3D12::Destruct() {
     Destroy(GetAllocationCallbacks(), this);
 }
 
-NRI_INLINE Result DeviceD3D12::GetQueue(QueueType queueType, uint32_t queueIndex, Queue*& queue) {
+OPENRHI_INLINE Result DeviceD3D12::GetQueue(QueueType queueType, uint32_t queueIndex, Queue*& queue) {
     const auto& queueFamily = m_QueueFamilies[(uint32_t)queueType];
     if (queueFamily.empty())
         return Result::UNSUPPORTED;
@@ -1862,7 +1934,7 @@ NRI_INLINE Result DeviceD3D12::GetQueue(QueueType queueType, uint32_t queueIndex
     return Result::INVALID_ARGUMENT;
 }
 
-NRI_INLINE Result DeviceD3D12::WaitIdle() {
+OPENRHI_INLINE Result DeviceD3D12::WaitIdle() {
     for (auto& queueFamily : m_QueueFamilies) {
         for (auto queue : queueFamily) {
             Result result = queue->WaitIdle();
@@ -1910,7 +1982,7 @@ Result DeviceD3D12::UploadHostMemoryToTexture(QueueD3D12& queue, const UploadHos
     if (result != Result::SUCCESS)
         return result;
 
-    Scratch<HostCopyLayoutD3D12> layouts = NRI_ALLOCATE_SCRATCH(*this, HostCopyLayoutD3D12, copyDescNum);
+    Scratch<HostCopyLayoutD3D12> layouts = OPENRHI_ALLOCATE_SCRATCH(*this, HostCopyLayoutD3D12, copyDescNum);
 
     uint64_t stagingSize = 0;
     for (uint32_t i = 0; i < copyDescNum; i++) {
@@ -1935,7 +2007,7 @@ Result DeviceD3D12::UploadHostMemoryToTexture(QueueD3D12& queue, const UploadHos
 
     if (result == Result::SUCCESS) {
         bool restoreCommon = !m_Desc.features.enhancedBarriers && queue.GetType() != D3D12_COMMAND_LIST_TYPE_COPY;
-        Scratch<D3D12_RESOURCE_BARRIER> restorationBarriers = NRI_ALLOCATE_SCRATCH(*this, D3D12_RESOURCE_BARRIER, restoreCommon ? copyDescNum : 0);
+        Scratch<D3D12_RESOURCE_BARRIER> restorationBarriers = OPENRHI_ALLOCATE_SCRATCH(*this, D3D12_RESOURCE_BARRIER, restoreCommon ? copyDescNum : 0);
         Map<std::pair<uintptr_t, uint32_t>, bool> copiedSubresources(GetStdAllocator());
         uint32_t restorationBarrierNum = 0;
 
@@ -2022,7 +2094,7 @@ Result DeviceD3D12::ReadbackTextureToHostMemory(QueueD3D12& queue, const Readbac
     if (result != Result::SUCCESS)
         return result;
 
-    Scratch<HostCopyLayoutD3D12> layouts = NRI_ALLOCATE_SCRATCH(*this, HostCopyLayoutD3D12, copyDescNum);
+    Scratch<HostCopyLayoutD3D12> layouts = OPENRHI_ALLOCATE_SCRATCH(*this, HostCopyLayoutD3D12, copyDescNum);
 
     uint64_t stagingSize = 0;
     for (uint32_t i = 0; i < copyDescNum; i++) {
@@ -2101,7 +2173,7 @@ void DeviceD3D12::ReleaseTransferContext(TransferContextD3D12& context) {
     context.SetInUse(false);
 }
 
-NRI_INLINE Result BindBufferMemoryD3D12(const BindBufferMemoryDesc* descs, uint32_t descNum) {
+OPENRHI_INLINE Result BindBufferMemoryD3D12(const BindBufferMemoryDesc* descs, uint32_t descNum) {
     for (uint32_t i = 0; i < descNum; i++) {
         const BindBufferMemoryDesc& desc = descs[i];
         Result result = ((BufferD3D12*)desc.buffer)->BindMemory(*(MemoryD3D12*)desc.memory, desc.offset);
@@ -2112,7 +2184,7 @@ NRI_INLINE Result BindBufferMemoryD3D12(const BindBufferMemoryDesc* descs, uint3
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result BindTextureMemoryD3D12(const BindTextureMemoryDesc* descs, uint32_t descNum) {
+OPENRHI_INLINE Result BindTextureMemoryD3D12(const BindTextureMemoryDesc* descs, uint32_t descNum) {
     for (uint32_t i = 0; i < descNum; i++) {
         const BindTextureMemoryDesc& desc = descs[i];
         Result result = ((TextureD3D12*)desc.texture)->BindMemory(*(MemoryD3D12*)desc.memory, desc.offset);
@@ -2123,7 +2195,7 @@ NRI_INLINE Result BindTextureMemoryD3D12(const BindTextureMemoryDesc* descs, uin
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result BindAccelerationStructureMemoryD3D12(const BindAccelerationStructureMemoryDesc* descs, uint32_t descNum) {
+OPENRHI_INLINE Result BindAccelerationStructureMemoryD3D12(const BindAccelerationStructureMemoryDesc* descs, uint32_t descNum) {
     for (uint32_t i = 0; i < descNum; i++) {
         const BindAccelerationStructureMemoryDesc& desc = descs[i];
         Result result = ((AccelerationStructureD3D12*)desc.accelerationStructure)->BindMemory(*(MemoryD3D12*)desc.memory, desc.offset);
@@ -2134,7 +2206,7 @@ NRI_INLINE Result BindAccelerationStructureMemoryD3D12(const BindAccelerationStr
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result BindMicromapMemoryD3D12(const BindMicromapMemoryDesc* descs, uint32_t descNum) {
+OPENRHI_INLINE Result BindMicromapMemoryD3D12(const BindMicromapMemoryDesc* descs, uint32_t descNum) {
     for (uint32_t i = 0; i < descNum; i++) {
         const BindMicromapMemoryDesc& desc = descs[i];
         Result result = ((MicromapD3D12*)desc.micromap)->BindMemory(*(MemoryD3D12*)desc.memory, desc.offset);
@@ -2153,7 +2225,7 @@ NRI_INLINE Result BindMicromapMemoryD3D12(const BindMicromapMemoryDesc* descs, u
     if ((formatSupport.Support2 & (optional)) != 0) \
         supportBits |= bit;
 
-NRI_INLINE FormatSupportBits DeviceD3D12::GetFormatSupport(Format format) const {
+OPENRHI_INLINE FormatSupportBits DeviceD3D12::GetFormatSupport(Format format) const {
     DXGI_FORMAT dxgiFormat = GetDxgiFormat(format).typed;
     if (dxgiFormat == DXGI_FORMAT_UNKNOWN)
         return FormatSupportBits::UNSUPPORTED;

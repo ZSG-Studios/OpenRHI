@@ -6,7 +6,7 @@ VideoPictureVK::~VideoPictureVK() {
         vk.DestroyImageView(m_Device, m_ImageView, m_Device.GetVkAllocationCallbacks());
 }
 
-NRI_INLINE Result VideoPictureVK::Create(const VideoPictureDesc& videoPictureDesc) {
+OPENRHI_INLINE Result VideoPictureVK::Create(const VideoPictureDesc& videoPictureDesc) {
     TextureVK& texture = *(TextureVK*)videoPictureDesc.texture;
     const TextureDesc& textureDesc = texture.GetDesc();
     m_Texture = &texture;
@@ -37,7 +37,7 @@ NRI_INLINE Result VideoPictureVK::Create(const VideoPictureDesc& videoPictureDes
             usageInfo.usage |= VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR;
             break;
         default:
-            NRI_CHECK(false, "Unexpected 'videoPictureDesc.usage'");
+            OPENRHI_CHECK(false, "Unexpected 'videoPictureDesc.usage'");
             break;
     }
 
@@ -46,7 +46,7 @@ NRI_INLINE Result VideoPictureVK::Create(const VideoPictureDesc& videoPictureDes
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateImageView(m_Device, &createInfo, m_Device.GetVkAllocationCallbacks(), &m_ImageView);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateImageView");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateImageView");
 
     m_Resource = {VK_STRUCTURE_TYPE_VIDEO_PICTURE_RESOURCE_INFO_KHR};
     m_Resource.codedExtent.width = videoPictureDesc.width ? videoPictureDesc.width : textureDesc.width;

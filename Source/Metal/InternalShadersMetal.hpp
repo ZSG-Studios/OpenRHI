@@ -2,36 +2,34 @@
 
 #include "InternalMetal.metallib.h"
 
-// "nri_clear_storage_<dimension>_<type>" follow "CLEAR_STORAGE_TEXTURE" (see "GetClearStorageKernel")
+// "openrhi_clear_storage_<dimension>_<type>" follow "CLEAR_STORAGE_TEXTURE" (see "GetClearStorageKernel")
 constexpr std::array<const char*, (size_t)InternalKernelMetal::MAX_NUM> g_InternalKernelNames = {
-    "nri_filter_draws",          // FILTER_DRAWS
-    "nri_prepare_draw_roots",    // PREPARE_DRAW_ROOTS
-    "nri_emulate_draws",         // EMULATE_DRAWS
-    "nri_clear_storage_buffer",  // CLEAR_STORAGE_BUFFER
-    "nri_convert_instances",     // CONVERT_INSTANCES
-    "nri_copy_top_level_header", // COPY_TOP_LEVEL_HEADER
-    "nri_copy_words",            // COPY_WORDS
-    "nri_prepare_rays_indirect", // PREPARE_RAYS_INDIRECT
-    "nri_clear_storage_0_0",
-    "nri_clear_storage_0_1",
-    "nri_clear_storage_0_2",
-    "nri_clear_storage_1_0",
-    "nri_clear_storage_1_1",
-    "nri_clear_storage_1_2",
-    "nri_clear_storage_2_0",
-    "nri_clear_storage_2_1",
-    "nri_clear_storage_2_2",
-    "nri_clear_storage_3_0",
-    "nri_clear_storage_3_1",
-    "nri_clear_storage_3_2",
-    "nri_clear_storage_4_0",
-    "nri_clear_storage_4_1",
-    "nri_clear_storage_4_2",
-    "nri_clear_storage_5_0",
-    "nri_clear_storage_5_1",
-    "nri_clear_storage_5_2",
+    "openrhi_filter_draws",          // FILTER_DRAWS
+    "openrhi_prepare_draw_roots",    // PREPARE_DRAW_ROOTS
+    "openrhi_clear_storage_buffer",  // CLEAR_STORAGE_BUFFER
+    "openrhi_convert_instances",     // CONVERT_INSTANCES
+    "openrhi_copy_top_level_header", // COPY_TOP_LEVEL_HEADER
+    "openrhi_copy_words",            // COPY_WORDS
+    "openrhi_clear_storage_0_0",
+    "openrhi_clear_storage_0_1",
+    "openrhi_clear_storage_0_2",
+    "openrhi_clear_storage_1_0",
+    "openrhi_clear_storage_1_1",
+    "openrhi_clear_storage_1_2",
+    "openrhi_clear_storage_2_0",
+    "openrhi_clear_storage_2_1",
+    "openrhi_clear_storage_2_2",
+    "openrhi_clear_storage_3_0",
+    "openrhi_clear_storage_3_1",
+    "openrhi_clear_storage_3_2",
+    "openrhi_clear_storage_4_0",
+    "openrhi_clear_storage_4_1",
+    "openrhi_clear_storage_4_2",
+    "openrhi_clear_storage_5_0",
+    "openrhi_clear_storage_5_1",
+    "openrhi_clear_storage_5_2",
 };
-NRI_VALIDATE_ARRAY_BY_PTR(g_InternalKernelNames);
+OPENRHI_VALIDATE_ARRAY_BY_PTR(g_InternalKernelNames);
 
 static inline bool IsEqual(const ClearPipelineKeyMetal& a, const ClearPipelineKeyMetal& b) {
     bool isEqual = a.colorNum == b.colorNum && a.colorIndex == b.colorIndex && a.sampleNum == b.sampleNum && a.colorType == b.colorType && a.planes == b.planes;
@@ -81,12 +79,12 @@ Result InternalShadersMetal::Create() {
     dispatch_release(data);
 
     if (!m_Library) {
-        NRI_REPORT_ERROR(&m_Device, "Internal Metal library loading failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
+        OPENRHI_REPORT_ERROR(&m_Device, "Internal Metal library loading failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
 
         return Result::FAILURE;
     }
 
-    m_DepthOnlyFragmentFunction = NewFunction("nri_depth_only");
+    m_DepthOnlyFragmentFunction = NewFunction("openrhi_depth_only");
 
     return Result::SUCCESS;
 }
@@ -125,7 +123,7 @@ MTL::ComputePipelineState* InternalShadersMetal::GetKernel(InternalKernelMetal k
     pipelineDesc->release();
 
     if (!pipeline) {
-        NRI_REPORT_ERROR(&m_Device, "Internal Metal kernel '%s' creation failed: %s", name, error ? error->localizedDescription()->utf8String() : "unknown error");
+        OPENRHI_REPORT_ERROR(&m_Device, "Internal Metal kernel '%s' creation failed: %s", name, error ? error->localizedDescription()->utf8String() : "unknown error");
 
         return nullptr;
     }
@@ -162,9 +160,9 @@ ClearPipelineMetal InternalShadersMetal::GetClearPipeline(const ClearPipelineKey
     AutoreleasePoolMetal autoreleasePool; // "NS::Error" is autoreleased
 
     char name[32] = {};
-    snprintf(name, sizeof(name), "nri_clear_fs_%u_%u", (uint32_t)key.colorType, key.colorIndex);
+    snprintf(name, sizeof(name), "openrhi_clear_fs_%u_%u", (uint32_t)key.colorType, key.colorIndex);
 
-    MTL4::FunctionDescriptor* vertex = NewFunction("nri_clear_vs");
+    MTL4::FunctionDescriptor* vertex = NewFunction("openrhi_clear_vs");
     MTL4::FunctionDescriptor* fragment = (key.planes & PlaneBits::COLOR) ? NewFunction(name) : nullptr;
 
     MTL4::RenderPipelineDescriptor* pipelineDesc = MTL4::RenderPipelineDescriptor::alloc()->init();
@@ -213,7 +211,7 @@ ClearPipelineMetal InternalShadersMetal::GetClearPipeline(const ClearPipelineKey
         if (clear.depthStencil)
             clear.depthStencil->release();
 
-        NRI_REPORT_ERROR(&m_Device, "Internal Metal clear pipeline creation failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
+        OPENRHI_REPORT_ERROR(&m_Device, "Internal Metal clear pipeline creation failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
 
         return {};
     }
@@ -250,9 +248,9 @@ MTL::RenderPipelineState* InternalShadersMetal::GetResolvePipeline(MTL::PixelFor
     AutoreleasePoolMetal autoreleasePool; // "NS::Error" is autoreleased
 
     char name[32] = {};
-    snprintf(name, sizeof(name), "nri_resolve_%s_%u", isArray ? "array" : "2d", (uint32_t)colorType);
+    snprintf(name, sizeof(name), "openrhi_resolve_%s_%u", isArray ? "array" : "2d", (uint32_t)colorType);
 
-    MTL4::FunctionDescriptor* vertex = NewFunction("nri_resolve_vs");
+    MTL4::FunctionDescriptor* vertex = NewFunction("openrhi_resolve_vs");
     MTL4::FunctionDescriptor* fragment = NewFunction(name);
 
     MTL4::RenderPipelineDescriptor* pipelineDesc = MTL4::RenderPipelineDescriptor::alloc()->init();
@@ -273,7 +271,7 @@ MTL::RenderPipelineState* InternalShadersMetal::GetResolvePipeline(MTL::PixelFor
         vertex->release();
 
     if (!pipeline) {
-        NRI_REPORT_ERROR(&m_Device, "Internal Metal resolve pipeline creation failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
+        OPENRHI_REPORT_ERROR(&m_Device, "Internal Metal resolve pipeline creation failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
 
         return nullptr;
     }

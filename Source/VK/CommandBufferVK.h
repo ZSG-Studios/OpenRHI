@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct InputAttachmentRange {
     VkImage image;
@@ -36,10 +36,10 @@ struct CommandBufferVK final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result Begin(const DescriptorPool* descriptorPool);
@@ -114,4 +114,4 @@ private:
     bool m_RenderPass = false;
 };
 
-} // namespace nri
+} // namespace openrhi

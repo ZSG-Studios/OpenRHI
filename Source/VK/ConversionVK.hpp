@@ -1,6 +1,6 @@
 // © 2021 NVIDIA Corporation
 
-uint32_t nri::ConvertBottomLevelGeometries(
+uint32_t openrhi::ConvertBottomLevelGeometries(
     VkAccelerationStructureBuildRangeInfoKHR* vkRanges,
     VkAccelerationStructureGeometryKHR* vkGeometries,
     VkAccelerationStructureTrianglesOpacityMicromapEXT* vkTrianglesMicromaps,
@@ -85,7 +85,7 @@ uint32_t nri::ConvertBottomLevelGeometries(
     return micromapNum;
 }
 
-QueryType nri::GetQueryTypeVK(uint32_t queryTypeVK) {
+QueryType openrhi::GetQueryTypeVK(uint32_t queryTypeVK) {
     if (queryTypeVK == VK_QUERY_TYPE_TIMESTAMP)
         return QueryType::TIMESTAMP;
 
@@ -219,8 +219,8 @@ constexpr std::array<VkFormat, (size_t)Format::MAX_NUM> g_Formats = {
     VK_FORMAT_D24_UNORM_S8_UINT,        // D24_UNORM_S8_UINT
     VK_FORMAT_D32_SFLOAT_S8_UINT,       // D32_SFLOAT_S8_UINT
 };
-NRI_VALIDATE_ARRAY(g_Formats);
+OPENRHI_VALIDATE_ARRAY(g_Formats);
 
-uint32_t nri::NRIFormatToVKFormat(Format format) {
+uint32_t openrhi::ConvertFormatToVK(Format format) {
     return (uint32_t)g_Formats[(uint32_t)format];
 }

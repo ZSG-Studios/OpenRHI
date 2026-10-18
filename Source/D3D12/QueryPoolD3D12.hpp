@@ -16,7 +16,7 @@ Result QueryPoolD3D12::Create(const QueryPoolDesc& queryPoolDesc) {
         m_QueryType = D3D12_QUERY_TYPE_OCCLUSION;
         desc.Type = D3D12_QUERY_HEAP_TYPE_OCCLUSION;
     } else if (queryPoolDesc.queryType == QueryType::PIPELINE_STATISTICS) {
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         if (m_Device.GetDesc().features.meshShaderPipelineStats) {
             m_QuerySize = sizeof(D3D12_QUERY_DATA_PIPELINE_STATISTICS1);
             m_QueryType = D3D12_QUERY_TYPE_PIPELINE_STATISTICS1;
@@ -26,7 +26,7 @@ Result QueryPoolD3D12::Create(const QueryPoolDesc& queryPoolDesc) {
             m_QuerySize = sizeof(D3D12_QUERY_DATA_PIPELINE_STATISTICS);
             m_QueryType = D3D12_QUERY_TYPE_PIPELINE_STATISTICS;
             desc.Type = D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS;
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
         }
 #endif
     } else if (queryPoolDesc.queryType == QueryType::ACCELERATION_STRUCTURE_SIZE) {
@@ -45,7 +45,7 @@ Result QueryPoolD3D12::Create(const QueryPoolDesc& queryPoolDesc) {
     desc.NodeMask = NODE_MASK;
 
     HRESULT hr = m_Device->CreateQueryHeap(&desc, IID_PPV_ARGS(&m_QueryHeap));
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateQueryHeap");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateQueryHeap");
 
     return Result::SUCCESS;
 }
@@ -61,7 +61,7 @@ Result QueryPoolD3D12::CreateBufferForAccelerationStructuresSizes(const QueryPoo
     resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     if (m_Device.GetTightAlignmentTier() != 0)
         resourceDesc.Flags |= D3D12_RESOURCE_FLAG_USE_TIGHT_ALIGNMENT;
 #endif
@@ -72,7 +72,7 @@ Result QueryPoolD3D12::CreateBufferForAccelerationStructuresSizes(const QueryPoo
     D3D12_HEAP_FLAGS heapFlags = m_Device.IsMemoryZeroInitializationEnabled() ? D3D12_HEAP_FLAG_NONE : D3D12_HEAP_FLAG_CREATE_NOT_ZEROED;
 
     HRESULT hr = m_Device->CreateCommittedResource(&heapProperties, heapFlags, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&m_BufferForAccelerationStructuresSizes));
-    NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateCommittedResource");
+    OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateCommittedResource");
 
     return Result::SUCCESS;
 }

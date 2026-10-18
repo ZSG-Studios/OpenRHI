@@ -2,7 +2,7 @@
 
 #include "SharedExternal.h"
 
-using namespace nri;
+using namespace openrhi;
 
 template <typename T>
 static constexpr T* DummyObject() {
@@ -19,8 +19,8 @@ struct DeviceNONE final : public DeviceBase {
             m_Desc.adapterDesc.queueNum[i] = 4;
 
         m_Desc.graphicsAPI = GraphicsAPI::NONE;
-        m_Desc.nriVersion = NRI_VERSION;
-        m_Desc.shaderModel = NriShaderModel(6, 10);
+        m_Desc.openrhiVersion = OPENRHI_VERSION;
+        m_Desc.shaderModel = OpenRhiShaderModel(6, 10);
 
         m_Desc.viewport.maxNum = 16;
         m_Desc.viewport.boundsMin = -32768;
@@ -217,7 +217,7 @@ struct DeviceNONE final : public DeviceBase {
     Result FillFunctionTable(SwapChainInterface& table) const override;
     Result FillFunctionTable(UpscalerInterface& table) const override;
 
-#if NRI_ENABLE_IMGUI_EXTENSION
+#if OPENRHI_ENABLE_IMGUI_EXTENSION
     Result FillFunctionTable(ImguiInterface& table) const override;
 #endif
 
@@ -243,446 +243,446 @@ Result CreateDeviceNONE(const DeviceCreationDesc& desc, DeviceBase*& device) {
 //============================================================================================================================================================================================
 #pragma region[  Core  ]
 
-static const DeviceDesc& NRI_CALL GetDeviceDesc(const Device& device) {
+static const DeviceDesc& OPENRHI_CALL GetDeviceDesc(const Device& device) {
     return ((DeviceNONE&)device).GetDesc();
 }
 
-static const BufferDesc& NRI_CALL GetBufferDesc(const Buffer&) {
+static const BufferDesc& OPENRHI_CALL GetBufferDesc(const Buffer&) {
     static const BufferDesc bufferDesc = {1};
 
     return bufferDesc;
 }
 
-static const TextureDesc& NRI_CALL GetTextureDesc(const Texture&) {
+static const TextureDesc& OPENRHI_CALL GetTextureDesc(const Texture&) {
     static const TextureDesc textureDesc = {TextureType::TEXTURE_1D, TextureUsageBits::NONE, Format::R8_UNORM, 1, 1, 1, 1, 1, 1};
 
     return textureDesc;
 }
 
-static FormatSupportBits NRI_CALL GetFormatSupport(const Device&, Format) {
+static FormatSupportBits OPENRHI_CALL GetFormatSupport(const Device&, Format) {
     return (FormatSupportBits)(-1);
 }
 
-static Result NRI_CALL GetQueue(Device&, QueueType, uint32_t, Queue*& queue) {
+static Result OPENRHI_CALL GetQueue(Device&, QueueType, uint32_t, Queue*& queue) {
     queue = DummyObject<Queue>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateCommandAllocator(Queue&, CommandAllocator*& commandAllocator) {
+static Result OPENRHI_CALL CreateCommandAllocator(Queue&, CommandAllocator*& commandAllocator) {
     commandAllocator = DummyObject<CommandAllocator>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateCommandBuffer(CommandAllocator&, CommandBuffer*& commandBuffer) {
+static Result OPENRHI_CALL CreateCommandBuffer(CommandAllocator&, CommandBuffer*& commandBuffer) {
     commandBuffer = DummyObject<CommandBuffer>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateFence(Device&, uint64_t, Fence*& fence) {
+static Result OPENRHI_CALL CreateFence(Device&, uint64_t, Fence*& fence) {
     fence = DummyObject<Fence>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateDescriptorPool(Device&, const DescriptorPoolDesc&, DescriptorPool*& descriptorPool) {
+static Result OPENRHI_CALL CreateDescriptorPool(Device&, const DescriptorPoolDesc&, DescriptorPool*& descriptorPool) {
     descriptorPool = DummyObject<DescriptorPool>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreatePipelineLayout(Device&, const PipelineLayoutDesc&, PipelineLayout*& pipelineLayout) {
+static Result OPENRHI_CALL CreatePipelineLayout(Device&, const PipelineLayoutDesc&, PipelineLayout*& pipelineLayout) {
     pipelineLayout = DummyObject<PipelineLayout>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateGraphicsPipeline(Device&, const GraphicsPipelineDesc&, Pipeline*& pipeline) {
+static Result OPENRHI_CALL CreateGraphicsPipeline(Device&, const GraphicsPipelineDesc&, Pipeline*& pipeline) {
     pipeline = DummyObject<Pipeline>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateComputePipeline(Device&, const ComputePipelineDesc&, Pipeline*& pipeline) {
+static Result OPENRHI_CALL CreateComputePipeline(Device&, const ComputePipelineDesc&, Pipeline*& pipeline) {
     pipeline = DummyObject<Pipeline>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreatePipelineCache(Device&, const PipelineCacheDesc&, PipelineCache*& pipelineCache) {
+static Result OPENRHI_CALL CreatePipelineCache(Device&, const PipelineCacheDesc&, PipelineCache*& pipelineCache) {
     pipelineCache = DummyObject<PipelineCache>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateQueryPool(Device&, const QueryPoolDesc&, QueryPool*& queryPool) {
+static Result OPENRHI_CALL CreateQueryPool(Device&, const QueryPoolDesc&, QueryPool*& queryPool) {
     queryPool = DummyObject<QueryPool>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateSampler(Device&, const SamplerDesc&, Descriptor*& sampler) {
+static Result OPENRHI_CALL CreateSampler(Device&, const SamplerDesc&, Descriptor*& sampler) {
     sampler = DummyObject<Descriptor>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateBufferView(const BufferViewDesc&, Descriptor*& bufferView) {
+static Result OPENRHI_CALL CreateBufferView(const BufferViewDesc&, Descriptor*& bufferView) {
     bufferView = DummyObject<Descriptor>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateTextureView(const TextureViewDesc&, Descriptor*& textureView) {
+static Result OPENRHI_CALL CreateTextureView(const TextureViewDesc&, Descriptor*& textureView) {
     textureView = DummyObject<Descriptor>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL DestroyCommandAllocator(CommandAllocator*) {
+static void OPENRHI_CALL DestroyCommandAllocator(CommandAllocator*) {
 }
 
-static void NRI_CALL DestroyCommandBuffer(CommandBuffer*) {
+static void OPENRHI_CALL DestroyCommandBuffer(CommandBuffer*) {
 }
 
-static void NRI_CALL DestroyDescriptorPool(DescriptorPool*) {
+static void OPENRHI_CALL DestroyDescriptorPool(DescriptorPool*) {
 }
 
-static void NRI_CALL DestroyBuffer(Buffer*) {
+static void OPENRHI_CALL DestroyBuffer(Buffer*) {
 }
 
-static void NRI_CALL DestroyTexture(Texture*) {
+static void OPENRHI_CALL DestroyTexture(Texture*) {
 }
 
-static void NRI_CALL DestroyDescriptor(Descriptor*) {
+static void OPENRHI_CALL DestroyDescriptor(Descriptor*) {
 }
 
-static void NRI_CALL DestroyPipelineLayout(PipelineLayout*) {
+static void OPENRHI_CALL DestroyPipelineLayout(PipelineLayout*) {
 }
 
-static void NRI_CALL DestroyPipeline(Pipeline*) {
+static void OPENRHI_CALL DestroyPipeline(Pipeline*) {
 }
 
-static void NRI_CALL DestroyPipelineCache(PipelineCache*) {
+static void OPENRHI_CALL DestroyPipelineCache(PipelineCache*) {
 }
 
-static Result NRI_CALL GetPipelineCacheData(PipelineCache&, void*, uint64_t& size) {
+static Result OPENRHI_CALL GetPipelineCacheData(PipelineCache&, void*, uint64_t& size) {
     size = 0;
     return Result::SUCCESS;
 }
 
-static void NRI_CALL DestroyQueryPool(QueryPool*) {
+static void OPENRHI_CALL DestroyQueryPool(QueryPool*) {
 }
 
-static void NRI_CALL DestroyFence(Fence*) {
+static void OPENRHI_CALL DestroyFence(Fence*) {
 }
 
-static Result NRI_CALL AllocateMemory(Device&, const AllocateMemoryDesc&, Memory*& memory) {
+static Result OPENRHI_CALL AllocateMemory(Device&, const AllocateMemoryDesc&, Memory*& memory) {
     memory = DummyObject<Memory>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL FreeMemory(Memory*) {
+static void OPENRHI_CALL FreeMemory(Memory*) {
 }
 
-static Result NRI_CALL CreateBuffer(Device&, const BufferDesc&, Buffer*& buffer) {
+static Result OPENRHI_CALL CreateBuffer(Device&, const BufferDesc&, Buffer*& buffer) {
     buffer = DummyObject<Buffer>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateTexture(Device&, const TextureDesc&, Texture*& texture) {
+static Result OPENRHI_CALL CreateTexture(Device&, const TextureDesc&, Texture*& texture) {
     texture = DummyObject<Texture>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL GetBufferMemoryDesc(const Buffer&, MemoryLocation, MemoryDesc& memoryDesc) {
+static void OPENRHI_CALL GetBufferMemoryDesc(const Buffer&, MemoryLocation, MemoryDesc& memoryDesc) {
     memoryDesc = {1};
 }
 
-static void NRI_CALL GetTextureMemoryDesc(const Texture&, MemoryLocation, MemoryDesc& memoryDesc) {
+static void OPENRHI_CALL GetTextureMemoryDesc(const Texture&, MemoryLocation, MemoryDesc& memoryDesc) {
     memoryDesc = {1};
 }
 
-static Result NRI_CALL BindBufferMemory(const BindBufferMemoryDesc*, uint32_t) {
+static Result OPENRHI_CALL BindBufferMemory(const BindBufferMemoryDesc*, uint32_t) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL BindTextureMemory(const BindTextureMemoryDesc*, uint32_t) {
+static Result OPENRHI_CALL BindTextureMemory(const BindTextureMemoryDesc*, uint32_t) {
     return Result::SUCCESS;
 }
 
-static void NRI_CALL GetBufferMemoryDesc2(const Device&, const BufferDesc&, MemoryLocation, MemoryDesc& memoryDesc) {
+static void OPENRHI_CALL GetBufferMemoryDesc2(const Device&, const BufferDesc&, MemoryLocation, MemoryDesc& memoryDesc) {
     memoryDesc = {1};
 }
 
-static void NRI_CALL GetTextureMemoryDesc2(const Device&, const TextureDesc&, MemoryLocation, MemoryDesc& memoryDesc) {
+static void OPENRHI_CALL GetTextureMemoryDesc2(const Device&, const TextureDesc&, MemoryLocation, MemoryDesc& memoryDesc) {
     memoryDesc = {1};
 }
 
-static Result NRI_CALL CreateCommittedBuffer(Device&, MemoryLocation, float, const BufferDesc&, Buffer*& buffer) {
+static Result OPENRHI_CALL CreateCommittedBuffer(Device&, MemoryLocation, float, const BufferDesc&, Buffer*& buffer) {
     buffer = DummyObject<Buffer>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateCommittedTexture(Device&, MemoryLocation, float, const TextureDesc&, Texture*& texture) {
+static Result OPENRHI_CALL CreateCommittedTexture(Device&, MemoryLocation, float, const TextureDesc&, Texture*& texture) {
     texture = DummyObject<Texture>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreatePlacedBuffer(Device&, Memory*, uint64_t, const BufferDesc&, Buffer*& buffer) {
+static Result OPENRHI_CALL CreatePlacedBuffer(Device&, Memory*, uint64_t, const BufferDesc&, Buffer*& buffer) {
     buffer = DummyObject<Buffer>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreatePlacedTexture(Device&, Memory*, uint64_t, const TextureDesc&, Texture*& texture) {
+static Result OPENRHI_CALL CreatePlacedTexture(Device&, Memory*, uint64_t, const TextureDesc&, Texture*& texture) {
     texture = DummyObject<Texture>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL AllocateDescriptorSets(DescriptorPool&, const PipelineLayout&, uint32_t, DescriptorSet** descriptorSets, uint32_t instanceNum, uint32_t) {
+static Result OPENRHI_CALL AllocateDescriptorSets(DescriptorPool&, const PipelineLayout&, uint32_t, DescriptorSet** descriptorSets, uint32_t instanceNum, uint32_t) {
     for (uint32_t i = 0; i < instanceNum; i++)
         descriptorSets[i] = DummyObject<DescriptorSet>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL UpdateDescriptorRanges(const UpdateDescriptorRangeDesc*, uint32_t) {
+static void OPENRHI_CALL UpdateDescriptorRanges(const UpdateDescriptorRangeDesc*, uint32_t) {
 }
 
-static void NRI_CALL CopyDescriptorRanges(const CopyDescriptorRangeDesc*, uint32_t) {
+static void OPENRHI_CALL CopyDescriptorRanges(const CopyDescriptorRangeDesc*, uint32_t) {
 }
 
-static void NRI_CALL ResetDescriptorPool(DescriptorPool&) {
+static void OPENRHI_CALL ResetDescriptorPool(DescriptorPool&) {
 }
 
-static void NRI_CALL GetDescriptorSetOffsets(const DescriptorSet&, uint32_t& resourceHeapOffset, uint32_t& samplerHeapOffset) {
+static void OPENRHI_CALL GetDescriptorSetOffsets(const DescriptorSet&, uint32_t& resourceHeapOffset, uint32_t& samplerHeapOffset) {
     resourceHeapOffset = 0;
     samplerHeapOffset = 0;
 }
 
-static Result NRI_CALL BeginCommandBuffer(CommandBuffer&, const DescriptorPool*) {
+static Result OPENRHI_CALL BeginCommandBuffer(CommandBuffer&, const DescriptorPool*) {
     return Result::SUCCESS;
 }
 
-static void NRI_CALL CmdSetDescriptorPool(CommandBuffer&, const DescriptorPool&) {
+static void OPENRHI_CALL CmdSetDescriptorPool(CommandBuffer&, const DescriptorPool&) {
 }
 
-static void NRI_CALL CmdSetPipelineLayout(CommandBuffer&, BindPoint, const PipelineLayout&) {
+static void OPENRHI_CALL CmdSetPipelineLayout(CommandBuffer&, BindPoint, const PipelineLayout&) {
 }
 
-static void NRI_CALL CmdSetDescriptorSet(CommandBuffer&, const SetDescriptorSetDesc&) {
+static void OPENRHI_CALL CmdSetDescriptorSet(CommandBuffer&, const SetDescriptorSetDesc&) {
 }
 
-static void NRI_CALL CmdSetRootConstants(CommandBuffer&, const SetRootConstantsDesc&) {
+static void OPENRHI_CALL CmdSetRootConstants(CommandBuffer&, const SetRootConstantsDesc&) {
 }
 
-static void NRI_CALL CmdSetRootDescriptor(CommandBuffer&, const SetRootDescriptorDesc&) {
+static void OPENRHI_CALL CmdSetRootDescriptor(CommandBuffer&, const SetRootDescriptorDesc&) {
 }
 
-static void NRI_CALL CmdSetPipeline(CommandBuffer&, const Pipeline&) {
+static void OPENRHI_CALL CmdSetPipeline(CommandBuffer&, const Pipeline&) {
 }
 
-static void NRI_CALL CmdBarrier(CommandBuffer&, const BarrierDesc&) {
+static void OPENRHI_CALL CmdBarrier(CommandBuffer&, const BarrierDesc&) {
 }
 
-static void NRI_CALL CmdSetIndexBuffer(CommandBuffer&, const Buffer&, uint64_t, IndexType) {
+static void OPENRHI_CALL CmdSetIndexBuffer(CommandBuffer&, const Buffer&, uint64_t, IndexType) {
 }
 
-static void NRI_CALL CmdSetVertexBuffers(CommandBuffer&, uint32_t, const VertexBufferDesc*, uint32_t) {
+static void OPENRHI_CALL CmdSetVertexBuffers(CommandBuffer&, uint32_t, const VertexBufferDesc*, uint32_t) {
 }
 
-static void NRI_CALL CmdSetViewports(CommandBuffer&, const Viewport*, uint32_t) {
+static void OPENRHI_CALL CmdSetViewports(CommandBuffer&, const Viewport*, uint32_t) {
 }
 
-static void NRI_CALL CmdSetScissors(CommandBuffer&, const Rect*, uint32_t) {
+static void OPENRHI_CALL CmdSetScissors(CommandBuffer&, const Rect*, uint32_t) {
 }
 
-static void NRI_CALL CmdSetStencilReference(CommandBuffer&, uint8_t, uint8_t) {
+static void OPENRHI_CALL CmdSetStencilReference(CommandBuffer&, uint8_t, uint8_t) {
 }
 
-static void NRI_CALL CmdSetDepthBounds(CommandBuffer&, float, float) {
+static void OPENRHI_CALL CmdSetDepthBounds(CommandBuffer&, float, float) {
 }
 
-static void NRI_CALL CmdSetBlendConstants(CommandBuffer&, const Color32f&) {
+static void OPENRHI_CALL CmdSetBlendConstants(CommandBuffer&, const Color32f&) {
 }
 
-static void NRI_CALL CmdSetSampleLocations(CommandBuffer&, const SampleLocation*, Sample_t, Sample_t) {
+static void OPENRHI_CALL CmdSetSampleLocations(CommandBuffer&, const SampleLocation*, Sample_t, Sample_t) {
 }
 
-static void NRI_CALL CmdSetShadingRate(CommandBuffer&, const ShadingRateDesc&) {
+static void OPENRHI_CALL CmdSetShadingRate(CommandBuffer&, const ShadingRateDesc&) {
 }
 
-static void NRI_CALL CmdSetDepthBias(CommandBuffer&, const DepthBiasDesc&) {
+static void OPENRHI_CALL CmdSetDepthBias(CommandBuffer&, const DepthBiasDesc&) {
 }
 
-static void NRI_CALL CmdBeginRendering(CommandBuffer&, const RenderingDesc&) {
+static void OPENRHI_CALL CmdBeginRendering(CommandBuffer&, const RenderingDesc&) {
 }
 
-static void NRI_CALL CmdClearAttachments(CommandBuffer&, const ClearAttachmentDesc*, uint32_t, const Rect*, uint32_t) {
+static void OPENRHI_CALL CmdClearAttachments(CommandBuffer&, const ClearAttachmentDesc*, uint32_t, const Rect*, uint32_t) {
 }
 
-static void NRI_CALL CmdDraw(CommandBuffer&, const DrawDesc&) {
+static void OPENRHI_CALL CmdDraw(CommandBuffer&, const DrawDesc&) {
 }
 
-static void NRI_CALL CmdDrawIndexed(CommandBuffer&, const DrawIndexedDesc&) {
+static void OPENRHI_CALL CmdDrawIndexed(CommandBuffer&, const DrawIndexedDesc&) {
 }
 
-static void NRI_CALL CmdDrawIndirect(CommandBuffer&, const Buffer&, uint64_t, uint32_t, uint32_t, const Buffer*, uint64_t) {
+static void OPENRHI_CALL CmdDrawIndirect(CommandBuffer&, const Buffer&, uint64_t, uint32_t, uint32_t, const Buffer*, uint64_t) {
 }
 
-static void NRI_CALL CmdDrawIndexedIndirect(CommandBuffer&, const Buffer&, uint64_t, uint32_t, uint32_t, const Buffer*, uint64_t) {
+static void OPENRHI_CALL CmdDrawIndexedIndirect(CommandBuffer&, const Buffer&, uint64_t, uint32_t, uint32_t, const Buffer*, uint64_t) {
 }
 
-static void NRI_CALL CmdEndRendering(CommandBuffer&) {
+static void OPENRHI_CALL CmdEndRendering(CommandBuffer&) {
 }
 
-static void NRI_CALL CmdDispatch(CommandBuffer&, const DispatchDesc&) {
+static void OPENRHI_CALL CmdDispatch(CommandBuffer&, const DispatchDesc&) {
 }
 
-static void NRI_CALL CmdDispatchIndirect(CommandBuffer&, const Buffer&, uint64_t) {
+static void OPENRHI_CALL CmdDispatchIndirect(CommandBuffer&, const Buffer&, uint64_t) {
 }
 
-static void NRI_CALL CmdCopyBuffer(CommandBuffer&, Buffer&, uint64_t, const Buffer&, uint64_t, uint64_t) {
+static void OPENRHI_CALL CmdCopyBuffer(CommandBuffer&, Buffer&, uint64_t, const Buffer&, uint64_t, uint64_t) {
 }
 
-static void NRI_CALL CmdCopyTexture(CommandBuffer&, Texture&, const TextureRegionDesc*, const Texture&, const TextureRegionDesc*) {
+static void OPENRHI_CALL CmdCopyTexture(CommandBuffer&, Texture&, const TextureRegionDesc*, const Texture&, const TextureRegionDesc*) {
 }
 
-static void NRI_CALL CmdUploadBufferToTexture(CommandBuffer&, Texture&, const TextureRegionDesc&, const Buffer&, const TextureDataLayoutDesc&) {
+static void OPENRHI_CALL CmdUploadBufferToTexture(CommandBuffer&, Texture&, const TextureRegionDesc&, const Buffer&, const TextureDataLayoutDesc&) {
 }
 
-static void NRI_CALL CmdReadbackTextureToBuffer(CommandBuffer&, Buffer&, const TextureDataLayoutDesc&, const Texture&, const TextureRegionDesc&) {
+static void OPENRHI_CALL CmdReadbackTextureToBuffer(CommandBuffer&, Buffer&, const TextureDataLayoutDesc&, const Texture&, const TextureRegionDesc&) {
 }
 
-static void NRI_CALL CmdZeroBuffer(CommandBuffer&, Buffer&, uint64_t, uint64_t) {
+static void OPENRHI_CALL CmdZeroBuffer(CommandBuffer&, Buffer&, uint64_t, uint64_t) {
 }
 
-static void NRI_CALL CmdResolveTexture(CommandBuffer&, Texture&, const TextureRegionDesc*, const Texture&, const TextureRegionDesc*, ResolveOp) {
+static void OPENRHI_CALL CmdResolveTexture(CommandBuffer&, Texture&, const TextureRegionDesc*, const Texture&, const TextureRegionDesc*, ResolveOp) {
 }
 
-static void NRI_CALL CmdClearStorage(CommandBuffer&, const ClearStorageDesc&) {
+static void OPENRHI_CALL CmdClearStorage(CommandBuffer&, const ClearStorageDesc&) {
 }
 
-static void NRI_CALL CmdResetQueries(CommandBuffer&, QueryPool&, uint32_t, uint32_t) {
+static void OPENRHI_CALL CmdResetQueries(CommandBuffer&, QueryPool&, uint32_t, uint32_t) {
 }
 
-static void NRI_CALL CmdBeginQuery(CommandBuffer&, QueryPool&, uint32_t) {
+static void OPENRHI_CALL CmdBeginQuery(CommandBuffer&, QueryPool&, uint32_t) {
 }
 
-static void NRI_CALL CmdEndQuery(CommandBuffer&, QueryPool&, uint32_t) {
+static void OPENRHI_CALL CmdEndQuery(CommandBuffer&, QueryPool&, uint32_t) {
 }
 
-static void NRI_CALL CmdCopyQueries(CommandBuffer&, const QueryPool&, uint32_t, uint32_t, Buffer&, uint64_t) {
+static void OPENRHI_CALL CmdCopyQueries(CommandBuffer&, const QueryPool&, uint32_t, uint32_t, Buffer&, uint64_t) {
 }
 
-static void NRI_CALL CmdBeginAnnotation(CommandBuffer&, const char*, uint32_t) {
+static void OPENRHI_CALL CmdBeginAnnotation(CommandBuffer&, const char*, uint32_t) {
 }
 
-static void NRI_CALL CmdEndAnnotation(CommandBuffer&) {
+static void OPENRHI_CALL CmdEndAnnotation(CommandBuffer&) {
 }
 
-static void NRI_CALL CmdAnnotation(CommandBuffer&, const char*, uint32_t) {
+static void OPENRHI_CALL CmdAnnotation(CommandBuffer&, const char*, uint32_t) {
 }
 
-static Result NRI_CALL EndCommandBuffer(CommandBuffer&) {
+static Result OPENRHI_CALL EndCommandBuffer(CommandBuffer&) {
     return Result::SUCCESS;
 }
 
-static void NRI_CALL QueueBeginAnnotation(Queue&, const char*, uint32_t) {
+static void OPENRHI_CALL QueueBeginAnnotation(Queue&, const char*, uint32_t) {
 }
 
-static void NRI_CALL QueueEndAnnotation(Queue&) {
+static void OPENRHI_CALL QueueEndAnnotation(Queue&) {
 }
 
-static void NRI_CALL QueueAnnotation(Queue&, const char*, uint32_t) {
+static void OPENRHI_CALL QueueAnnotation(Queue&, const char*, uint32_t) {
 }
 
-static void NRI_CALL GetCalibratedTimestamps(Queue&, uint64_t& timestampGPU, uint64_t& timestampCPU) {
+static void OPENRHI_CALL GetCalibratedTimestamps(Queue&, uint64_t& timestampGPU, uint64_t& timestampCPU) {
     timestampGPU = 0;
     timestampCPU = 0;
 }
 
-static void NRI_CALL ResetQueries(QueryPool&, uint32_t, uint32_t) {
+static void OPENRHI_CALL ResetQueries(QueryPool&, uint32_t, uint32_t) {
 }
 
-static uint32_t NRI_CALL GetQuerySize(const QueryPool&) {
+static uint32_t OPENRHI_CALL GetQuerySize(const QueryPool&) {
     return 0;
 }
 
-static Result NRI_CALL QueueSubmit(Queue&, const QueueSubmitDesc&) {
+static Result OPENRHI_CALL QueueSubmit(Queue&, const QueueSubmitDesc&) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL DeviceWaitIdle(Device*) {
+static Result OPENRHI_CALL DeviceWaitIdle(Device*) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL QueueWaitIdle(Queue*) {
+static Result OPENRHI_CALL QueueWaitIdle(Queue*) {
     return Result::SUCCESS;
 }
 
-static void NRI_CALL Wait(Fence&, uint64_t) {
+static void OPENRHI_CALL Wait(Fence&, uint64_t) {
 }
 
-static uint64_t NRI_CALL GetFenceValue(Fence&) {
+static uint64_t OPENRHI_CALL GetFenceValue(Fence&) {
     return 0;
 }
 
-static void NRI_CALL ResetCommandAllocator(CommandAllocator&) {
+static void OPENRHI_CALL ResetCommandAllocator(CommandAllocator&) {
 }
 
-static void* NRI_CALL MapBuffer(Buffer&, uint64_t, uint64_t) {
+static void* OPENRHI_CALL MapBuffer(Buffer&, uint64_t, uint64_t) {
     return nullptr;
 }
 
-static void NRI_CALL UnmapBuffer(Buffer&) {
+static void OPENRHI_CALL UnmapBuffer(Buffer&) {
 }
 
-static Result NRI_CALL UploadHostMemoryToTexture(Queue&, const UploadHostMemoryToTextureDesc*, uint32_t) {
+static Result OPENRHI_CALL UploadHostMemoryToTexture(Queue&, const UploadHostMemoryToTextureDesc*, uint32_t) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL ReadbackTextureToHostMemory(Queue&, const ReadbackTextureToHostMemoryDesc*, uint32_t) {
+static Result OPENRHI_CALL ReadbackTextureToHostMemory(Queue&, const ReadbackTextureToHostMemoryDesc*, uint32_t) {
     return Result::SUCCESS;
 }
 
-static uint64_t NRI_CALL GetBufferDeviceAddress(const Buffer&) {
+static uint64_t OPENRHI_CALL GetBufferDeviceAddress(const Buffer&) {
     return 0;
 }
 
-static void NRI_CALL SetDebugName(Object*, const char*) {
+static void OPENRHI_CALL SetDebugName(Object*, const char*) {
 }
 
-static void* NRI_CALL GetDeviceNativeObject(const Device*) {
+static void* OPENRHI_CALL GetDeviceNativeObject(const Device*) {
     return nullptr;
 }
 
-static void* NRI_CALL GetQueueNativeObject(const Queue*) {
+static void* OPENRHI_CALL GetQueueNativeObject(const Queue*) {
     return nullptr;
 }
 
-static void* NRI_CALL GetCommandBufferNativeObject(const CommandBuffer*) {
+static void* OPENRHI_CALL GetCommandBufferNativeObject(const CommandBuffer*) {
     return nullptr;
 }
 
-static uint64_t NRI_CALL GetBufferNativeObject(const Buffer*) {
+static uint64_t OPENRHI_CALL GetBufferNativeObject(const Buffer*) {
     return 0;
 }
 
-static uint64_t NRI_CALL GetTextureNativeObject(const Texture*) {
+static uint64_t OPENRHI_CALL GetTextureNativeObject(const Texture*) {
     return 0;
 }
 
-static uint64_t NRI_CALL GetDescriptorNativeObject(const Descriptor*) {
+static uint64_t OPENRHI_CALL GetDescriptorNativeObject(const Descriptor*) {
     return 0;
 }
 
@@ -810,24 +810,24 @@ Result DeviceNONE::FillFunctionTable(CoreInterface& table) const {
 //============================================================================================================================================================================================
 #pragma region[  DescriptorHeap  ]
 
-static Result NRI_CALL CreateDescriptorHeap(Device&, const DescriptorHeapDesc&, DescriptorHeap*& descriptorHeap) {
+static Result OPENRHI_CALL CreateDescriptorHeap(Device&, const DescriptorHeapDesc&, DescriptorHeap*& descriptorHeap) {
     descriptorHeap = DummyObject<DescriptorHeap>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL DestroyDescriptorHeap(DescriptorHeap*) {
+static void OPENRHI_CALL DestroyDescriptorHeap(DescriptorHeap*) {
 }
 
-static Result NRI_CALL WriteResourceDescriptors(DescriptorHeap&, const WriteResourceDescriptorsDesc*, uint32_t) {
+static Result OPENRHI_CALL WriteResourceDescriptors(DescriptorHeap&, const WriteResourceDescriptorsDesc*, uint32_t) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL WriteSamplerDescriptors(DescriptorHeap&, const WriteSamplerDescriptorsDesc*, uint32_t) {
+static Result OPENRHI_CALL WriteSamplerDescriptors(DescriptorHeap&, const WriteSamplerDescriptorsDesc*, uint32_t) {
     return Result::SUCCESS;
 }
 
-static void NRI_CALL CmdSetDescriptorHeap(CommandBuffer&, const DescriptorHeap&) {
+static void OPENRHI_CALL CmdSetDescriptorHeap(CommandBuffer&, const DescriptorHeap&) {
 }
 
 Result DeviceNONE::FillFunctionTable(DescriptorHeapInterface& table) const {
@@ -845,19 +845,19 @@ Result DeviceNONE::FillFunctionTable(DescriptorHeapInterface& table) const {
 //============================================================================================================================================================================================
 #pragma region[  Helper  ]
 
-static uint32_t NRI_CALL CalculateAllocationNumber(const Device&, const ResourceGroupDesc&) {
+static uint32_t OPENRHI_CALL CalculateAllocationNumber(const Device&, const ResourceGroupDesc&) {
     return 0;
 }
 
-static Result NRI_CALL AllocateAndBindMemory(Device&, const ResourceGroupDesc&, Memory**) {
+static Result OPENRHI_CALL AllocateAndBindMemory(Device&, const ResourceGroupDesc&, Memory**) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL UploadData(Queue&, const TextureUploadDesc*, uint32_t, const BufferUploadDesc*, uint32_t) {
+static Result OPENRHI_CALL UploadData(Queue&, const TextureUploadDesc*, uint32_t, const BufferUploadDesc*, uint32_t) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL QueryVideoMemoryInfo(const Device&, MemoryLocation, VideoMemoryInfo& videoMemoryInfo) {
+static Result OPENRHI_CALL QueryVideoMemoryInfo(const Device&, MemoryLocation, VideoMemoryInfo& videoMemoryInfo) {
     videoMemoryInfo = {};
 
     return Result::SUCCESS;
@@ -877,23 +877,23 @@ Result DeviceNONE::FillFunctionTable(HelperInterface& table) const {
 //============================================================================================================================================================================================
 #pragma region[  Imgui  ]
 
-#if NRI_ENABLE_IMGUI_EXTENSION
+#if OPENRHI_ENABLE_IMGUI_EXTENSION
 
-static Result NRI_CALL CreateImgui(Device&, const ImguiDesc&, Imgui*& imgui) {
+static Result OPENRHI_CALL CreateImgui(Device&, const ImguiDesc&, Imgui*& imgui) {
     imgui = DummyObject<Imgui>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL DestroyImgui(Imgui*) {
+static void OPENRHI_CALL DestroyImgui(Imgui*) {
 }
 
-static void NRI_CALL CmdCopyImguiData(CommandBuffer&, Streamer&, Imgui& imgui, const CopyImguiDataDesc&, ImguiRenderData& imguiRenderData) {
+static void OPENRHI_CALL CmdCopyImguiData(CommandBuffer&, Streamer&, Imgui& imgui, const CopyImguiDataDesc&, ImguiRenderData& imguiRenderData) {
     imguiRenderData = {};
     imguiRenderData.imgui = &imgui;
 }
 
-static void NRI_CALL CmdDrawImgui(CommandBuffer&, const ImguiRenderData&, const DrawImguiDesc&) {
+static void OPENRHI_CALL CmdDrawImgui(CommandBuffer&, const ImguiRenderData&, const DrawImguiDesc&) {
 }
 
 Result DeviceNONE::FillFunctionTable(ImguiInterface& table) const {
@@ -912,19 +912,19 @@ Result DeviceNONE::FillFunctionTable(ImguiInterface& table) const {
 //============================================================================================================================================================================================
 #pragma region[  LowLatency  ]
 
-static Result NRI_CALL SetLatencySleepMode(SwapChain&, const LatencySleepMode&) {
+static Result OPENRHI_CALL SetLatencySleepMode(SwapChain&, const LatencySleepMode&) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL SetLatencyMarker(SwapChain&, uint64_t, LatencyMarker) {
+static Result OPENRHI_CALL SetLatencyMarker(SwapChain&, uint64_t, LatencyMarker) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL LatencySleep(SwapChain&, uint64_t) {
+static Result OPENRHI_CALL LatencySleep(SwapChain&, uint64_t) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL GetLatencyReport(const SwapChain&, LatencyReport&) {
+static Result OPENRHI_CALL GetLatencyReport(const SwapChain&, LatencyReport&) {
     return Result::SUCCESS;
 }
 
@@ -942,10 +942,10 @@ Result DeviceNONE::FillFunctionTable(LowLatencyInterface& table) const {
 //============================================================================================================================================================================================
 #pragma region[  MeshShader  ]
 
-static void NRI_CALL CmdDrawMeshTasks(CommandBuffer&, const DrawMeshTasksDesc&) {
+static void OPENRHI_CALL CmdDrawMeshTasks(CommandBuffer&, const DrawMeshTasksDesc&) {
 }
 
-static void NRI_CALL CmdDrawMeshTasksIndirect(CommandBuffer&, const Buffer&, uint64_t, uint32_t, uint32_t, const Buffer*, uint64_t) {
+static void OPENRHI_CALL CmdDrawMeshTasksIndirect(CommandBuffer&, const Buffer&, uint64_t, uint32_t, uint32_t, const Buffer*, uint64_t) {
 }
 
 Result DeviceNONE::FillFunctionTable(MeshShaderInterface& table) const {
@@ -960,144 +960,144 @@ Result DeviceNONE::FillFunctionTable(MeshShaderInterface& table) const {
 //============================================================================================================================================================================================
 #pragma region[  RayTracing  ]
 
-static Result NRI_CALL CreateRayTracingPipeline(Device&, const RayTracingPipelineDesc&, Pipeline*& pipeline) {
+static Result OPENRHI_CALL CreateRayTracingPipeline(Device&, const RayTracingPipelineDesc&, Pipeline*& pipeline) {
     pipeline = DummyObject<Pipeline>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateAccelerationStructureDescriptor(const AccelerationStructure&, Descriptor*& descriptor) {
+static Result OPENRHI_CALL CreateAccelerationStructureDescriptor(const AccelerationStructure&, Descriptor*& descriptor) {
     descriptor = DummyObject<Descriptor>();
 
     return Result::SUCCESS;
 }
 
-static uint64_t NRI_CALL GetAccelerationStructureHandle(const AccelerationStructure&) {
+static uint64_t OPENRHI_CALL GetAccelerationStructureHandle(const AccelerationStructure&) {
     return 0;
 }
 
-static uint64_t NRI_CALL GetAccelerationStructureUpdateScratchBufferSize(const AccelerationStructure&) {
+static uint64_t OPENRHI_CALL GetAccelerationStructureUpdateScratchBufferSize(const AccelerationStructure&) {
     return 0;
 }
 
-static uint64_t NRI_CALL GetAccelerationStructureBuildScratchBufferSize(const AccelerationStructure&) {
+static uint64_t OPENRHI_CALL GetAccelerationStructureBuildScratchBufferSize(const AccelerationStructure&) {
     return 0;
 }
 
-static uint64_t NRI_CALL GetMicromapBuildScratchBufferSize(const Micromap&) {
+static uint64_t OPENRHI_CALL GetMicromapBuildScratchBufferSize(const Micromap&) {
     return 0;
 }
 
-static Buffer* NRI_CALL GetAccelerationStructureBuffer(const AccelerationStructure&) {
+static Buffer* OPENRHI_CALL GetAccelerationStructureBuffer(const AccelerationStructure&) {
     return DummyObject<Buffer>();
 }
 
-static Buffer* NRI_CALL GetMicromapBuffer(const Micromap&) {
+static Buffer* OPENRHI_CALL GetMicromapBuffer(const Micromap&) {
     return DummyObject<Buffer>();
 }
 
-static void NRI_CALL DestroyAccelerationStructure(AccelerationStructure*) {
+static void OPENRHI_CALL DestroyAccelerationStructure(AccelerationStructure*) {
 }
 
-static void NRI_CALL DestroyMicromap(Micromap*) {
+static void OPENRHI_CALL DestroyMicromap(Micromap*) {
 }
 
-static Result NRI_CALL CreateAccelerationStructure(Device&, const AccelerationStructureDesc&, AccelerationStructure*& accelerationStructure) {
+static Result OPENRHI_CALL CreateAccelerationStructure(Device&, const AccelerationStructureDesc&, AccelerationStructure*& accelerationStructure) {
     accelerationStructure = DummyObject<AccelerationStructure>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateMicromap(Device&, const MicromapDesc&, Micromap*& micromap) {
+static Result OPENRHI_CALL CreateMicromap(Device&, const MicromapDesc&, Micromap*& micromap) {
     micromap = DummyObject<Micromap>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL GetAccelerationStructureMemoryDesc(const AccelerationStructure&, MemoryLocation, MemoryDesc& memoryDesc) {
+static void OPENRHI_CALL GetAccelerationStructureMemoryDesc(const AccelerationStructure&, MemoryLocation, MemoryDesc& memoryDesc) {
     memoryDesc = {1};
 }
 
-static void NRI_CALL GetMicromapMemoryDesc(const Micromap&, MemoryLocation, MemoryDesc& memoryDesc) {
+static void OPENRHI_CALL GetMicromapMemoryDesc(const Micromap&, MemoryLocation, MemoryDesc& memoryDesc) {
     memoryDesc = {1};
 }
 
-static Result NRI_CALL BindAccelerationStructureMemory(const BindAccelerationStructureMemoryDesc*, uint32_t) {
+static Result OPENRHI_CALL BindAccelerationStructureMemory(const BindAccelerationStructureMemoryDesc*, uint32_t) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL BindMicromapMemory(const BindMicromapMemoryDesc*, uint32_t) {
+static Result OPENRHI_CALL BindMicromapMemory(const BindMicromapMemoryDesc*, uint32_t) {
     return Result::SUCCESS;
 }
 
-static void NRI_CALL GetAccelerationStructureMemoryDesc2(const Device&, const AccelerationStructureDesc&, MemoryLocation, MemoryDesc& memoryDesc) {
+static void OPENRHI_CALL GetAccelerationStructureMemoryDesc2(const Device&, const AccelerationStructureDesc&, MemoryLocation, MemoryDesc& memoryDesc) {
     memoryDesc = {1};
 }
 
-static void NRI_CALL GetMicromapMemoryDesc2(const Device&, const MicromapDesc&, MemoryLocation, MemoryDesc& memoryDesc) {
+static void OPENRHI_CALL GetMicromapMemoryDesc2(const Device&, const MicromapDesc&, MemoryLocation, MemoryDesc& memoryDesc) {
     memoryDesc = {1};
 }
 
-static Result NRI_CALL CreateCommittedAccelerationStructure(Device&, MemoryLocation, float, const AccelerationStructureDesc&, AccelerationStructure*& accelerationStructure) {
+static Result OPENRHI_CALL CreateCommittedAccelerationStructure(Device&, MemoryLocation, float, const AccelerationStructureDesc&, AccelerationStructure*& accelerationStructure) {
     accelerationStructure = DummyObject<AccelerationStructure>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateCommittedMicromap(Device&, MemoryLocation, float, const MicromapDesc&, Micromap*& micromap) {
+static Result OPENRHI_CALL CreateCommittedMicromap(Device&, MemoryLocation, float, const MicromapDesc&, Micromap*& micromap) {
     micromap = DummyObject<Micromap>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreatePlacedAccelerationStructure(Device&, Memory*, uint64_t, const AccelerationStructureDesc&, AccelerationStructure*& accelerationStructure) {
+static Result OPENRHI_CALL CreatePlacedAccelerationStructure(Device&, Memory*, uint64_t, const AccelerationStructureDesc&, AccelerationStructure*& accelerationStructure) {
     accelerationStructure = DummyObject<AccelerationStructure>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreatePlacedMicromap(Device&, Memory*, uint64_t, const MicromapDesc&, Micromap*& micromap) {
+static Result OPENRHI_CALL CreatePlacedMicromap(Device&, Memory*, uint64_t, const MicromapDesc&, Micromap*& micromap) {
     micromap = DummyObject<Micromap>();
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL WriteShaderGroupIdentifiers(const Pipeline&, uint32_t, uint32_t, uint32_t, void*) {
+static Result OPENRHI_CALL WriteShaderGroupIdentifiers(const Pipeline&, uint32_t, uint32_t, uint32_t, void*) {
     return Result::SUCCESS;
 }
 
-static void NRI_CALL CmdBuildTopLevelAccelerationStructures(CommandBuffer&, const BuildTopLevelAccelerationStructureDesc*, uint32_t) {
+static void OPENRHI_CALL CmdBuildTopLevelAccelerationStructures(CommandBuffer&, const BuildTopLevelAccelerationStructureDesc*, uint32_t) {
 }
 
-static void NRI_CALL CmdBuildBottomLevelAccelerationStructures(CommandBuffer&, const BuildBottomLevelAccelerationStructureDesc*, uint32_t) {
+static void OPENRHI_CALL CmdBuildBottomLevelAccelerationStructures(CommandBuffer&, const BuildBottomLevelAccelerationStructureDesc*, uint32_t) {
 }
 
-static void NRI_CALL CmdBuildMicromaps(CommandBuffer&, const BuildMicromapDesc*, uint32_t) {
+static void OPENRHI_CALL CmdBuildMicromaps(CommandBuffer&, const BuildMicromapDesc*, uint32_t) {
 }
 
-static void NRI_CALL CmdDispatchRays(CommandBuffer&, const DispatchRaysDesc&) {
+static void OPENRHI_CALL CmdDispatchRays(CommandBuffer&, const DispatchRaysDesc&) {
 }
 
-static void NRI_CALL CmdDispatchRaysIndirect(CommandBuffer&, const Buffer&, uint64_t) {
+static void OPENRHI_CALL CmdDispatchRaysIndirect(CommandBuffer&, const Buffer&, uint64_t) {
 }
 
-static void NRI_CALL CmdWriteAccelerationStructureSizes(CommandBuffer&, const AccelerationStructure* const*, uint32_t, QueryPool&, uint32_t) {
+static void OPENRHI_CALL CmdWriteAccelerationStructureSizes(CommandBuffer&, const AccelerationStructure* const*, uint32_t, QueryPool&, uint32_t) {
 }
 
-static void NRI_CALL CmdWriteMicromapSizes(CommandBuffer&, const Micromap* const*, uint32_t, QueryPool&, uint32_t) {
+static void OPENRHI_CALL CmdWriteMicromapSizes(CommandBuffer&, const Micromap* const*, uint32_t, QueryPool&, uint32_t) {
 }
 
-static void NRI_CALL CmdCopyAccelerationStructure(CommandBuffer&, AccelerationStructure&, const AccelerationStructure&, CopyMode) {
+static void OPENRHI_CALL CmdCopyAccelerationStructure(CommandBuffer&, AccelerationStructure&, const AccelerationStructure&, CopyMode) {
 }
 
-static void NRI_CALL CmdCopyMicromap(CommandBuffer&, Micromap&, const Micromap&, CopyMode) {
+static void OPENRHI_CALL CmdCopyMicromap(CommandBuffer&, Micromap&, const Micromap&, CopyMode) {
 }
 
-static uint64_t NRI_CALL GetAccelerationStructureNativeObject(const AccelerationStructure*) {
+static uint64_t OPENRHI_CALL GetAccelerationStructureNativeObject(const AccelerationStructure*) {
     return 0;
 }
 
-static uint64_t NRI_CALL GetMicromapNativeObject(const Micromap*) {
+static uint64_t OPENRHI_CALL GetMicromapNativeObject(const Micromap*) {
     return 0;
 }
 
@@ -1145,7 +1145,7 @@ Result DeviceNONE::FillFunctionTable(RayTracingInterface& table) const {
 //============================================================================================================================================================================================
 #pragma region[  Video  ]
 
-static Result NRI_CALL GetVideoCapabilities(const Device&, const VideoSessionDesc&, VideoCapabilities& videoCapabilities) {
+static Result OPENRHI_CALL GetVideoCapabilities(const Device&, const VideoSessionDesc&, VideoCapabilities& videoCapabilities) {
     videoCapabilities = {};
     videoCapabilities.widthMin = 1;
     videoCapabilities.heightMin = 1;
@@ -1172,7 +1172,7 @@ static Result NRI_CALL GetVideoCapabilities(const Device&, const VideoSessionDes
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL GetVideoAV1Capabilities(const Device&, const VideoSessionDesc&, VideoAV1Capabilities& videoAV1Capabilities) {
+static Result OPENRHI_CALL GetVideoAV1Capabilities(const Device&, const VideoSessionDesc&, VideoAV1Capabilities& videoAV1Capabilities) {
     videoAV1Capabilities = {};
     videoAV1Capabilities.av1MaxLevel = uint32_t(-1);
     videoAV1Capabilities.av1MaxTileColumnNum = 64;
@@ -1197,70 +1197,70 @@ static Result NRI_CALL GetVideoAV1Capabilities(const Device&, const VideoSession
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL CreateVideoSession(Device&, const VideoSessionDesc&, VideoSession*& videoSession) {
+static Result OPENRHI_CALL CreateVideoSession(Device&, const VideoSessionDesc&, VideoSession*& videoSession) {
     videoSession = DummyObject<VideoSession>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL DestroyVideoSession(VideoSession*) {
+static void OPENRHI_CALL DestroyVideoSession(VideoSession*) {
 }
 
-static void NRI_CALL ResetVideoSession(VideoSession&) {
+static void OPENRHI_CALL ResetVideoSession(VideoSession&) {
 }
 
-static Result NRI_CALL CreateVideoSessionParameters(Device&, const VideoSessionParametersDesc&, VideoSessionParameters*& videoSessionParameters) {
+static Result OPENRHI_CALL CreateVideoSessionParameters(Device&, const VideoSessionParametersDesc&, VideoSessionParameters*& videoSessionParameters) {
     videoSessionParameters = DummyObject<VideoSessionParameters>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL DestroyVideoSessionParameters(VideoSessionParameters*) {
+static void OPENRHI_CALL DestroyVideoSessionParameters(VideoSessionParameters*) {
 }
 
-static Result NRI_CALL CreateVideoPicture(Device&, const VideoPictureDesc&, VideoPicture*& videoPicture) {
+static Result OPENRHI_CALL CreateVideoPicture(Device&, const VideoPictureDesc&, VideoPicture*& videoPicture) {
     videoPicture = DummyObject<VideoPicture>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL DestroyVideoPicture(VideoPicture*) {
+static void OPENRHI_CALL DestroyVideoPicture(VideoPicture*) {
 }
 
-static Result NRI_CALL GetVideoPictureState(const VideoPicture&, VideoPictureRole, VideoPictureState& state) {
+static Result OPENRHI_CALL GetVideoPictureState(const VideoPicture&, VideoPictureRole, VideoPictureState& state) {
     state = {};
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL WriteVideoAnnexBParameterSets(VideoAnnexBParameterSetsDesc& annexBParameterSetsDesc) {
+static Result OPENRHI_CALL WriteVideoAnnexBParameterSets(VideoAnnexBParameterSetsDesc& annexBParameterSetsDesc) {
     return video::WriteAnnexBParameterSets(annexBParameterSetsDesc);
 }
 
-static Result NRI_CALL WriteVideoAnnexBEndOfStream(VideoAnnexBEndOfStreamDesc& annexBEndOfStreamDesc) {
+static Result OPENRHI_CALL WriteVideoAnnexBEndOfStream(VideoAnnexBEndOfStreamDesc& annexBEndOfStreamDesc) {
     return video::WriteAnnexBEndOfStream(annexBEndOfStreamDesc);
 }
 
-static Result NRI_CALL WriteVideoAV1ObuHeaders(VideoAV1ObuHeadersDesc& av1ObuHeadersDesc) {
+static Result OPENRHI_CALL WriteVideoAV1ObuHeaders(VideoAV1ObuHeadersDesc& av1ObuHeadersDesc) {
     return video::WriteAV1ObuHeaders(av1ObuHeadersDesc);
 }
 
-static void NRI_CALL CmdDecodeVideo(CommandBuffer&, const VideoDecodeDesc&) {
+static void OPENRHI_CALL CmdDecodeVideo(CommandBuffer&, const VideoDecodeDesc&) {
 }
 
-static void NRI_CALL CmdEncodeVideo(CommandBuffer&, const VideoEncodeDesc&) {
+static void OPENRHI_CALL CmdEncodeVideo(CommandBuffer&, const VideoEncodeDesc&) {
 }
 
-static void NRI_CALL CmdResolveVideoEncodeFeedback(CommandBuffer&, VideoSession&, Buffer&, uint64_t) {
+static void OPENRHI_CALL CmdResolveVideoEncodeFeedback(CommandBuffer&, VideoSession&, Buffer&, uint64_t) {
 }
 
-static Result NRI_CALL GetVideoEncodeFeedback(VideoSession&, Buffer&, uint64_t, VideoEncodeFeedback& feedback) {
+static Result OPENRHI_CALL GetVideoEncodeFeedback(VideoSession&, Buffer&, uint64_t, VideoEncodeFeedback& feedback) {
     feedback = {};
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL GetVideoAV1EncodeDecodeInfo(VideoSession&, Buffer&, uint64_t, const VideoAV1EncodeDecodeInfoDesc&, VideoAV1EncodeDecodeInfo& info) {
+static Result OPENRHI_CALL GetVideoAV1EncodeDecodeInfo(VideoSession&, Buffer&, uint64_t, const VideoAV1EncodeDecodeInfoDesc&, VideoAV1EncodeDecodeInfo& info) {
     info = {};
 
     return Result::SUCCESS;
@@ -1294,45 +1294,45 @@ Result DeviceNONE::FillFunctionTable(VideoInterface& table) const {
 //============================================================================================================================================================================================
 #pragma region[  Streamer  ]
 
-static Result NRI_CALL CreateStreamer(Device&, const StreamerDesc&, Streamer*& streamer) {
+static Result OPENRHI_CALL CreateStreamer(Device&, const StreamerDesc&, Streamer*& streamer) {
     streamer = DummyObject<Streamer>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL DestroyStreamer(Streamer*) {
+static void OPENRHI_CALL DestroyStreamer(Streamer*) {
 }
 
-static StreamerCopyBatch NRI_CALL BeginStreamerCopyBatch(Streamer&) {
+static StreamerCopyBatch OPENRHI_CALL BeginStreamerCopyBatch(Streamer&) {
     static std::atomic_uint64_t copyBatch = 0;
 
     return copyBatch.fetch_add(1, std::memory_order_relaxed) + 1;
 }
 
-static Buffer* NRI_CALL GetStreamerConstantBuffer(Streamer&) {
+static Buffer* OPENRHI_CALL GetStreamerConstantBuffer(Streamer&) {
     return DummyObject<Buffer>();
 }
 
-static uint32_t NRI_CALL StreamConstantData(Streamer&, const void*, uint32_t) {
+static uint32_t OPENRHI_CALL StreamConstantData(Streamer&, const void*, uint32_t) {
     return 0;
 }
 
-static void* NRI_CALL StreamHostData(Streamer&, const void*, uint64_t, uint32_t) {
+static void* OPENRHI_CALL StreamHostData(Streamer&, const void*, uint64_t, uint32_t) {
     return nullptr;
 }
 
-static BufferOffset NRI_CALL StreamBufferData(Streamer&, const StreamBufferDataDesc&) {
+static BufferOffset OPENRHI_CALL StreamBufferData(Streamer&, const StreamBufferDataDesc&) {
     return {};
 }
 
-static BufferOffset NRI_CALL StreamTextureData(Streamer&, const StreamTextureDataDesc&) {
+static BufferOffset OPENRHI_CALL StreamTextureData(Streamer&, const StreamTextureDataDesc&) {
     return {};
 }
 
-static void NRI_CALL EndStreamerFrame(Streamer&) {
+static void OPENRHI_CALL EndStreamerFrame(Streamer&) {
 }
 
-static void NRI_CALL CmdCopyStreamedData(CommandBuffer&, Streamer&, StreamerCopyBatch) {
+static void OPENRHI_CALL CmdCopyStreamedData(CommandBuffer&, Streamer&, StreamerCopyBatch) {
 }
 
 Result DeviceNONE::FillFunctionTable(StreamerInterface& table) const {
@@ -1355,39 +1355,39 @@ Result DeviceNONE::FillFunctionTable(StreamerInterface& table) const {
 //============================================================================================================================================================================================
 #pragma region[  SwapChain  ]
 
-static Result NRI_CALL CreateSwapChain(Device&, const SwapChainDesc&, SwapChain*& swapChain) {
+static Result OPENRHI_CALL CreateSwapChain(Device&, const SwapChainDesc&, SwapChain*& swapChain) {
     swapChain = DummyObject<SwapChain>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL DestroySwapChain(SwapChain*) {
+static void OPENRHI_CALL DestroySwapChain(SwapChain*) {
 }
 
-static Texture* const* NRI_CALL GetSwapChainTextures(const SwapChain&, uint32_t& textureNum) {
+static Texture* const* OPENRHI_CALL GetSwapChainTextures(const SwapChain&, uint32_t& textureNum) {
     static Texture* const textures[1] = {DummyObject<Texture>()};
     textureNum = 1;
 
     return textures;
 }
 
-static Result NRI_CALL GetDisplayDesc(SwapChain&, DisplayDesc& displayDesc) {
+static Result OPENRHI_CALL GetDisplayDesc(SwapChain&, DisplayDesc& displayDesc) {
     displayDesc = {};
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL AcquireNextTexture(SwapChain&, Fence&, uint32_t& textureIndex) {
+static Result OPENRHI_CALL AcquireNextTexture(SwapChain&, Fence&, uint32_t& textureIndex) {
     textureIndex = 0;
 
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL WaitForPresent(SwapChain&, uint64_t) {
+static Result OPENRHI_CALL WaitForPresent(SwapChain&, uint64_t) {
     return Result::SUCCESS;
 }
 
-static Result NRI_CALL QueuePresent(SwapChain&, Fence&, uint64_t) {
+static Result OPENRHI_CALL QueuePresent(SwapChain&, Fence&, uint64_t) {
     return Result::SUCCESS;
 }
 
@@ -1408,24 +1408,24 @@ Result DeviceNONE::FillFunctionTable(SwapChainInterface& table) const {
 //============================================================================================================================================================================================
 #pragma region[  Upscaler  ]
 
-static Result NRI_CALL CreateUpscaler(Device&, const UpscalerDesc&, Upscaler*& upscaler) {
+static Result OPENRHI_CALL CreateUpscaler(Device&, const UpscalerDesc&, Upscaler*& upscaler) {
     upscaler = DummyObject<Upscaler>();
 
     return Result::SUCCESS;
 }
 
-static void NRI_CALL DestroyUpscaler(Upscaler*) {
+static void OPENRHI_CALL DestroyUpscaler(Upscaler*) {
 }
 
-static bool NRI_CALL IsUpscalerSupported(const Device&, UpscalerType) {
+static bool OPENRHI_CALL IsUpscalerSupported(const Device&, UpscalerType) {
     return true;
 }
 
-static void NRI_CALL GetUpscalerProps(const Upscaler&, UpscalerProps& upscalerProps) {
+static void OPENRHI_CALL GetUpscalerProps(const Upscaler&, UpscalerProps& upscalerProps) {
     upscalerProps = {1.0f, 0.0f, {1, 1}, {1, 1}, {1, 1}, 1};
 }
 
-static void NRI_CALL CmdDispatchUpscale(CommandBuffer&, Upscaler&, const DispatchUpscaleDesc&) {
+static void OPENRHI_CALL CmdDispatchUpscale(CommandBuffer&, Upscaler&, const DispatchUpscaleDesc&) {
 }
 
 Result DeviceNONE::FillFunctionTable(UpscalerInterface& table) const {

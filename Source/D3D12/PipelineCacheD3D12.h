@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct PipelineCacheD3D12 final : public DebugNameBase {
     inline PipelineCacheD3D12(DeviceD3D12& device)
@@ -29,12 +29,12 @@ struct PipelineCacheD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(m_Library, name);
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(m_Library, name);
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result Create(const PipelineCacheDesc& pipelineCacheDesc);
@@ -47,4 +47,4 @@ private:
     Lock m_StoreLock;
 };
 
-} // namespace nri
+} // namespace openrhi

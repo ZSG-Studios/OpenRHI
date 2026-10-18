@@ -1,6 +1,6 @@
 // © 2026 NVIDIA Corporation
 
-NRI_INLINE VideoSessionParametersVal::VideoSessionParametersVal(DeviceVal& device, VideoSessionParameters* impl, VideoSessionVal& session, const VideoSessionParametersDesc& desc)
+OPENRHI_INLINE VideoSessionParametersVal::VideoSessionParametersVal(DeviceVal& device, VideoSessionParameters* impl, VideoSessionVal& session, const VideoSessionParametersDesc& desc)
     : ObjectVal(device, (Object*)impl)
     , m_Session(session) {
     if (desc.h264Parameters) {
@@ -19,22 +19,22 @@ NRI_INLINE VideoSessionParametersVal::VideoSessionParametersVal(DeviceVal& devic
     }
 }
 
-NRI_INLINE VideoSessionParameters* VideoSessionParametersVal::GetImpl() const {
+OPENRHI_INLINE VideoSessionParameters* VideoSessionParametersVal::GetImpl() const {
     return (VideoSessionParameters*)m_Impl;
 }
 
-NRI_INLINE VideoSessionVal& VideoSessionParametersVal::GetSession() const {
+OPENRHI_INLINE VideoSessionVal& VideoSessionParametersVal::GetSession() const {
     return m_Session;
 }
 
-NRI_INLINE bool VideoSessionParametersVal::IsH264ParameterSetValid(uint8_t sequenceParameterSetId, uint8_t pictureParameterSetId) const {
+OPENRHI_INLINE bool VideoSessionParametersVal::IsH264ParameterSetValid(uint8_t sequenceParameterSetId, uint8_t pictureParameterSetId) const {
     if (sequenceParameterSetId >= 32)
         return false;
 
     return m_H264PpsToSpsPlusOne[pictureParameterSetId] == sequenceParameterSetId + 1;
 }
 
-NRI_INLINE bool VideoSessionParametersVal::IsH265ParameterSetValid(uint8_t videoParameterSetId, uint8_t sequenceParameterSetId, uint8_t pictureParameterSetId) const {
+OPENRHI_INLINE bool VideoSessionParametersVal::IsH265ParameterSetValid(uint8_t videoParameterSetId, uint8_t sequenceParameterSetId, uint8_t pictureParameterSetId) const {
     if (videoParameterSetId >= 16 || sequenceParameterSetId >= 16 || pictureParameterSetId >= 64)
         return false;
 

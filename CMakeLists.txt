@@ -3,21 +3,16 @@ cmake_minimum_required(VERSION 3.30)
 include(CMakeDependentOption)
 include(FetchContent)
 
-# GitHub actions?
-if("$ENV{GITHUB_ACTIONS}" STREQUAL "")
-    set(GITHUB_CI FALSE CACHE BOOL "GitHub Actions runner" FORCE)
-else()
-    set(GITHUB_CI TRUE CACHE BOOL "GitHub Actions runner" FORCE)
-    message(STATUS "Detected environment: GitHub Actions...")
-endif()
-
 # Create project
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/Include/NRI.h" ver_h)
-string(REGEX MATCH "NRI_VERSION ([0-9]*)" _ ${ver_h})
-set(NRI_VERSION ${CMAKE_MATCH_1})
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/Include/OpenRHI.h" ver_h)
+string(REGEX MATCH "OPENRHI_VERSION ([0-9]*)" _ ${ver_h})
+set(OPENRHI_VERSION ${CMAKE_MATCH_1})
 
-project(NRI VERSION ${NRI_VERSION} LANGUAGES CXX)
-message("NRI: v${NRI_VERSION}:")
+project(OpenRHI VERSION ${OPENRHI_VERSION} LANGUAGES CXX)
+message("OpenRHI: v${OPENRHI_VERSION}:")
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "OpenRHI requires a 64-bit target")
+endif()
 
 # Test packages availability ("find_package" works only for X11)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -30,119 +25,110 @@ if(CMAKE_GENERATOR_PLATFORM STREQUAL "ARM64EC")
     set(IS_ARM64 FALSE)
     set(BIN_ARCHITECTURE "x64")
     set(NVAPI_BIN_ARCHITECTURE "amd64")
-    set(WGPU_BIN_ARCHITECTURE "x86_64")
 elseif((CMAKE_GENERATOR_PLATFORM MATCHES "ARM64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64"))
     set(IS_ARM64 TRUE)
     set(BIN_ARCHITECTURE "arm64")
     set(NVAPI_BIN_ARCHITECTURE "aarch64")
-    set(WGPU_BIN_ARCHITECTURE "aarch64")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(IS_ARM64 FALSE)
     set(BIN_ARCHITECTURE "x64")
     set(NVAPI_BIN_ARCHITECTURE "amd64")
-    set(WGPU_BIN_ARCHITECTURE "x86_64")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     set(IS_ARM64 FALSE)
     set(BIN_ARCHITECTURE "x86")
     set(NVAPI_BIN_ARCHITECTURE "x86")
-    if(WIN32)
-        set(WGPU_BIN_ARCHITECTURE "i686")
-    endif()
 else()
-    message(FATAL_ERROR "NRI: unsupported architecture or platform '${CMAKE_SYSTEM_NAME}', '${CMAKE_SYSTEM_PROCESSOR}'")
+    message(FATAL_ERROR "OpenRHI: unsupported architecture or platform '${CMAKE_SYSTEM_NAME}', '${CMAKE_SYSTEM_PROCESSOR}'")
 endif()
 
 # Options
-set(NRI_AGILITY_SDK_DIR "AgilitySDK" CACHE STRING "Directory where Agility SDK will be copied relative to the directory with binaries")
-set(NRI_AGILITY_SDK_VERSION_MAJOR "619" CACHE STRING "Agility SDK major version") # 721 ("D3D12_ERROR_INVALID_REDIST" if Windows developer mode is not enabled)
-set(NRI_AGILITY_SDK_VERSION_MINOR "6" CACHE STRING "Agility SDK minor version") # 3-preview
-set(NRI_WGPU_VERSION "v29.0.1.1")
-set(NRI_SHADERS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/_Shaders" CACHE STRING "Shader output path override")
-set(NRI_NVAPI_CUSTOM_PATH "" CACHE STRING "Path to a custom NVAPI library directory")
+set(OPENRHI_AGILITY_SDK_DIR "AgilitySDK" CACHE STRING "Directory where Agility SDK will be copied relative to the directory with binaries")
+set(OPENRHI_AGILITY_SDK_VERSION_MAJOR "619" CACHE STRING "Agility SDK major version") # 721 ("D3D12_ERROR_INVALID_REDIST" if Windows developer mode is not enabled)
+set(OPENRHI_AGILITY_SDK_VERSION_MINOR "6" CACHE STRING "Agility SDK minor version") # 3-preview
+set(OPENRHI_NVAPI_CUSTOM_PATH "" CACHE STRING "Path to a custom NVAPI library directory")
 
 # A shared library on iOS requires framework packaging and code signing
 if(IOS)
-    set(NRI_STATIC_LIBRARY_DEFAULT ON)
+    set(OPENRHI_STATIC_LIBRARY_DEFAULT ON)
 else()
-    set(NRI_STATIC_LIBRARY_DEFAULT OFF)
+    set(OPENRHI_STATIC_LIBRARY_DEFAULT OFF)
 endif()
 
-option(NRI_STATIC_LIBRARY "Build static library" ${NRI_STATIC_LIBRARY_DEFAULT})
-option(NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS "Enable debug names, host and device annotations" ON)
-option(NRI_ENABLE_NONE_SUPPORT "Enable NONE backend" ON)
-option(NRI_ENABLE_VALIDATION_SUPPORT "Enable Validation backend (otherwise 'enableNRIValidation' is ignored)" ON)
-option(NRI_ENABLE_IMGUI_EXTENSION "Enable 'NRIImgui' extension" OFF)
-option(NRI_STREAMER_THREAD_SAFE "'NRIStreamer' thread safety (OFF is faster)" ON)
+option(OPENRHI_STATIC_LIBRARY "Build static library" ${OPENRHI_STATIC_LIBRARY_DEFAULT})
+option(OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS "Enable debug names, host and device annotations" ON)
+option(OPENRHI_ENABLE_NONE_SUPPORT "Enable NONE test backend" OFF)
+option(OPENRHI_ENABLE_VALIDATION_SUPPORT "Enable Validation backend (otherwise 'enableOpenRHIValidation' is ignored)" ON)
+option(OPENRHI_ENABLE_IMGUI_EXTENSION "Enable 'ImguiInterface' extension" OFF)
+option(OPENRHI_STREAMER_THREAD_SAFE "'StreamerInterface' thread safety (OFF is faster)" ON)
 
 # Metal 4 requires Xcode 26 or newer (AppleClang 17 or newer)
-set(NRI_METAL_SUPPORT_DEFAULT ON)
+set(OPENRHI_METAL_SUPPORT_DEFAULT ON)
 if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 17)
-    set(NRI_METAL_SUPPORT_DEFAULT OFF)
-    message(STATUS "NRI: Metal 4 backend is disabled by default (requires Xcode 26 or newer)")
+    set(OPENRHI_METAL_SUPPORT_DEFAULT OFF)
+    message(STATUS "OpenRHI: Metal 4 backend is disabled by default (requires Xcode 26 or newer)")
 endif()
 
 # Internal shaders are precompiled, which requires the Metal toolchain ("xcodebuild -downloadComponent MetalToolchain")
-if(APPLE AND NRI_METAL_SUPPORT_DEFAULT)
+if(APPLE AND OPENRHI_METAL_SUPPORT_DEFAULT)
     if(IOS)
-        set(NRI_METAL_PROBE_SDK iphoneos)
+        set(OPENRHI_METAL_PROBE_SDK iphoneos)
     else()
-        set(NRI_METAL_PROBE_SDK macosx)
+        set(OPENRHI_METAL_PROBE_SDK macosx)
     endif()
 
-    execute_process(COMMAND xcrun -sdk ${NRI_METAL_PROBE_SDK} metal --version RESULT_VARIABLE NRI_METAL_PROBE_RESULT OUTPUT_QUIET ERROR_QUIET)
+    execute_process(COMMAND xcrun -sdk ${OPENRHI_METAL_PROBE_SDK} metal --version RESULT_VARIABLE OPENRHI_METAL_PROBE_RESULT OUTPUT_QUIET ERROR_QUIET)
 
-    if(NOT NRI_METAL_PROBE_RESULT EQUAL 0)
-        set(NRI_METAL_SUPPORT_DEFAULT OFF)
-        message(STATUS "NRI: Metal 4 backend is disabled by default (the Metal toolchain for '${NRI_METAL_PROBE_SDK}' is not installed)")
+    if(NOT OPENRHI_METAL_PROBE_RESULT EQUAL 0)
+        set(OPENRHI_METAL_SUPPORT_DEFAULT OFF)
+        message(STATUS "OpenRHI: Metal 4 backend is disabled by default (the Metal toolchain for '${OPENRHI_METAL_PROBE_SDK}' is not installed)")
     endif()
 endif()
 
-# Metal Shader Converter (macOS and iOS devices, no simulator build) is enabled by default if installed
-set(NRI_METAL_SHADER_CONVERTER_DEFAULT OFF)
-if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set(NRI_METAL_SHADER_CONVERTER_SUPPORTED ON)
-    set(NRI_METAL_SHADER_CONVERTER_FIND_ARGS "")
-elseif(IOS AND NOT CMAKE_OSX_SYSROOT MATCHES "[Ss]imulator")
-    set(NRI_METAL_SHADER_CONVERTER_SUPPORTED ON)
-    set(NRI_METAL_SHADER_CONVERTER_FIND_ARGS PATHS "/usr/local/lib_iOS" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+cmake_dependent_option(OPENRHI_ENABLE_D3D12_SUPPORT "Enable D3D12 backend" ON "WIN32" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_NVTX_SUPPORT "Annotations for NVIDIA Nsight Systems" ON "NOT IOS" OFF)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" OR ANDROID)
+    set(OPENRHI_VULKAN_PLATFORM ON)
 else()
-    set(NRI_METAL_SHADER_CONVERTER_SUPPORTED OFF)
+    set(OPENRHI_VULKAN_PLATFORM OFF)
 endif()
-
-if(NRI_METAL_SHADER_CONVERTER_SUPPORTED)
-    set(NRI_METAL_SHADER_CONVERTER_INCLUDE_PATH "" CACHE PATH "Path to Metal Shader Converter headers")
-    set(NRI_METAL_SHADER_CONVERTER_LIBRARY "" CACHE FILEPATH "Path to the Metal Shader Converter library")
-
-    find_library(NRI_METAL_SHADER_CONVERTER_PROBE NAMES metalirconverter ${NRI_METAL_SHADER_CONVERTER_FIND_ARGS} NO_CACHE)
-    if(NRI_METAL_SHADER_CONVERTER_LIBRARY OR NRI_METAL_SHADER_CONVERTER_PROBE)
-        set(NRI_METAL_SHADER_CONVERTER_DEFAULT ON)
+option(OPENRHI_ENABLE_VK_SUPPORT "Enable Vulkan on Linux and Android" ${OPENRHI_VULKAN_PLATFORM})
+if(OPENRHI_ENABLE_VK_SUPPORT AND NOT OPENRHI_VULKAN_PLATFORM)
+    message(FATAL_ERROR "OpenRHI Vulkan requires Linux or Android; Windows uses D3D12 and Apple uses Metal")
+endif()
+if(ANDROID)
+    # The NDK legacy toolchain uses CMAKE_SYSTEM_VERSION=1; its platform level is the target API
+    if(DEFINED ANDROID_PLATFORM_LEVEL)
+        set(OPENRHI_ANDROID_API "${ANDROID_PLATFORM_LEVEL}")
+    elseif(DEFINED CMAKE_ANDROID_API)
+        set(OPENRHI_ANDROID_API "${CMAKE_ANDROID_API}")
+    else()
+        set(OPENRHI_ANDROID_API "${CMAKE_SYSTEM_VERSION}")
+    endif()
+    if(OPENRHI_ANDROID_API LESS 33 OR NOT IS_ARM64)
+        message(FATAL_ERROR "OpenRHI requires Android ARM64 API 33 or newer (target API ${OPENRHI_ANDROID_API})")
     endif()
 endif()
-
-cmake_dependent_option(NRI_ENABLE_D3D11_SUPPORT "Enable D3D11 backend" ON "WIN32" OFF)
-cmake_dependent_option(NRI_ENABLE_D3D12_SUPPORT "Enable D3D12 backend" ON "WIN32" OFF)
-cmake_dependent_option(NRI_ENABLE_NVTX_SUPPORT "Annotations for NVIDIA Nsight Systems" ON "NOT IOS" OFF)
-cmake_dependent_option(NRI_ENABLE_VK_SUPPORT "Enable Vulkan backend" ON "NOT IOS" OFF)
-cmake_dependent_option(NRI_ENABLE_NIS_SDK "Enable NVIDIA Image Sharpening SDK" OFF "NOT IOS" OFF)
-cmake_dependent_option(NRI_ENABLE_WGPU_SUPPORT "Enable WebGPU backend" ${GITHUB_CI} "WGPU_BIN_ARCHITECTURE; NOT ANDROID; NOT IOS" OFF)
-cmake_dependent_option(NRI_ENABLE_METAL_SUPPORT "Enable Metal 4 backend" ${NRI_METAL_SUPPORT_DEFAULT} "APPLE" OFF)
-cmake_dependent_option(NRI_ENABLE_METAL_SHADER_CONVERTER "Enable DXIL conversion in the Metal backend" ${NRI_METAL_SHADER_CONVERTER_DEFAULT} "NRI_ENABLE_METAL_SUPPORT; NRI_METAL_SHADER_CONVERTER_SUPPORTED" OFF)
-cmake_dependent_option(NRI_METAL_CPP_PRIVATE_IMPLEMENTATION "Compile metal-cpp implementation into NRI (static NRI: turn OFF if the app provides it)" ON "NRI_ENABLE_METAL_SUPPORT; NRI_STATIC_LIBRARY" ${NRI_ENABLE_METAL_SUPPORT})
-cmake_dependent_option(NRI_ENABLE_AMDAGS "Enable AMD AGS library for D3D" ON "(NRI_ENABLE_D3D11_SUPPORT OR NRI_ENABLE_D3D12_SUPPORT); NOT IS_ARM64" OFF)
-cmake_dependent_option(NRI_ENABLE_NVAPI "Enable NVAPI library for D3D" ON "(NRI_ENABLE_D3D11_SUPPORT OR NRI_ENABLE_D3D12_SUPPORT)" OFF)
-cmake_dependent_option(NRI_ENABLE_AGILITY_SDK_SUPPORT "Enable Agility SDK support to unlock access to latest D3D12 features" ON "NRI_ENABLE_D3D12_SUPPORT" OFF)
-cmake_dependent_option(NRI_ENABLE_XLIB_SUPPORT "Enable X11 support" ON "XLIB_HEADERS" OFF)
-cmake_dependent_option(NRI_ENABLE_WAYLAND_SUPPORT "Enable Wayland support" ON "WAYLAND_HEADERS" OFF)
-cmake_dependent_option(NRI_ENABLE_NGX_SDK "Enable NVIDIA NGX (DLSS) SDK" OFF "(NRI_ENABLE_D3D11_SUPPORT OR NRI_ENABLE_D3D12_SUPPORT OR NRI_ENABLE_VK_SUPPORT); WIN32 OR NOT IS_ARM64" OFF)
-cmake_dependent_option(NRI_ENABLE_FFX_SDK "Enable AMD FidelityFX SDK" OFF "(NRI_ENABLE_VK_SUPPORT OR NRI_ENABLE_D3D12_SUPPORT); WIN32; NOT IS_ARM64" OFF)
-cmake_dependent_option(NRI_ENABLE_XESS_SDK "Enable INTEL XeSS SDK" OFF "NRI_ENABLE_D3D12_SUPPORT; WIN32; NOT IS_ARM64" OFF)
-
-# ShaderMake required?
-if(NRI_ENABLE_NIS_SDK)
-    set(NRI_ENABLE_SHADERMAKE ON)
-else()
-    set(NRI_ENABLE_SHADERMAKE OFF)
+option(OPENRHI_ENABLE_NIS_SDK "Enable the NVIDIA Image Scaling Slang upscaler" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_METAL_SUPPORT "Enable Metal 4 backend" ${OPENRHI_METAL_SUPPORT_DEFAULT} "APPLE" OFF)
+if(OPENRHI_ENABLE_METAL_SUPPORT)
+    if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "26.0" CACHE STRING "Minimum Apple OS version" FORCE)
+    elseif(CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 26)
+        message(FATAL_ERROR "OpenRHI Metal 4 requires macOS/iOS/iPadOS 26 or newer")
+    endif()
 endif()
+if(NOT OPENRHI_ENABLE_D3D12_SUPPORT AND NOT OPENRHI_ENABLE_VK_SUPPORT AND NOT OPENRHI_ENABLE_METAL_SUPPORT AND NOT OPENRHI_ENABLE_NONE_SUPPORT)
+    message(FATAL_ERROR "OpenRHI requires a native backend or the explicit NONE test configuration")
+endif()
+cmake_dependent_option(OPENRHI_METAL_CPP_PRIVATE_IMPLEMENTATION "Compile metal-cpp implementation into OpenRHI (static OpenRHI: turn OFF if the app provides it)" ON "OPENRHI_ENABLE_METAL_SUPPORT; OPENRHI_STATIC_LIBRARY" ${OPENRHI_ENABLE_METAL_SUPPORT})
+cmake_dependent_option(OPENRHI_ENABLE_AMDAGS "Enable AMD AGS library for D3D" ON "(OPENRHI_ENABLE_D3D12_SUPPORT); NOT IS_ARM64" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_NVAPI "Enable NVAPI library for D3D" ON "(OPENRHI_ENABLE_D3D12_SUPPORT)" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_AGILITY_SDK_SUPPORT "Enable Agility SDK support to unlock access to latest D3D12 features" ON "OPENRHI_ENABLE_D3D12_SUPPORT" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_XLIB_SUPPORT "Enable X11 support" ON "XLIB_HEADERS" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_WAYLAND_SUPPORT "Enable Wayland support" ON "WAYLAND_HEADERS" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_NGX_SDK "Enable NVIDIA NGX (DLSS) SDK" OFF "(OPENRHI_ENABLE_D3D12_SUPPORT OR OPENRHI_ENABLE_VK_SUPPORT); WIN32 OR NOT IS_ARM64" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_FFX_SDK "Enable AMD FidelityFX SDK" OFF "(OPENRHI_ENABLE_VK_SUPPORT OR OPENRHI_ENABLE_D3D12_SUPPORT); WIN32; NOT IS_ARM64" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_XESS_SDK "Enable INTEL XeSS SDK" OFF "OPENRHI_ENABLE_D3D12_SUPPORT; WIN32; NOT IS_ARM64" OFF)
 
 # Self-build?
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}) # if not submodule
@@ -162,30 +148,26 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Compile definitions
 set(COMPILE_DEFINITIONS "")
 foreach(opt IN ITEMS
-    NRI_STATIC_LIBRARY
-    NRI_ENABLE_NVTX_SUPPORT
-    NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS
-    NRI_ENABLE_NONE_SUPPORT
-    NRI_ENABLE_VK_SUPPORT
-    NRI_ENABLE_WGPU_SUPPORT
-    NRI_ENABLE_METAL_SUPPORT
-    NRI_ENABLE_METAL_SHADER_CONVERTER
-    NRI_METAL_CPP_PRIVATE_IMPLEMENTATION
-    NRI_ENABLE_VALIDATION_SUPPORT
-    NRI_ENABLE_NIS_SDK
-    NRI_ENABLE_IMGUI_EXTENSION
-    NRI_ENABLE_D3D11_SUPPORT
-    NRI_ENABLE_D3D12_SUPPORT
-    NRI_ENABLE_NVAPI
-    NRI_ENABLE_AMDAGS
-    NRI_ENABLE_AGILITY_SDK_SUPPORT
-    NRI_ENABLE_XLIB_SUPPORT
-    NRI_ENABLE_WAYLAND_SUPPORT
-    NRI_ENABLE_NGX_SDK
-    NRI_ENABLE_FFX_SDK
-    NRI_ENABLE_XESS_SDK
-    NRI_ENABLE_SHADERMAKE
-    NRI_STREAMER_THREAD_SAFE
+    OPENRHI_STATIC_LIBRARY
+    OPENRHI_ENABLE_NVTX_SUPPORT
+    OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS
+    OPENRHI_ENABLE_NONE_SUPPORT
+    OPENRHI_ENABLE_VK_SUPPORT
+    OPENRHI_ENABLE_METAL_SUPPORT
+    OPENRHI_METAL_CPP_PRIVATE_IMPLEMENTATION
+    OPENRHI_ENABLE_VALIDATION_SUPPORT
+    OPENRHI_ENABLE_NIS_SDK
+    OPENRHI_ENABLE_IMGUI_EXTENSION
+    OPENRHI_ENABLE_D3D12_SUPPORT
+    OPENRHI_ENABLE_NVAPI
+    OPENRHI_ENABLE_AMDAGS
+    OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
+    OPENRHI_ENABLE_XLIB_SUPPORT
+    OPENRHI_ENABLE_WAYLAND_SUPPORT
+    OPENRHI_ENABLE_NGX_SDK
+    OPENRHI_ENABLE_FFX_SDK
+    OPENRHI_ENABLE_XESS_SDK
+    OPENRHI_STREAMER_THREAD_SAFE
 )
     if(${opt})
         message(STATUS "${opt}")
@@ -200,19 +182,19 @@ set(DEPS)
 # - URL - good (no fat ".git" folder)
 # - GIT_REPOSITORY - worse (because of ".git" folder)
 # - GIT_SHALLOW = 0 - worse ^ 2 (needed to workaround Cmake's inability to shalow-clone a commit hash, which is a non-ToT PR, so even more fat useless ".git" folder)
-if(NRI_ENABLE_AGILITY_SDK_SUPPORT)
+if(OPENRHI_ENABLE_AGILITY_SDK_SUPPORT)
     # Agility SDK
     fetchcontent_declare(
         agilitysdk
         DOWNLOAD_EXTRACT_TIMESTAMP 1
         DOWNLOAD_NO_PROGRESS 1
         SOURCE_SUBDIR "ignore CMakeLists.txt"
-        URL "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.${NRI_AGILITY_SDK_VERSION_MAJOR}.${NRI_AGILITY_SDK_VERSION_MINOR}"
+        URL "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.${OPENRHI_AGILITY_SDK_VERSION_MAJOR}.${OPENRHI_AGILITY_SDK_VERSION_MINOR}"
     )
     list(APPEND DEPS agilitysdk)
 endif()
 
-if(NRI_ENABLE_NVTX_SUPPORT)
+if(OPENRHI_ENABLE_NVTX_SUPPORT)
     # NVTX
     fetchcontent_declare(
         nvtx
@@ -224,7 +206,7 @@ if(NRI_ENABLE_NVTX_SUPPORT)
     list(APPEND DEPS nvtx)
 endif()
 
-if(NRI_ENABLE_METAL_SUPPORT)
+if(OPENRHI_ENABLE_METAL_SUPPORT)
     # metal-cpp (macOS 27 SDK, the backend requires macOS 26+)
     fetchcontent_declare(
         metal_cpp
@@ -236,7 +218,7 @@ if(NRI_ENABLE_METAL_SUPPORT)
     list(APPEND DEPS metal_cpp)
 endif()
 
-if(NRI_ENABLE_VK_SUPPORT)
+if(OPENRHI_ENABLE_VK_SUPPORT)
     # Vulkan headers
     fetchcontent_declare(
         vulkan_headers
@@ -267,7 +249,7 @@ else()
     set(NGX_WINDOWS_LIB_DIR "Windows_x86_64/x64")
 endif()
 
-if(NRI_ENABLE_NGX_SDK)
+if(OPENRHI_ENABLE_NGX_SDK)
     # NVIDIA NGX SDK
     fetchcontent_declare(
         ngx
@@ -279,9 +261,9 @@ if(NRI_ENABLE_NGX_SDK)
     list(APPEND DEPS ngx)
 endif()
 
-if(NRI_ENABLE_FFX_SDK)
+if(OPENRHI_ENABLE_FFX_SDK)
     # Keep the legacy SDK for Vulkan (the newer FSR SDK only supports D3D12)
-    if(NRI_ENABLE_VK_SUPPORT)
+    if(OPENRHI_ENABLE_VK_SUPPORT)
         fetchcontent_declare(
             ffx
             DOWNLOAD_EXTRACT_TIMESTAMP 1
@@ -292,7 +274,7 @@ if(NRI_ENABLE_FFX_SDK)
         list(APPEND DEPS ffx)
     endif()
 
-    if(NRI_ENABLE_D3D12_SUPPORT)
+    if(OPENRHI_ENABLE_D3D12_SUPPORT)
         fetchcontent_declare(
             fsr
             DOWNLOAD_EXTRACT_TIMESTAMP 1
@@ -304,7 +286,7 @@ if(NRI_ENABLE_FFX_SDK)
     endif()
 endif()
 
-if(NRI_ENABLE_XESS_SDK)
+if(OPENRHI_ENABLE_XESS_SDK)
     # INTEL XeSS SDK
     fetchcontent_declare(
         xess
@@ -316,7 +298,7 @@ if(NRI_ENABLE_XESS_SDK)
     list(APPEND DEPS xess)
 endif()
 
-if(NRI_ENABLE_D3D12_SUPPORT)
+if(OPENRHI_ENABLE_D3D12_SUPPORT)
     # D3D12 MA
     fetchcontent_declare(
         d3d12ma
@@ -328,32 +310,7 @@ if(NRI_ENABLE_D3D12_SUPPORT)
     list(APPEND DEPS d3d12ma)
 endif()
 
-if(NRI_ENABLE_WGPU_SUPPORT)
-    if(WIN32)
-        set(WGPU_NATIVE_PACKAGE "wgpu-windows-${WGPU_BIN_ARCHITECTURE}-msvc-release.zip")
-        set(WGPU_NATIVE_LIB_NAME "wgpu_native.dll.lib")
-        set(WGPU_NATIVE_RUNTIME_NAME "wgpu_native.dll")
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        set(WGPU_NATIVE_PACKAGE "wgpu-linux-${WGPU_BIN_ARCHITECTURE}-release.zip")
-        set(WGPU_NATIVE_LIB_NAME "libwgpu_native.so")
-        set(WGPU_NATIVE_RUNTIME_NAME "${WGPU_NATIVE_LIB_NAME}")
-    elseif(APPLE)
-        set(WGPU_NATIVE_PACKAGE "wgpu-macos-${WGPU_BIN_ARCHITECTURE}-release.zip")
-        set(WGPU_NATIVE_LIB_NAME "libwgpu_native.dylib")
-        set(WGPU_NATIVE_RUNTIME_NAME "${WGPU_NATIVE_LIB_NAME}")
-    endif()
-
-    fetchcontent_declare(
-        wgpu_native
-        DOWNLOAD_EXTRACT_TIMESTAMP 1
-        DOWNLOAD_NO_PROGRESS 1
-        SOURCE_SUBDIR "ignore CMakeLists.txt"
-        URL "https://github.com/gfx-rs/wgpu-native/releases/download/${NRI_WGPU_VERSION}/${WGPU_NATIVE_PACKAGE}"
-    )
-    list(APPEND DEPS wgpu_native)
-endif()
-
-if(NRI_ENABLE_AMDAGS)
+if(OPENRHI_ENABLE_AMDAGS)
     # AMD AGS
     fetchcontent_declare(
         amdags
@@ -365,11 +322,11 @@ if(NRI_ENABLE_AMDAGS)
     list(APPEND DEPS amdags)
 endif()
 
-if(NRI_ENABLE_NVAPI)
+if(OPENRHI_ENABLE_NVAPI)
     # NV API
-    if(NRI_NVAPI_CUSTOM_PATH)
-        get_filename_component(nvapi_SOURCE_DIR "${NRI_NVAPI_CUSTOM_PATH}" ABSOLUTE)
-        message("NRI: using custom NVAPI from '${nvapi_SOURCE_DIR}'")
+    if(OPENRHI_NVAPI_CUSTOM_PATH)
+        get_filename_component(nvapi_SOURCE_DIR "${OPENRHI_NVAPI_CUSTOM_PATH}" ABSOLUTE)
+        message("OpenRHI: using custom NVAPI from '${nvapi_SOURCE_DIR}'")
     else()
         fetchcontent_declare(
             nvapi
@@ -382,34 +339,18 @@ if(NRI_ENABLE_NVAPI)
     endif()
 endif()
 
-if(NRI_ENABLE_SHADERMAKE AND NOT TARGET ShaderMake)
-    # ShaderMake
-    option(SHADERMAKE_TOOL "" ON)
-
-    fetchcontent_declare(
-        shadermake
-        DOWNLOAD_EXTRACT_TIMESTAMP 1
-        DOWNLOAD_NO_PROGRESS 1
-        URL "https://github.com/NVIDIA-RTX/ShaderMake/archive/3f01623a76b092ac127d2debd79a672f55d77665.zip"
-    )
-    list(APPEND DEPS shadermake)
-endif()
-
 # Download dependencies
 if(DEPS)
-    message("NRI: downloading dependencies:")
+    message("OpenRHI: downloading dependencies:")
     message(STATUS "${DEPS} ...")
 
     fetchcontent_makeavailable(${DEPS})
 
-    # Delete original archives
-    foreach(DEP IN LISTS DEPS)
-        file(REMOVE_RECURSE "${FETCHCONTENT_BASE_DIR}/${DEP}-tmp")
-    endforeach()
+
 endif()
 
 # NVAPI
-if(NRI_ENABLE_NVAPI)
+if(OPENRHI_ENABLE_NVAPI)
     find_library(NVAPI_LIB
         NAMES
             nvapi64 nvapia64 nvapi
@@ -420,7 +361,6 @@ if(NRI_ENABLE_NVAPI)
 
     set(NVAPI_HEADERS
         "${nvapi_SOURCE_DIR}/nvapi.h"
-        "${nvapi_SOURCE_DIR}/nvHLSLExtns.h"
         "${nvapi_SOURCE_DIR}/nvShaderExtnEnums.h"
     )
     source_group("External/nvapi"
@@ -430,7 +370,7 @@ if(NRI_ENABLE_NVAPI)
 endif()
 
 # AMDAGS
-if(NRI_ENABLE_AMDAGS)
+if(OPENRHI_ENABLE_AMDAGS)
     find_library(AGS_LIB
         NAMES
             amd_ags_${BIN_ARCHITECTURE}
@@ -441,8 +381,6 @@ if(NRI_ENABLE_AMDAGS)
 
     set(AMDAGS_HEADERS
         "${amdags_SOURCE_DIR}/ags_lib/inc/amd_ags.h"
-        "${amdags_SOURCE_DIR}/ags_lib/hlsl/ags_shader_intrinsics_dx11.hlsl"
-        "${amdags_SOURCE_DIR}/ags_lib/hlsl/ags_shader_intrinsics_dx12.hlsl"
     )
     source_group("External/amdags"
         FILES
@@ -450,19 +388,19 @@ if(NRI_ENABLE_AMDAGS)
     )
     set_source_files_properties(${AMDAGS_HEADERS}
         PROPERTIES
-            VS_SETTINGS "ExcludedFromBuild=true" # do not compile HLSL
+            VS_SETTINGS "ExcludedFromBuild=true" # shader compilation is explicit
     )
 endif()
 
 # Shared
-if(NRI_ENABLE_NGX_SDK)
+if(OPENRHI_ENABLE_NGX_SDK)
     if(WIN32)
         if((NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY) OR (${CMAKE_MSVC_RUNTIME_LIBRARY} MATCHES "DLL"))
             set(NGX_SUFFIX "d")
-            message("NRI: using NGX LIB with dynamic runtime")
+            message("OpenRHI: using NGX LIB with dynamic runtime")
         else()
             set(NGX_SUFFIX "s")
-            message("NRI: using NGX LIB with static runtime")
+            message("OpenRHI: using NGX LIB with static runtime")
         endif()
 
         set(NGX_LIB "${ngx_SOURCE_DIR}/lib/${NGX_WINDOWS_LIB_DIR}/nvsdk_ngx_${NGX_SUFFIX}$<$<CONFIG:Debug>:_dbg>.lib")
@@ -472,8 +410,9 @@ if(NRI_ENABLE_NGX_SDK)
 endif()
 
 set(SHARED_SOURCE
-    "Source/NRIConfig.h"
+    "Source/OpenRHIConfig.h"
     "Source/Shared/DeviceBase.h"
+    "Source/Shared/DevicePolicy.h"
     "Source/Shared/HelperInterface.h"
     "Source/Shared/HelperInterface.hpp"
     "Source/Shared/ImguiInterface.h"
@@ -491,44 +430,44 @@ set(SHARED_SOURCE
     "Source/Shared/SharedVideo.h"
 )
 
-add_library(NRI_Shared STATIC)
-target_sources(NRI_Shared
+add_library(OpenRHI_Shared STATIC)
+target_sources(OpenRHI_Shared
     PRIVATE
         ${SHARED_SOURCE}
 )
-target_include_directories(NRI_Shared
+target_include_directories(OpenRHI_Shared
     PUBLIC
         "Include"
         "Source/Shared"
     PRIVATE
-        $<$<BOOL:${NRI_ENABLE_AGILITY_SDK_SUPPORT}>:
+        $<$<BOOL:${OPENRHI_ENABLE_AGILITY_SDK_SUPPORT}>:
             ${agilitysdk_SOURCE_DIR}/build/native/include
         >
-        $<$<BOOL:${NRI_ENABLE_VK_SUPPORT}>:
+        $<$<BOOL:${OPENRHI_ENABLE_VK_SUPPORT}>:
             ${vulkan_headers_SOURCE_DIR}/include
         >
-        $<$<BOOL:${NRI_ENABLE_NGX_SDK}>:
+        $<$<BOOL:${OPENRHI_ENABLE_NGX_SDK}>:
             ${ngx_SOURCE_DIR}/include
         >
-        $<$<AND:$<BOOL:${NRI_ENABLE_FFX_SDK}>,$<BOOL:${NRI_ENABLE_D3D12_SUPPORT}>>:
+        $<$<AND:$<BOOL:${OPENRHI_ENABLE_FFX_SDK}>,$<BOOL:${OPENRHI_ENABLE_D3D12_SUPPORT}>>:
             ${fsr_SOURCE_DIR}/Kits/FidelityFX/api/include
             ${fsr_SOURCE_DIR}/Kits/FidelityFX/upscalers/include
         >
-        $<$<AND:$<BOOL:${NRI_ENABLE_FFX_SDK}>,$<NOT:$<BOOL:${NRI_ENABLE_D3D12_SUPPORT}>>>:
+        $<$<AND:$<BOOL:${OPENRHI_ENABLE_FFX_SDK}>,$<NOT:$<BOOL:${OPENRHI_ENABLE_D3D12_SUPPORT}>>>:
             ${ffx_SOURCE_DIR}/ffx-api/include/ffx_api
         >
-        $<$<BOOL:${NRI_ENABLE_XESS_SDK}>:
+        $<$<BOOL:${OPENRHI_ENABLE_XESS_SDK}>:
             ${xess_SOURCE_DIR}/inc/xess
         >
 )
-target_compile_definitions(NRI_Shared
+target_compile_definitions(OpenRHI_Shared
     PUBLIC
         WIN32_LEAN_AND_MEAN
         NOMINMAX
         _CRT_SECURE_NO_WARNINGS
         ${COMPILE_DEFINITIONS}
 )
-target_compile_options(NRI_Shared
+target_compile_options(OpenRHI_Shared
     PUBLIC
         # Options for Clang/GCC compilers
         # No "nullability-completeness" caused by VMA
@@ -549,125 +488,48 @@ target_compile_options(NRI_Shared
             $<$<CONFIG:Release>:/Zi>
         >
 )
-target_compile_features(NRI_Shared
+target_compile_features(OpenRHI_Shared
     PUBLIC
         cxx_std_17
 )
-target_link_libraries(NRI_Shared
+target_link_libraries(OpenRHI_Shared
     PRIVATE
-        $<$<BOOL:${NRI_ENABLE_NGX_SDK}>:
+        $<$<BOOL:${OPENRHI_ENABLE_NGX_SDK}>:
             ${NGX_LIB}
         >
-        $<$<BOOL:${NRI_ENABLE_XESS_SDK}>:
+        $<$<BOOL:${OPENRHI_ENABLE_XESS_SDK}>:
             ${xess_SOURCE_DIR}/lib/libxess.lib
         >
 )
-set_target_properties(NRI_Shared
+set_target_properties(OpenRHI_Shared
     PROPERTIES
         POSITION_INDEPENDENT_CODE ON           # enable PIC...
         INTERFACE_POSITION_INDEPENDENT_CODE ON # ...and propagate to all consumers
-        FOLDER "NRI"
+        FOLDER "OpenRHI"
 )
 
 # NONE
-if(NRI_ENABLE_NONE_SUPPORT)
+if(OPENRHI_ENABLE_NONE_SUPPORT)
     set(NONE_SOURCE "Source/NONE/ImplNONE.cpp")
 
-    add_library(NRI_NONE STATIC)
-    target_sources(NRI_NONE
+    add_library(OpenRHI_NONE STATIC)
+    target_sources(OpenRHI_NONE
         PRIVATE
             ${NONE_SOURCE}
     )
-    target_link_libraries(NRI_NONE
+    target_link_libraries(OpenRHI_NONE
         PRIVATE
-            NRI_Shared
+            OpenRHI_Shared
     )
-    set_target_properties(NRI_NONE
+    set_target_properties(OpenRHI_NONE
         PROPERTIES
-            FOLDER "NRI"
-    )
-endif()
-
-# D3D11
-if(NRI_ENABLE_D3D11_SUPPORT)
-    set(D3D11_SOURCE
-        "Source/D3D11/BufferD3D11.h"
-        "Source/D3D11/BufferD3D11.hpp"
-        "Source/D3D11/CommandAllocatorD3D11.h"
-        "Source/D3D11/CommandAllocatorD3D11.hpp"
-        "Source/D3D11/CommandBufferD3D11.h"
-        "Source/D3D11/CommandBufferD3D11.hpp"
-        "Source/D3D11/CommandBufferEmuD3D11.h"
-        "Source/D3D11/CommandBufferEmuD3D11.hpp"
-        "Source/D3D11/DescriptorD3D11.h"
-        "Source/D3D11/DescriptorD3D11.hpp"
-        "Source/D3D11/DescriptorPoolD3D11.h"
-        "Source/D3D11/DescriptorPoolD3D11.hpp"
-        "Source/D3D11/DescriptorSetD3D11.h"
-        "Source/D3D11/DescriptorSetD3D11.hpp"
-        "Source/D3D11/DeviceD3D11.h"
-        "Source/D3D11/DeviceD3D11.hpp"
-        "Source/D3D11/FenceD3D11.h"
-        "Source/D3D11/FenceD3D11.hpp"
-        "Source/D3D11/ImplD3D11.cpp"
-        "Source/D3D11/MemoryD3D11.h"
-        "Source/D3D11/PipelineCacheD3D11.h"
-        "Source/D3D11/PipelineCacheD3D11.hpp"
-        "Source/D3D11/PipelineD3D11.h"
-        "Source/D3D11/PipelineD3D11.hpp"
-        "Source/D3D11/PipelineLayoutD3D11.h"
-        "Source/D3D11/PipelineLayoutD3D11.hpp"
-        "Source/D3D11/QueryPoolD3D11.h"
-        "Source/D3D11/QueryPoolD3D11.hpp"
-        "Source/D3D11/QueueD3D11.h"
-        "Source/D3D11/QueueD3D11.hpp"
-        "Source/D3D11/SharedD3D11.h"
-        "Source/D3D11/SharedD3D11.hpp"
-        "Source/D3D11/SwapChainD3D11.h"
-        "Source/D3D11/SwapChainD3D11.hpp"
-        "Source/D3D11/TextureD3D11.h"
-        "Source/D3D11/TextureD3D11.hpp"
-    )
-
-    add_library(NRI_D3D11 STATIC)
-    target_sources(NRI_D3D11
-        PRIVATE
-            ${D3D11_SOURCE}
-            $<$<BOOL:${NRI_ENABLE_NVAPI}>:
-                ${NVAPI_HEADERS}
-            >
-            $<$<BOOL:${NRI_ENABLE_AMDAGS}>:
-                ${AMDAGS_HEADERS}
-            >
-    )
-    target_include_directories(NRI_D3D11
-        PRIVATE
-            $<$<BOOL:${NRI_ENABLE_NVAPI}>:
-                "${nvapi_SOURCE_DIR}"
-            >
-            $<$<BOOL:${NRI_ENABLE_AMDAGS}>:
-                "${amdags_SOURCE_DIR}/ags_lib/inc"
-            >
-    )
-    target_link_libraries(NRI_D3D11
-        PRIVATE
-            NRI_Shared
-            d3d11
-            dxgi
-            dxguid
-            $<$<BOOL:${NRI_ENABLE_NVAPI}>:
-                ${NVAPI_LIB}
-            >
-    )
-    set_target_properties(NRI_D3D11
-        PROPERTIES
-            FOLDER "NRI"
+            FOLDER "OpenRHI"
     )
 endif()
 
 # D3D12
-if(NRI_ENABLE_D3D12_SUPPORT)
-    message("NRI: using Windows SDK ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")
+if(OPENRHI_ENABLE_D3D12_SUPPORT)
+    message("OpenRHI: using Windows SDK ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")
 
     set(D3D12_VMA "${d3d12ma_SOURCE_DIR}/include/D3D12MemAlloc.h")
     source_group("External/Vma"
@@ -729,64 +591,64 @@ if(NRI_ENABLE_D3D12_SUPPORT)
         "Source/D3D12/VideoSessionParametersD3D12.hpp"
     )
 
-    add_library(NRI_D3D12 STATIC)
-    target_sources(NRI_D3D12
+    add_library(OpenRHI_D3D12 STATIC)
+    target_sources(OpenRHI_D3D12
         PRIVATE
             ${D3D12_SOURCE}
             ${D3D12_VMA}
-            $<$<BOOL:${NRI_ENABLE_NVAPI}>:
+            $<$<BOOL:${OPENRHI_ENABLE_NVAPI}>:
                 ${NVAPI_HEADERS}
             >
-            $<$<BOOL:${NRI_ENABLE_AMDAGS}>:
+            $<$<BOOL:${OPENRHI_ENABLE_AMDAGS}>:
                 ${AMDAGS_HEADERS}
             >
     )
-    target_include_directories(NRI_D3D12
+    target_include_directories(OpenRHI_D3D12
         PRIVATE
             "${d3d12ma_SOURCE_DIR}/include"
             "${d3d12ma_SOURCE_DIR}/src"
-            $<$<BOOL:${NRI_ENABLE_NVAPI}>:
+            $<$<BOOL:${OPENRHI_ENABLE_NVAPI}>:
                 "${nvapi_SOURCE_DIR}"
             >
-            $<$<BOOL:${NRI_ENABLE_AMDAGS}>:
+            $<$<BOOL:${OPENRHI_ENABLE_AMDAGS}>:
                 "${amdags_SOURCE_DIR}/ags_lib/inc"
             >
-            $<$<BOOL:${NRI_ENABLE_AGILITY_SDK_SUPPORT}>:
+            $<$<BOOL:${OPENRHI_ENABLE_AGILITY_SDK_SUPPORT}>:
                 ${agilitysdk_SOURCE_DIR}/build/native/include
             >
     )
-    target_compile_definitions(NRI_D3D12
+    target_compile_definitions(OpenRHI_D3D12
         PRIVATE
-            NRI_AGILITY_SDK_VERSION_MAJOR=$<IF:$<BOOL:${NRI_ENABLE_AGILITY_SDK_SUPPORT}>,${NRI_AGILITY_SDK_VERSION_MAJOR},D3D12_SDK_VERSION>
+            OPENRHI_AGILITY_SDK_VERSION_MAJOR=$<IF:$<BOOL:${OPENRHI_ENABLE_AGILITY_SDK_SUPPORT}>,${OPENRHI_AGILITY_SDK_VERSION_MAJOR},D3D12_SDK_VERSION>
     )
-    target_link_libraries(NRI_D3D12
+    target_link_libraries(OpenRHI_D3D12
         PRIVATE
-            NRI_Shared
+            OpenRHI_Shared
             d3d12
             dxgi
             dxguid
-            $<$<BOOL:${NRI_ENABLE_NVAPI}>:
+            $<$<BOOL:${OPENRHI_ENABLE_NVAPI}>:
                 ${NVAPI_LIB}
             >
     )
-    set_target_properties(NRI_D3D12
+    set_target_properties(OpenRHI_D3D12
         PROPERTIES
-            FOLDER "NRI"
+            FOLDER "OpenRHI"
     )
 
-    if(NRI_ENABLE_AGILITY_SDK_SUPPORT)
-        message("NRI: using AgilitySDK v1.${NRI_AGILITY_SDK_VERSION_MAJOR}.${NRI_AGILITY_SDK_VERSION_MINOR}")
+    if(OPENRHI_ENABLE_AGILITY_SDK_SUPPORT)
+        message("OpenRHI: using AgilitySDK v1.${OPENRHI_AGILITY_SDK_VERSION_MAJOR}.${OPENRHI_AGILITY_SDK_VERSION_MINOR}")
 
-        # Generate "NRIAgilitySDK.h"
-        file(WRITE Include/NRIAgilitySDK.h
+        # Generate "OpenRHIAgilitySDK.h"
+        file(WRITE Include/OpenRHIAgilitySDK.h
             "// This file is auto-generated during project deployment. Do not modify!\n"
             "#ifdef __cplusplus\n"
             "extern \"C\" {\n"
             "#endif\n\n"
             "__declspec(dllexport) extern const uint32_t D3D12SDKVersion;\n"
-            "const uint32_t D3D12SDKVersion = ${NRI_AGILITY_SDK_VERSION_MAJOR};\n\n"
+            "const uint32_t D3D12SDKVersion = ${OPENRHI_AGILITY_SDK_VERSION_MAJOR};\n\n"
             "__declspec(dllexport) extern const char* D3D12SDKPath;\n"
-            "const char* D3D12SDKPath = \"${NRI_AGILITY_SDK_DIR}/\";\n\n"
+            "const char* D3D12SDKPath = \"${OPENRHI_AGILITY_SDK_DIR}/\";\n\n"
             "#ifdef __cplusplus\n"
             "}\n"
             "#endif\n"
@@ -795,10 +657,7 @@ if(NRI_ENABLE_D3D12_SUPPORT)
 endif()
 
 # VK
-if(NRI_ENABLE_VK_SUPPORT)
-    if(APPLE)
-        find_package(Vulkan REQUIRED)
-    endif()
+if(OPENRHI_ENABLE_VK_SUPPORT)
 
     set(VK_VMA "${vma_SOURCE_DIR}/include/vk_mem_alloc.h")
     source_group("External/Vma"
@@ -862,212 +721,92 @@ if(NRI_ENABLE_VK_SUPPORT)
         "Source/VK/VideoSessionParametersVK.hpp"
     )
 
-    add_library(NRI_VK STATIC)
-    target_sources(NRI_VK
+    add_library(OpenRHI_VK STATIC)
+    target_sources(OpenRHI_VK
         PRIVATE
             ${VK_SOURCE}
             ${VK_VMA}
     )
-    target_include_directories(NRI_VK
+    target_include_directories(OpenRHI_VK
         PRIVATE
             "${vma_SOURCE_DIR}/include"
             "${vulkan_headers_SOURCE_DIR}/include"
     )
-    target_compile_definitions(NRI_VK
+    target_compile_definitions(OpenRHI_VK
         PRIVATE
-            $<$<BOOL:${WIN32}>:
-                VK_USE_PLATFORM_WIN32_KHR
-            >
-            $<$<BOOL:${APPLE}>:
-                VK_USE_PLATFORM_METAL_EXT;VK_ENABLE_BETA_EXTENSIONS
-            >
             $<$<BOOL:${ANDROID}>:
                 VK_USE_PLATFORM_ANDROID_KHR
             >
-            $<$<BOOL:${NRI_ENABLE_XLIB_SUPPORT}>:
+            $<$<BOOL:${OPENRHI_ENABLE_XLIB_SUPPORT}>:
                 VK_USE_PLATFORM_XLIB_KHR
             >
-            $<$<BOOL:${NRI_ENABLE_WAYLAND_SUPPORT}>:
+            $<$<BOOL:${OPENRHI_ENABLE_WAYLAND_SUPPORT}>:
                 VK_USE_PLATFORM_WAYLAND_KHR
             >
     )
-    target_link_libraries(NRI_VK
+    target_link_libraries(OpenRHI_VK
         PRIVATE
-            NRI_Shared
-            $<$<BOOL:${APPLE}>:
-                ${Vulkan_LIBRARIES}
-            >
+            OpenRHI_Shared
     )
-    set_target_properties(NRI_VK
+    set_target_properties(OpenRHI_VK
         PROPERTIES
-            FOLDER "NRI"
-    )
-endif()
-
-# WGPU
-if(NRI_ENABLE_WGPU_SUPPORT)
-    set(WGPU_SOURCE
-        "Source/WGPU/BufferWGPU.h"
-        "Source/WGPU/BufferWGPU.hpp"
-        "Source/WGPU/CommandAllocatorWGPU.h"
-        "Source/WGPU/CommandAllocatorWGPU.hpp"
-        "Source/WGPU/CommandBufferWGPU.h"
-        "Source/WGPU/CommandBufferWGPU.hpp"
-        "Source/WGPU/DescriptorPoolWGPU.h"
-        "Source/WGPU/DescriptorPoolWGPU.hpp"
-        "Source/WGPU/DescriptorSetWGPU.h"
-        "Source/WGPU/DescriptorSetWGPU.hpp"
-        "Source/WGPU/DescriptorWGPU.h"
-        "Source/WGPU/DescriptorWGPU.hpp"
-        "Source/WGPU/DeviceWGPU.h"
-        "Source/WGPU/DeviceWGPU.hpp"
-        "Source/WGPU/FenceWGPU.h"
-        "Source/WGPU/FenceWGPU.hpp"
-        "Source/WGPU/ImplWGPU.cpp"
-        "Source/WGPU/MemoryWGPU.h"
-        "Source/WGPU/MemoryWGPU.hpp"
-        "Source/WGPU/PipelineCacheWGPU.h"
-        "Source/WGPU/PipelineCacheWGPU.hpp"
-        "Source/WGPU/PipelineLayoutWGPU.h"
-        "Source/WGPU/PipelineLayoutWGPU.hpp"
-        "Source/WGPU/PipelineWGPU.h"
-        "Source/WGPU/PipelineWGPU.hpp"
-        "Source/WGPU/QueryPoolWGPU.h"
-        "Source/WGPU/QueryPoolWGPU.hpp"
-        "Source/WGPU/QueueWGPU.h"
-        "Source/WGPU/QueueWGPU.hpp"
-        "Source/WGPU/SharedWGPU.h"
-        "Source/WGPU/SharedWGPU.hpp"
-        "Source/WGPU/SwapChainWGPU.h"
-        "Source/WGPU/SwapChainWGPU.hpp"
-        "Source/WGPU/TextureWGPU.h"
-        "Source/WGPU/TextureWGPU.hpp"
-    )
-
-    add_library(NRI_WGPU STATIC)
-    target_sources(NRI_WGPU
-        PRIVATE
-            ${WGPU_SOURCE}
-    )
-    target_include_directories(NRI_WGPU
-        PRIVATE
-            "${wgpu_native_SOURCE_DIR}/include"
-    )
-    target_link_libraries(NRI_WGPU
-        PRIVATE
-            NRI_Shared
-            "${wgpu_native_SOURCE_DIR}/lib/${WGPU_NATIVE_LIB_NAME}"
-    )
-    set_target_properties(NRI_WGPU
-        PROPERTIES
-            FOLDER "NRI"
+            FOLDER "OpenRHI"
     )
 endif()
 
 # Metal
-if(NRI_ENABLE_METAL_SUPPORT)
+if(OPENRHI_ENABLE_METAL_SUPPORT)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 17)
-        message(FATAL_ERROR "NRI: Metal 4 requires Xcode 26 or newer (AppleClang 17 or newer)")
+        message(FATAL_ERROR "OpenRHI: Metal 4 requires Xcode 26 or newer (AppleClang 17 or newer)")
     endif()
 
     if(NOT EXISTS "${metal_cpp_SOURCE_DIR}/Metal/Metal.hpp" OR NOT EXISTS "${metal_cpp_SOURCE_DIR}/Metal/MTL4ArgumentTable.hpp")
-        message(FATAL_ERROR "NRI: Metal 4 metal-cpp headers were not found at '${metal_cpp_SOURCE_DIR}'")
+        message(FATAL_ERROR "OpenRHI: Metal 4 metal-cpp headers were not found at '${metal_cpp_SOURCE_DIR}'")
     endif()
 
-    if(NRI_ENABLE_METAL_SHADER_CONVERTER)
-        if(NOT NRI_METAL_SHADER_CONVERTER_INCLUDE_PATH)
-            unset(NRI_METAL_SHADER_CONVERTER_INCLUDE_PATH CACHE)
-        endif()
-        if(NOT NRI_METAL_SHADER_CONVERTER_LIBRARY)
-            unset(NRI_METAL_SHADER_CONVERTER_LIBRARY CACHE)
-        endif()
-        find_path(NRI_METAL_SHADER_CONVERTER_INCLUDE_PATH metal_irconverter/metal_irconverter.h PATHS "/usr/local/include" NO_CMAKE_FIND_ROOT_PATH REQUIRED)
-        find_library(NRI_METAL_SHADER_CONVERTER_LIBRARY NAMES metalirconverter ${NRI_METAL_SHADER_CONVERTER_FIND_ARGS} REQUIRED)
-        message(STATUS "NRI: Metal Shader Converter headers: ${NRI_METAL_SHADER_CONVERTER_INCLUDE_PATH}")
-        message(STATUS "NRI: Metal Shader Converter library: ${NRI_METAL_SHADER_CONVERTER_LIBRARY}")
-    endif()
 
     # MetalFX is not in the iOS simulator SDK (with the Xcode generator "CMAKE_OSX_SYSROOT" must match the SDK used for building)
     if(IOS AND CMAKE_OSX_SYSROOT MATCHES "[Ss]imulator")
-        set(NRI_METALFX_FRAMEWORK "")
+        set(OPENRHI_METALFX_FRAMEWORK "")
     else()
-        set(NRI_METALFX_FRAMEWORK "-framework MetalFX")
+        set(OPENRHI_METALFX_FRAMEWORK "-framework MetalFX")
     endif()
 
-    # Precompiles "Shaders/<NAME>.metal" into "<NAME>.metallib.h" ("g_<NAME>_metallib" byte array) and makes "TARGET" depend on it.
-    # iOS: device and simulator variants are selected by "TARGET_OS_SIMULATOR", since generators like Xcode pick the SDK at build time
-    find_program(NRI_XCRUN xcrun REQUIRED)
-
-    set(NRI_METALLIB_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/EmbedMetallib.cmake")
-    file(CONFIGURE
-        OUTPUT "${NRI_METALLIB_SCRIPT}"
-        CONTENT [=[
-function(to_array IN VAR)
-    file(READ "${IN}" DATA HEX)
-    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," DATA "${DATA}")
-    set(${VAR} "unsigned char g_${NAME}_metallib[] = {${DATA}};\n" PARENT_SCOPE)
-endfunction()
-to_array("${IN}" DATA)
-if(IN_SIMULATOR)
-    to_array("${IN_SIMULATOR}" DATA_SIMULATOR)
-    set(DATA "#include <TargetConditionals.h>\n#if TARGET_OS_SIMULATOR\n${DATA_SIMULATOR}#else\n${DATA}#endif\n")
-endif()
-file(WRITE "${OUT}" "${DATA}")
-]=]
-        @ONLY
-    )
-
-    function(nri_embed_metallib NAME TARGET)
-        set(SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/Shaders/${NAME}.metal")
-        set(HEADER "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.metallib.h")
-
-        if(IOS)
-            set(SDKS iphoneos iphonesimulator)
-        else()
-            set(SDKS macosx)
-        endif()
-
-        set(COMMANDS "")
-        set(INPUTS "")
-        foreach(SDK IN LISTS SDKS)
-            set(AIR "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.${SDK}.air")
-            set(METALLIB "${CMAKE_CURRENT_BINARY_DIR}/${NAME}.${SDK}.metallib")
-            if(SDK STREQUAL "macosx")
-                set(VERSION_MIN "-mmacosx-version-min=26.0")
-                list(APPEND INPUTS -D "IN=${METALLIB}")
-            elseif(SDK STREQUAL "iphonesimulator")
-                set(VERSION_MIN "-mios-simulator-version-min=26.0")
-                list(APPEND INPUTS -D "IN_SIMULATOR=${METALLIB}")
-            else()
-                set(VERSION_MIN "-mios-version-min=26.0")
-                list(APPEND INPUTS -D "IN=${METALLIB}")
-            endif()
-            list(APPEND COMMANDS
-                COMMAND "${NRI_XCRUN}" -sdk ${SDK} metal -std=metal4.0 ${VERSION_MIN} -c "${SOURCE}" -o "${AIR}"
-                COMMAND "${NRI_XCRUN}" -sdk ${SDK} metallib "${AIR}" -o "${METALLIB}"
-            )
+    include(CMake/OpenRHISlang.cmake)
+    set(internal_groups CLEAR BUFFER RESOLVE_VS FILTER ROOTS DEPTH INSTANCES HEADER WORDS)
+    foreach(dimension RANGE 0 5)
+        foreach(type RANGE 0 2)
+            list(APPEND internal_groups STORAGE_${dimension}_${type})
         endforeach()
-
-        add_custom_command(
-            OUTPUT "${HEADER}"
-            ${COMMANDS}
-            COMMAND "${CMAKE_COMMAND}" ${INPUTS} -D "OUT=${HEADER}" -D "NAME=${NAME}" -P "${NRI_METALLIB_SCRIPT}"
-            DEPENDS "${SOURCE}" "${NRI_METALLIB_SCRIPT}"
-            VERBATIM
-        )
-        add_custom_target(NRI_Metal_${NAME}Shader
-            DEPENDS "${HEADER}"
-        )
-        add_dependencies(${TARGET} NRI_Metal_${NAME}Shader)
-        target_include_directories(${TARGET}
-            PRIVATE
-                "${CMAKE_CURRENT_BINARY_DIR}"
-        )
-    endfunction()
-
-    if(NRI_ENABLE_IMGUI_EXTENSION)
-        nri_embed_metallib(Imgui NRI_Shared)
+    endforeach()
+    foreach(dimension IN ITEMS 2d array)
+        foreach(type RANGE 0 2)
+            list(APPEND internal_groups RESOLVE_${dimension}_${type})
+        endforeach()
+    endforeach()
+    set(internal_air)
+    foreach(group IN LISTS internal_groups)
+        openrhi_compile_shader(NAME Internal_${group} SOURCE Shaders/InternalMetal.slang
+            DEFINES OPENRHI_INTERNAL_${group}=1 AIR air)
+        list(APPEND internal_air "${air}")
+    endforeach()
+    find_program(OPENRHI_XCRUN xcrun REQUIRED)
+    if(IOS)
+        if(CMAKE_OSX_SYSROOT MATCHES "[Ss]imulator")
+            set(internal_sdk iphonesimulator)
+        else()
+            set(internal_sdk iphoneos)
+        endif()
+    else()
+        set(internal_sdk macosx)
     endif()
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/InternalMetal.metallib.h"
+        COMMAND "${OPENRHI_XCRUN}" -sdk ${internal_sdk} metallib ${internal_air} -o "${CMAKE_CURRENT_BINARY_DIR}/InternalMetal.metallib"
+        COMMAND "${CMAKE_COMMAND}" "-DINPUT=${CMAKE_CURRENT_BINARY_DIR}/InternalMetal.metallib"
+            "-DOUTPUT=${CMAKE_CURRENT_BINARY_DIR}/InternalMetal.metallib.h" -DNAME=InternalMetal_metallib
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/CMake/EmbedShader.cmake"
+        DEPENDS ${internal_air} "${CMAKE_CURRENT_SOURCE_DIR}/CMake/EmbedShader.cmake" VERBATIM)
+    add_custom_target(OpenRHI_InternalShaders DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/InternalMetal.metallib.h")
 
     set(METAL_SOURCE
         "Source/Metal/AccelerationStructureMetal.h"
@@ -1112,43 +851,38 @@ file(WRITE "${OUT}" "${DATA}")
         "Source/Metal/TextureMetal.hpp"
     )
 
-    target_include_directories(NRI_Shared PRIVATE "${metal_cpp_SOURCE_DIR}") # MetalFX in "UpscalerInterface.hpp"
+    target_include_directories(OpenRHI_Shared PRIVATE "${metal_cpp_SOURCE_DIR}") # MetalFX in "UpscalerInterface.hpp"
 
-    add_library(NRI_Metal STATIC)
-    target_sources(NRI_Metal
+    add_library(OpenRHI_Metal STATIC)
+    target_sources(OpenRHI_Metal
         PRIVATE
             ${METAL_SOURCE}
     )
-    target_include_directories(NRI_Metal
+    target_include_directories(OpenRHI_Metal
         PRIVATE
             "${metal_cpp_SOURCE_DIR}"
-            $<$<BOOL:${NRI_ENABLE_METAL_SHADER_CONVERTER}>:
-                "${NRI_METAL_SHADER_CONVERTER_INCLUDE_PATH}"
-            >
     )
-    target_link_libraries(NRI_Metal
+    target_link_libraries(OpenRHI_Metal
         PRIVATE
-            NRI_Shared
+            OpenRHI_Shared
             "-framework Foundation"
             "-framework Metal"
-            ${NRI_METALFX_FRAMEWORK}
+            ${OPENRHI_METALFX_FRAMEWORK}
             "-framework QuartzCore"
             "-framework CoreGraphics"
-            $<$<BOOL:${NRI_ENABLE_METAL_SHADER_CONVERTER}>:
-                "${NRI_METAL_SHADER_CONVERTER_LIBRARY}"
-            >
     )
-    set_target_properties(NRI_Metal
+    set_target_properties(OpenRHI_Metal
         PROPERTIES
-            FOLDER "NRI"
+            FOLDER "OpenRHI"
     )
 
-    nri_embed_metallib(InternalMetal NRI_Metal)
+    add_dependencies(OpenRHI_Metal OpenRHI_InternalShaders)
+    target_include_directories(OpenRHI_Metal PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 # Validation
-if(NRI_ENABLE_VALIDATION_SUPPORT)
-    set(NRI_VALIDATION_SOURCE
+if(OPENRHI_ENABLE_VALIDATION_SUPPORT)
+    set(OPENRHI_VALIDATION_SOURCE
         "Source/Validation/AccelerationStructureVal.h"
         "Source/Validation/AccelerationStructureVal.hpp"
         "Source/Validation/BufferVal.h"
@@ -1198,89 +932,87 @@ if(NRI_ENABLE_VALIDATION_SUPPORT)
         "Source/Validation/VideoSessionVal.hpp"
     )
 
-    add_library(NRI_Validation STATIC)
-    target_sources(NRI_Validation
+    add_library(OpenRHI_Validation STATIC)
+    target_sources(OpenRHI_Validation
         PRIVATE
-            ${NRI_VALIDATION_SOURCE}
+            ${OPENRHI_VALIDATION_SOURCE}
     )
-    target_link_libraries(NRI_Validation
+    target_link_libraries(OpenRHI_Validation
         PRIVATE
-            NRI_Shared
+            OpenRHI_Shared
     )
-    set_target_properties(NRI_Validation
+    set_target_properties(OpenRHI_Validation
         PROPERTIES
-            FOLDER "NRI"
+            FOLDER "OpenRHI"
     )
 endif()
 
 # Core headers
-set(NRI_HEADERS
-    "Include/NRI.h"
-    "Include/NRI.hlsl"
-    "Include/NRI.metal"
-    "Include/NRIDescs.h"
-    "Include/NRIMacro.h"
+set(OPENRHI_HEADERS
+    "Include/OpenRHI.h"
+    "Include/OpenRHI.slang"
+    "Include/OpenRHIDescs.h"
+    "Include/OpenRHIMacro.h"
 )
 source_group("Include"
     FILES
-        ${NRI_HEADERS}
+        ${OPENRHI_HEADERS}
 )
-set_source_files_properties(${NRI_HEADERS}
+set_source_files_properties(${OPENRHI_HEADERS}
     PROPERTIES
-        VS_SETTINGS "ExcludedFromBuild=true" # do not compile HLSL
+        VS_SETTINGS "ExcludedFromBuild=true" # shader compilation is explicit
 )
-set_source_files_properties("Include/NRI.metal"
+set_source_files_properties("Include/OpenRHI.slang"
     PROPERTIES
-        HEADER_FILE_ONLY TRUE # do not compile MSL
+        HEADER_FILE_ONLY TRUE # included by Slang
 )
 
 # Extensions headers
-set(NRI_EXTENSIONS
-    "Include/Extensions/NRIDescriptorHeap.h"
-    "Include/Extensions/NRIDeviceCreation.h"
-    "Include/Extensions/NRIHelper.h"
-    "Include/Extensions/NRIImgui.h"
-    "Include/Extensions/NRILowLatency.h"
-    "Include/Extensions/NRIMeshShader.h"
-    "Include/Extensions/NRIRayTracing.h"
-    "Include/Extensions/NRIStreamer.h"
-    "Include/Extensions/NRISwapChain.h"
-    "Include/Extensions/NRIUpscaler.h"
-    "Include/Extensions/NRIVideo.h"
-    "Include/Extensions/NRIWrapperD3D11.h"
-    "Include/Extensions/NRIWrapperD3D12.h"
-    "Include/Extensions/NRIWrapperMetal.h"
-    "Include/Extensions/NRIWrapperVK.h"
+set(OPENRHI_EXTENSIONS
+    "Include/Extensions/OpenRHIDescriptorHeap.h"
+    "Include/Extensions/OpenRHIDeviceCreation.h"
+    "Include/Extensions/OpenRHIHelper.h"
+    "Include/Extensions/OpenRHIImgui.h"
+    "Include/Extensions/OpenRHILowLatency.h"
+    "Include/Extensions/OpenRHIMeshShader.h"
+    "Include/Extensions/OpenRHIRayTracing.h"
+    "Include/Extensions/OpenRHIStreamer.h"
+    "Include/Extensions/OpenRHISwapChain.h"
+    "Include/Extensions/OpenRHIUpscaler.h"
+    "Include/Extensions/OpenRHIVideo.h"
+    "Include/Extensions/OpenRHIWrapperD3D12.h"
+    "Include/Extensions/OpenRHIWrapperMetal.h"
+    "Include/Extensions/OpenRHIWrapperVK.h"
 )
 source_group("Include/Extensions"
     FILES
-        ${NRI_EXTENSIONS}
+        ${OPENRHI_EXTENSIONS}
 )
 
 # Resources
-set(NRI_RESOURCES
-    "Resources/NRI.rc"
+set(OPENRHI_RESOURCES
+    "Resources/OpenRHI.rc"
     "Resources/Version.h"
 )
 source_group("Resources"
     FILES
-        ${NRI_RESOURCES}
+        ${OPENRHI_RESOURCES}
 )
 
-# NRI
-set(NRI_SOURCE "Source/Creation/Creation.cpp")
+# OpenRHI
+set(OPENRHI_SOURCE "Source/Creation/Creation.cpp")
 source_group("Sources"
     FILES
-        ${NRI_SOURCE}
+        ${OPENRHI_SOURCE}
 )
 
-if(NRI_STATIC_LIBRARY)
-    add_library(NRI STATIC)
+if(OPENRHI_STATIC_LIBRARY)
+    add_library(OpenRHI STATIC)
 else()
-    add_library(NRI SHARED)
+    add_library(OpenRHI SHARED)
 
     if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-        target_link_options(NRI
+        target_link_options(OpenRHI
             PRIVATE
                 $<$<CONFIG:Release>:/DEBUG> # generate a PDB for Release build
                 $<$<CONFIG:Release>:/OPT:ICF> # perform identical COMDAT folding (removes duplicate code/data)
@@ -1288,130 +1020,111 @@ else()
     endif()
 endif()
 
-target_sources(NRI
+target_sources(OpenRHI
     PRIVATE
-        ${NRI_SOURCE}
-        ${NRI_HEADERS}
-        ${NRI_RESOURCES}
-        ${NRI_EXTENSIONS}
-        $<$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>:nri.natvis> # debugger markup
+        ${OPENRHI_SOURCE}
+        ${OPENRHI_HEADERS}
+        ${OPENRHI_RESOURCES}
+        ${OPENRHI_EXTENSIONS}
+        $<$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>:openrhi.natvis> # debugger markup
 )
-target_include_directories(NRI
+target_include_directories(OpenRHI
     PRIVATE
-        $<$<BOOL:${NRI_ENABLE_NVTX_SUPPORT}>:
+        $<$<BOOL:${OPENRHI_ENABLE_NVTX_SUPPORT}>:
             "${nvtx_SOURCE_DIR}/c/include/"
         >
-        $<$<BOOL:${NRI_ENABLE_VK_SUPPORT}>:
+        $<$<BOOL:${OPENRHI_ENABLE_VK_SUPPORT}>:
             "${vulkan_headers_SOURCE_DIR}/include"
-        >
-        $<$<BOOL:${NRI_ENABLE_WGPU_SUPPORT}>:
-            "${wgpu_native_SOURCE_DIR}/include"
         >
     PUBLIC
         "Include"
 )
-target_compile_definitions(NRI
+target_compile_definitions(OpenRHI
     PRIVATE
-        $<$<NOT:$<BOOL:${NRI_STATIC_LIBRARY}>>:
+        $<$<NOT:$<BOOL:${OPENRHI_STATIC_LIBRARY}>>:
             $<$<BOOL:${WIN32}>:
-                "NRI_API=extern \"C\" __declspec(dllexport)"
+                "OPENRHI_API=extern \"C\" __declspec(dllexport)"
             >
             $<$<NOT:$<BOOL:${WIN32}>>:
-                "NRI_API=extern \"C\" __attribute__((visibility(\"default\")))"
+                "OPENRHI_API=extern \"C\" __attribute__((visibility(\"default\")))"
             >
         >
     PUBLIC
-        $<$<BOOL:${NRI_ENABLE_AGILITY_SDK_SUPPORT}>:
-            NRI_ENABLE_AGILITY_SDK_SUPPORT=1
+        $<$<BOOL:${OPENRHI_ENABLE_AGILITY_SDK_SUPPORT}>:
+            OPENRHI_ENABLE_AGILITY_SDK_SUPPORT=1
         >
 )
-target_link_libraries(NRI
+target_link_libraries(OpenRHI
     PRIVATE
-        NRI_Shared
+        OpenRHI_Shared
         $<$<NOT:$<BOOL:${WIN32}>>:
             ${CMAKE_DL_LIBS}
         >
-        $<$<BOOL:${NRI_ENABLE_NONE_SUPPORT}>:
-            NRI_NONE
+        $<$<BOOL:${OPENRHI_ENABLE_NONE_SUPPORT}>:
+            OpenRHI_NONE
         >
-        $<$<BOOL:${NRI_ENABLE_D3D11_SUPPORT}>:
-            NRI_D3D11
+        $<$<BOOL:${OPENRHI_ENABLE_D3D12_SUPPORT}>:
+            OpenRHI_D3D12
         >
-        $<$<BOOL:${NRI_ENABLE_D3D12_SUPPORT}>:
-            NRI_D3D12
+        $<$<BOOL:${OPENRHI_ENABLE_VK_SUPPORT}>:
+            OpenRHI_VK
         >
-        $<$<BOOL:${NRI_ENABLE_VK_SUPPORT}>:
-            NRI_VK
+        $<$<BOOL:${OPENRHI_ENABLE_METAL_SUPPORT}>:
+            OpenRHI_Metal
         >
-        $<$<BOOL:${NRI_ENABLE_WGPU_SUPPORT}>:
-            NRI_WGPU
-        >
-        $<$<BOOL:${NRI_ENABLE_METAL_SUPPORT}>:
-            NRI_Metal
-        >
-        $<$<BOOL:${NRI_ENABLE_VALIDATION_SUPPORT}>:
-            NRI_Validation
+        $<$<BOOL:${OPENRHI_ENABLE_VALIDATION_SUPPORT}>:
+            OpenRHI_Validation
         >
 )
-set_target_properties(NRI
+set_target_properties(OpenRHI
     PROPERTIES
-        FOLDER "NRI"
+        FOLDER "OpenRHI"
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
 )
 
-message("NRI: output path '${CMAKE_RUNTIME_OUTPUT_DIRECTORY}'")
+message("OpenRHI: output path '${CMAKE_RUNTIME_OUTPUT_DIRECTORY}'")
+
+# Carry the dependency-provided license files with distributable binaries
+foreach(DEPENDENCY IN LISTS DEPS)
+    set(DEPENDENCY_SOURCE "${${DEPENDENCY}_SOURCE_DIR}")
+    if(DEPENDENCY_SOURCE)
+        file(GLOB DEPENDENCY_LICENSES LIST_DIRECTORIES false
+            "${DEPENDENCY_SOURCE}/*LICENSE*" "${DEPENDENCY_SOURCE}/*License*"
+            "${DEPENDENCY_SOURCE}/*license*" "${DEPENDENCY_SOURCE}/*COPYING*")
+        foreach(DEPENDENCY_LICENSE IN LISTS DEPENDENCY_LICENSES)
+            add_custom_command(TARGET OpenRHI POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:OpenRHI>/ThirdPartyLicenses/${DEPENDENCY}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DEPENDENCY_LICENSE}" "$<TARGET_FILE_DIR:OpenRHI>/ThirdPartyLicenses/${DEPENDENCY}/"
+                VERBATIM)
+        endforeach()
+    endif()
+endforeach()
 
 # Copy to the output folder
-if(NRI_ENABLE_AMDAGS)
+if(OPENRHI_ENABLE_AMDAGS)
     find_file(AMD_AGS_DLL
         NAMES
             amd_ags_${BIN_ARCHITECTURE}.dll
         PATHS "${amdags_SOURCE_DIR}/ags_lib/lib"
     )
-    add_custom_command(TARGET NRI
+    add_custom_command(TARGET OpenRHI
         POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${AMD_AGS_DLL}" "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
         VERBATIM
     )
 endif()
 
-if(NRI_ENABLE_AGILITY_SDK_SUPPORT)
-    add_custom_command(TARGET NRI
+if(OPENRHI_ENABLE_AGILITY_SDK_SUPPORT)
+    add_custom_command(TARGET OpenRHI
         POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${agilitysdk_SOURCE_DIR}/build/native/bin/${BIN_ARCHITECTURE}" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${NRI_AGILITY_SDK_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${agilitysdk_SOURCE_DIR}/build/native/bin/${BIN_ARCHITECTURE}" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${OPENRHI_AGILITY_SDK_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${agilitysdk_SOURCE_DIR}/LICENSE.txt" "${agilitysdk_SOURCE_DIR}/LICENSE-CODE.txt" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${OPENRHI_AGILITY_SDK_DIR}"
         VERBATIM
     )
 endif()
 
-# Metal Shader Converter: "@rpath/libmetalirconverter.dylib" is found next to "libNRI" or in the app "Frameworks" folder
-if(NRI_ENABLE_METAL_SHADER_CONVERTER AND NOT NRI_STATIC_LIBRARY)
-    if(IOS)
-        set(NRI_RPATH "@loader_path;@executable_path/Frameworks")
-    else()
-        set(NRI_RPATH "@loader_path;@executable_path/../Frameworks")
-    endif()
 
-    set_target_properties(NRI
-        PROPERTIES
-            BUILD_RPATH "${NRI_RPATH}"
-            INSTALL_RPATH "${NRI_RPATH}"
-    )
-    add_custom_command(TARGET NRI
-        POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${NRI_METAL_SHADER_CONVERTER_LIBRARY}" "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-        VERBATIM
-    )
-endif()
-
-if(NRI_ENABLE_WGPU_SUPPORT)
-    add_custom_command(TARGET NRI
-        POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${wgpu_native_SOURCE_DIR}/lib/${WGPU_NATIVE_RUNTIME_NAME}" "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-        VERBATIM
-    )
-endif()
-
-if(NRI_ENABLE_NGX_SDK)
+if(OPENRHI_ENABLE_NGX_SDK)
     set(NGX_LIB_DIR $<IF:$<CONFIG:Debug>,dev,rel>)
 
     if(WIN32)
@@ -1422,7 +1135,7 @@ if(NRI_ENABLE_NGX_SDK)
         set(DLSS_RR_DLL "${ngx_SOURCE_DIR}/lib/Linux_x86_64/${NGX_LIB_DIR}/libnvidia-ngx-dlssd.so.${NGX_VERSION}")
     endif()
 
-    add_custom_command(TARGET NRI
+    add_custom_command(TARGET OpenRHI
         POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DLSS_SR_DLL} "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DLSS_RR_DLL} "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
@@ -1430,8 +1143,8 @@ if(NRI_ENABLE_NGX_SDK)
     )
 endif()
 
-if(NRI_ENABLE_FFX_SDK)
-    if(NRI_ENABLE_D3D12_SUPPORT)
+if(OPENRHI_ENABLE_FFX_SDK)
+    if(OPENRHI_ENABLE_D3D12_SUPPORT)
         find_file(FSR_DX12_LOADER_DLL
             NAMES
                 amd_fidelityfx_loader_dx12.dll
@@ -1450,37 +1163,24 @@ if(NRI_ENABLE_FFX_SDK)
             NO_CACHE
             REQUIRED
         )
-        add_custom_command(TARGET NRI
+        add_custom_command(TARGET OpenRHI
             POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FSR_DX12_LOADER_DLL} ${FSR_DX12_UPSCALER_DLL} "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
                 VERBATIM
         )
     endif()
 
-    if(NRI_ENABLE_VK_SUPPORT AND WIN32)
-        find_file(FFX_VK_DLL
-            NAMES
-                amd_fidelityfx_vk.dll
-            PATHS
-                "${ffx_SOURCE_DIR}/PrebuiltSignedDLL"
-        )
-        add_custom_command(TARGET NRI
-            POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FFX_VK_DLL} "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
-            VERBATIM
-        )
-    endif()
 endif()
 
-if(NRI_ENABLE_XESS_SDK)
-    if(NRI_ENABLE_D3D12_SUPPORT)
+if(OPENRHI_ENABLE_XESS_SDK)
+    if(OPENRHI_ENABLE_D3D12_SUPPORT)
         find_file(XESS_DX12_DLL
             NAMES
                 libxess.dll
             PATHS
                 "${xess_SOURCE_DIR}/bin"
         )
-        add_custom_command(TARGET NRI
+        add_custom_command(TARGET OpenRHI
             POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different ${XESS_DX12_DLL} "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
             VERBATIM
@@ -1488,77 +1188,54 @@ if(NRI_ENABLE_XESS_SDK)
     endif()
 endif()
 
-# Shaders
-if(NRI_ENABLE_SHADERMAKE)
-    set(SHADERS
-        "Shaders/Imgui.fs.hlsl"
-        "Shaders/Imgui.metal"
-        "Shaders/Imgui.vs.hlsl"
-        "Shaders/InternalMetal.metal"
-        "Shaders/NIS.hlsl"
-        "Shaders/NIS.cs.hlsl"
-    )
-    set_source_files_properties(${SHADERS}
-        PROPERTIES
-            VS_SETTINGS "ExcludedFromBuild=true" # do not compile HLSL
-    )
-    set_source_files_properties("Shaders/Imgui.metal" "Shaders/InternalMetal.metal"
-        PROPERTIES
-            HEADER_FILE_ONLY TRUE # precompiled by "nri_embed_metallib"
-    )
-
-    set(SHADERMAKE_GENERAL_ARGS
-        --project "NRI"
-        --compactProgress
-        --flatten
-        --stripReflection
-        --WX
-        --sRegShift 0 --tRegShift 0 --bRegShift 0 --uRegShift 0
-        --headerBlob
-        --sourceDir "Shaders"
-        --ignoreConfigDir
-        -c "Shaders/Shaders.cfg"
-        -o "${NRI_SHADERS_PATH}"
-        -I "Shaders"
-        -I "Include"
-    )
-
-    set(SHADERMAKE_COMMANDS)
-    if(NRI_ENABLE_D3D11_SUPPORT)
-        list(APPEND SHADERMAKE_COMMANDS COMMAND ${SHADERMAKE_PATH} -p DXBC --compiler "${SHADERMAKE_FXC_PATH}" ${SHADERMAKE_GENERAL_ARGS})
+# Slang is the sole shader compilation front end
+include(CMake/OpenRHISlang.cmake)
+if(OPENRHI_ENABLE_IMGUI_EXTENSION OR OPENRHI_ENABLE_NIS_SDK)
+    set(OPENRHI_SHADER_HEADERS)
+    if(OPENRHI_ENABLE_IMGUI_EXTENSION)
+        foreach(stage IN ITEMS vs fs)
+            if(stage STREQUAL "vs")
+                set(entry ImguiVS)
+                set(kind vertex)
+            else()
+                set(entry ImguiFS)
+                set(kind fragment)
+            endif()
+            openrhi_compile_shader(NAME Imgui_${stage} SOURCE Shaders/Imgui.slang ENTRY ${entry} STAGE ${kind}
+                INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/Include" HEADER header)
+            list(APPEND OPENRHI_SHADER_HEADERS "${header}")
+        endforeach()
     endif()
-    if(NRI_ENABLE_D3D12_SUPPORT OR (NRI_ENABLE_METAL_SUPPORT AND NRI_ENABLE_METAL_SHADER_CONVERTER))
-        list(APPEND SHADERMAKE_COMMANDS COMMAND ${SHADERMAKE_PATH} -p DXIL --compiler "${SHADERMAKE_DXC_PATH}" ${SHADERMAKE_GENERAL_ARGS})
+    if(OPENRHI_ENABLE_NIS_SDK)
+        set(nis_includes "")
+        set(nis_table "static const ShaderDesc g_NisShaders[] = {\n")
+        foreach(half RANGE 0 1)
+            foreach(hdr RANGE 0 1)
+                foreach(format RANGE 0 3)
+                    if(NOT OPENRHI_ENABLE_VK_SUPPORT AND format GREATER 0)
+                        set(name NIS_${half}_${hdr}_0)
+                    else()
+                        set(name NIS_${half}_${hdr}_${format})
+                        openrhi_compile_shader(NAME ${name} SOURCE Shaders/NIS.slang ENTRY NisMain STAGE compute
+                            INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/Include" "${CMAKE_CURRENT_SOURCE_DIR}/Shaders"
+                            DEFINES NIS_FP16=${half} NIS_HDR_MODE=${hdr} NIS_OUTPUT_FORMAT=${format} NIS_THREAD_GROUP_SIZE=256 HEADER header)
+                        list(APPEND OPENRHI_SHADER_HEADERS "${header}")
+                        string(APPEND nis_includes "#include \"${name}.h\"\n")
+                    endif()
+                    string(APPEND nis_table "    g_${name}_desc,\n")
+                endforeach()
+            endforeach()
+        endforeach()
+        file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/NisShaders.h" "${nis_includes}${nis_table}};\n")
     endif()
-    if(NRI_ENABLE_VK_SUPPORT OR NRI_ENABLE_WGPU_SUPPORT)
-        list(APPEND SHADERMAKE_COMMANDS COMMAND ${SHADERMAKE_PATH} -p SPIRV --compiler "${SHADERMAKE_DXC_VK_PATH}" ${SHADERMAKE_GENERAL_ARGS})
-    endif()
-    list(APPEND SHADERMAKE_COMMANDS "") # fix for "The system cannot find the batch label specified - VCEnd"
+    add_custom_target(OpenRHI_Shaders DEPENDS ${OPENRHI_SHADER_HEADERS})
+    add_dependencies(OpenRHI_Shared OpenRHI_Shaders)
+    target_include_directories(OpenRHI_Shared PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
 
-    add_custom_target(NRI_Shaders
-        ALL
-            ${SHADERMAKE_COMMANDS}
-        DEPENDS
-            ShaderMake
-        WORKING_DIRECTORY
-            "${CMAKE_CURRENT_SOURCE_DIR}"
-        SOURCES
-            ${SHADERS}
-        VERBATIM
-    )
-    set_target_properties(NRI_Shaders
-        PROPERTIES
-            FOLDER "NRI"
-    )
-    add_dependencies(NRI_Shared NRI_Shaders)
-    target_include_directories(NRI_Shared
-        PRIVATE
-            "${NRI_SHADERS_PATH}"
-    )
-    target_link_libraries(NRI_Shared
-        PRIVATE
-            ShaderMakeBlob
-    )
-
-    message("NRI: shaders path '${NRI_SHADERS_PATH}'")
+# OpenRHI qualification
+option(OPENRHI_BUILD_TESTS "Build OpenRHI backend integration tests" OFF)
+if(OPENRHI_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(Tests)
 endif()

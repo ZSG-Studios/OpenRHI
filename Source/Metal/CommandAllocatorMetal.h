@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct UploadChunkMetal {
     MTL::Buffer* buffer = nullptr;
@@ -46,7 +46,7 @@ struct CommandAllocatorMetal final : public DebugNameBase {
     MTL::Texture* CreateTransientTexture(MTL::PixelFormat format, uint32_t width, uint32_t height);
     MTL::Buffer* CreateTransientBuffer(uint64_t size);
     void ReleaseOnReset(NS::Object* object); // takes ownership
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     MTL::Resource* AcquireTransientResource(const TransientResourceMetal& desc);
@@ -61,4 +61,4 @@ private:
     uint32_t m_ResetIndex = 0;
 };
 
-} // namespace nri
+} // namespace openrhi

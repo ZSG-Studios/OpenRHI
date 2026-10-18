@@ -1,53 +1,53 @@
 // © 2021 NVIDIA Corporation
 
-NRI_INLINE void QueueVal::BeginAnnotation(const char* name, uint32_t bgra) {
+OPENRHI_INLINE void QueueVal::BeginAnnotation(const char* name, uint32_t bgra) {
     GetCoreInterfaceImpl().QueueBeginAnnotation(*GetImpl(), name, bgra);
 }
 
-NRI_INLINE void QueueVal::EndAnnotation() {
+OPENRHI_INLINE void QueueVal::EndAnnotation() {
     GetCoreInterfaceImpl().QueueEndAnnotation(*GetImpl());
 }
 
-NRI_INLINE void QueueVal::Annotation(const char* name, uint32_t bgra) {
+OPENRHI_INLINE void QueueVal::Annotation(const char* name, uint32_t bgra) {
     GetCoreInterfaceImpl().QueueAnnotation(*GetImpl(), name, bgra);
 }
 
-NRI_INLINE void QueueVal::GetCalibratedTimestamps(uint64_t& timestampGPU, uint64_t& timestampCPU) {
+OPENRHI_INLINE void QueueVal::GetCalibratedTimestamps(uint64_t& timestampGPU, uint64_t& timestampCPU) {
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
-    NRI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.calibratedTimestamps, ReturnVoid(), "'features.calibratedTimestamps' is false");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.calibratedTimestamps, ReturnVoid(), "'features.calibratedTimestamps' is false");
 
     GetCoreInterfaceImpl().GetCalibratedTimestamps(*GetImpl(), timestampGPU, timestampCPU);
 }
 
-NRI_INLINE Result QueueVal::Submit(const QueueSubmitDesc& queueSubmitDesc) {
-    NRI_RETURN_ON_FAILURE(&m_Device, !queueSubmitDesc.swapChain || queueSubmitDesc.presentId != 0, Result::INVALID_ARGUMENT, "'presentId' is 0");
+OPENRHI_INLINE Result QueueVal::Submit(const QueueSubmitDesc& queueSubmitDesc) {
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, !queueSubmitDesc.swapChain || queueSubmitDesc.presentId != 0, Result::INVALID_ARGUMENT, "'presentId' is 0");
 
     auto queueSubmitDescImpl = queueSubmitDesc;
 
-    Scratch<FenceSubmitDesc> waitFences = NRI_ALLOCATE_SCRATCH(m_Device, FenceSubmitDesc, queueSubmitDesc.waitFenceNum);
+    Scratch<FenceSubmitDesc> waitFences = OPENRHI_ALLOCATE_SCRATCH(m_Device, FenceSubmitDesc, queueSubmitDesc.waitFenceNum);
     for (uint32_t i = 0; i < queueSubmitDesc.waitFenceNum; i++) {
         waitFences[i] = queueSubmitDesc.waitFences[i];
-        waitFences[i].fence = NRI_GET_IMPL(Fence, waitFences[i].fence);
+        waitFences[i].fence = OPENRHI_GET_IMPL(Fence, waitFences[i].fence);
     }
     queueSubmitDescImpl.waitFences = waitFences;
 
-    Scratch<CommandBuffer*> commandBuffers = NRI_ALLOCATE_SCRATCH(m_Device, CommandBuffer*, queueSubmitDesc.commandBufferNum);
+    Scratch<CommandBuffer*> commandBuffers = OPENRHI_ALLOCATE_SCRATCH(m_Device, CommandBuffer*, queueSubmitDesc.commandBufferNum);
     for (uint32_t i = 0; i < queueSubmitDesc.commandBufferNum; i++)
-        commandBuffers[i] = NRI_GET_IMPL(CommandBuffer, queueSubmitDesc.commandBuffers[i]);
+        commandBuffers[i] = OPENRHI_GET_IMPL(CommandBuffer, queueSubmitDesc.commandBuffers[i]);
     queueSubmitDescImpl.commandBuffers = commandBuffers;
 
-    Scratch<FenceSubmitDesc> signalFences = NRI_ALLOCATE_SCRATCH(m_Device, FenceSubmitDesc, queueSubmitDesc.signalFenceNum);
+    Scratch<FenceSubmitDesc> signalFences = OPENRHI_ALLOCATE_SCRATCH(m_Device, FenceSubmitDesc, queueSubmitDesc.signalFenceNum);
     for (uint32_t i = 0; i < queueSubmitDesc.signalFenceNum; i++) {
         signalFences[i] = queueSubmitDesc.signalFences[i];
-        signalFences[i].fence = NRI_GET_IMPL(Fence, signalFences[i].fence);
+        signalFences[i].fence = OPENRHI_GET_IMPL(Fence, signalFences[i].fence);
     }
     queueSubmitDescImpl.signalFences = signalFences;
 
-    queueSubmitDescImpl.swapChain = NRI_GET_IMPL(SwapChain, queueSubmitDesc.swapChain);
+    queueSubmitDescImpl.swapChain = OPENRHI_GET_IMPL(SwapChain, queueSubmitDesc.swapChain);
 
     return GetCoreInterfaceImpl().QueueSubmit(*GetImpl(), queueSubmitDescImpl);
 }
 
-NRI_INLINE Result QueueVal::WaitIdle() {
+OPENRHI_INLINE Result QueueVal::WaitIdle() {
     return GetCoreInterfaceImpl().QueueWaitIdle(GetImpl());
 }

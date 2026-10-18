@@ -2,18 +2,16 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
-// Compute kernels in "Shaders/InternalMetal.metal"
+// Compute kernels in "Shaders/InternalMetal.slang"
 enum class InternalKernelMetal : uint8_t {
     FILTER_DRAWS,
     PREPARE_DRAW_ROOTS,
-    EMULATE_DRAWS,
     CLEAR_STORAGE_BUFFER,
     CONVERT_INSTANCES,
     COPY_TOP_LEVEL_HEADER,
     COPY_WORDS,
-    PREPARE_RAYS_INDIRECT,
 
     // "CLEAR_STORAGE_TEXTURE + dimension * 3 + type", see "GetClearStorageKernel"
     CLEAR_STORAGE_TEXTURE,
@@ -42,12 +40,6 @@ struct CopyTopLevelHeaderArgsMetal {
 struct CopyWordsArgsMetal {
     MTL::GPUAddress src;
     MTL::GPUAddress dst;
-};
-
-struct PrepareRaysIndirectArgsMetal {
-    MTL::GPUAddress src;      // "DispatchRaysIndirectDesc"
-    MTL::GPUAddress dst;      // "IRDispatchRaysArgument::DispatchRaysDesc"
-    MTL::GPUAddress dispatch; // "MTLDispatchThreadsIndirectArguments"
 };
 
 // "TopLevelInstanceBits" 0-3 match "MTLAccelerationStructureInstanceOptions", micromap bits are dropped by the kernel
@@ -96,7 +88,7 @@ struct ResolvePipelineMetal {
     bool isArray = false;
 };
 
-// Device-level internal shaders ("Shaders/InternalMetal.metal"), pipelines are created on first use. Thread-safe
+// Device-level internal shaders ("Shaders/InternalMetal.slang"), pipelines are created on first use. Thread-safe
 struct InternalShadersMetal {
     InternalShadersMetal(DeviceMetal& device);
     ~InternalShadersMetal();
@@ -125,4 +117,4 @@ private:
     std::shared_mutex m_RenderPipelineLock; // render pipeline lookups (shared) and creation (exclusive)
 };
 
-} // namespace nri
+} // namespace openrhi

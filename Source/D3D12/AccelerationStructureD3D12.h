@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct AccelerationStructureD3D12 final : public DebugNameBase {
     inline AccelerationStructureD3D12(DeviceD3D12& device)
@@ -29,10 +29,10 @@ struct AccelerationStructureD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     inline uint64_t GetUpdateScratchBufferSize() const {
@@ -58,4 +58,4 @@ private:
     AccelerationStructureBits m_Flags = AccelerationStructureBits::NONE;
 };
 
-} // namespace nri
+} // namespace openrhi

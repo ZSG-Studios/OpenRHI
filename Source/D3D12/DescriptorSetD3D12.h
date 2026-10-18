@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorSetD3D12 final : public DebugNameBase {
     inline DescriptorSetD3D12() {
@@ -18,7 +18,7 @@ struct DescriptorSetD3D12 final : public DebugNameBase {
     DescriptorHandleGPU GetDescriptorHandleGPU(uint32_t rangeIndex, uint32_t baseDescriptor) const;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     static void UpdateDescriptorRanges(const UpdateDescriptorRangeDesc* updateDescriptorRangeDescs, uint32_t updateDescriptorRangeDescNum);
@@ -30,4 +30,4 @@ private:
     std::array<uint32_t, DescriptorHeapType::MAX_NUM> m_HeapOffsets = {};
 };
 
-} // namespace nri
+} // namespace openrhi

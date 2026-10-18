@@ -46,17 +46,11 @@ struct DispatchTable {
     VK_FUNC(GetPhysicalDeviceSurfacePresentModesKHR);
     VK_FUNC(DestroySurfaceKHR);
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-    VK_FUNC(CreateWin32SurfaceKHR);
-#endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     VK_FUNC(CreateXlibSurfaceKHR);
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
     VK_FUNC(CreateWaylandSurfaceKHR);
-#endif
-#ifdef VK_USE_PLATFORM_METAL_EXT
-    VK_FUNC(CreateMetalSurfaceEXT);
 #endif
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     VK_FUNC(CreateAndroidSurfaceKHR);
@@ -115,7 +109,7 @@ struct DispatchTable {
     VK_FUNC(CmdSetDepthBounds);                           // - | +
     VK_FUNC(CmdSetStencilReference);                      // - | +
     VK_FUNC(CmdSetBlendConstants);                        // - | +
-    VK_FUNC(CmdSetDepthBias);                             // - | + TODO: "VK_EXT_depth_bias_control" offers "2" but MoltenVK doesn't support it yet
+    VK_FUNC(CmdSetDepthBias);                   // - | +
     VK_FUNC(CmdClearAttachments);                         // - | +
     VK_FUNC(CmdClearColorImage);                          // - | +
     VK_FUNC(CmdSetViewport);                              // - | +
@@ -205,10 +199,6 @@ struct DispatchTable {
     VK_FUNC(GetSwapchainImagesKHR);                       // + | +
                                                           // VK_KHR_present_wait
     VK_FUNC(WaitForPresentKHR);                           // - | ? may return "VK_ERROR_DEVICE_LOST"
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-                                                          // VK_KHR_external_memory_win32
-    VK_FUNC(GetMemoryWin32HandlePropertiesKHR);           // + | +
-#endif
                                                           // VK_KHR_acceleration_structure
     VK_FUNC(CreateAccelerationStructureKHR);              // + | +
     VK_FUNC(DestroyAccelerationStructureKHR);             // - | +

@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct IsExtSupported {
     uint32_t lowLatency     : 1;
@@ -10,7 +10,6 @@ struct IsExtSupported {
     uint32_t rayTracing     : 1;
     uint32_t video          : 1;
     uint32_t swapChain      : 1;
-    uint32_t wrapperD3D11   : 1;
     uint32_t wrapperD3D12   : 1;
     uint32_t wrapperMetal   : 1;
     uint32_t wrapperVK      : 1;
@@ -59,10 +58,6 @@ struct DeviceVal final : public DeviceBase {
 
     inline const SwapChainInterface& GetSwapChainInterfaceImpl() const {
         return m_iSwapChainImpl;
-    }
-
-    inline const WrapperD3D11Interface& GetWrapperD3D11InterfaceImpl() const {
-        return m_iWrapperD3D11Impl;
     }
 
     inline const WrapperD3D12Interface& GetWrapperD3D12InterfaceImpl() const {
@@ -123,17 +118,16 @@ struct DeviceVal final : public DeviceBase {
     Result FillFunctionTable(StreamerInterface& table) const override;
     Result FillFunctionTable(SwapChainInterface& table) const override;
     Result FillFunctionTable(UpscalerInterface& table) const override;
-    Result FillFunctionTable(WrapperD3D11Interface& table) const override;
     Result FillFunctionTable(WrapperD3D12Interface& table) const override;
     Result FillFunctionTable(WrapperMetalInterface& table) const override;
     Result FillFunctionTable(WrapperVKInterface& table) const override;
 
-#if NRI_ENABLE_IMGUI_EXTENSION
+#if OPENRHI_ENABLE_IMGUI_EXTENSION
     Result FillFunctionTable(ImguiInterface& table) const override;
 #endif
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result CreateFence(uint64_t initialValue, Fence*& fence);
@@ -144,15 +138,12 @@ struct DeviceVal final : public DeviceBase {
     Result CreateMemory(const MemoryD3D12Desc& memoryD3D12Desc, Memory*& memory);
     Result CreateBuffer(const BufferDesc& bufferDesc, Buffer*& buffer);
     Result CreateBuffer(const BufferVKDesc& bufferVKDesc, Buffer*& buffer);
-    Result CreateBuffer(const BufferD3D11Desc& bufferD3D11Desc, Buffer*& buffer);
     Result CreateBuffer(const BufferD3D12Desc& bufferD3D12Desc, Buffer*& buffer);
     Result CreateBuffer(const BufferMetalDesc& bufferMetalDesc, Buffer*& buffer);
     Result CreateTexture(const TextureDesc& textureDesc, Texture*& texture);
     Result CreateTexture(const TextureVKDesc& textureVKDesc, Texture*& texture);
-    Result CreateTexture(const TextureD3D11Desc& textureD3D11Desc, Texture*& texture);
     Result CreateTexture(const TextureD3D12Desc& textureD3D12Desc, Texture*& texture);
     Result CreateTexture(const TextureMetalDesc& textureMetalDesc, Texture*& texture);
-    Result GetRootSignature(const PipelineLayout& pipelineLayout, char* json, uint64_t& size);
     Result CreatePipeline(const GraphicsPipelineDesc& graphicsPipelineDesc, Pipeline*& pipeline);
     Result CreatePipeline(const ComputePipelineDesc& computePipelineDesc, Pipeline*& pipeline);
     Result CreatePipeline(const RayTracingPipelineDesc& rayTracingPipelineDesc, Pipeline*& pipeline);
@@ -166,7 +157,6 @@ struct DeviceVal final : public DeviceBase {
     Result CreateDescriptor(const BufferViewDesc& bufferViewDesc, Descriptor*& bufferView);
     Result CreateDescriptor(const TextureViewDesc& textureViewDesc, Descriptor*& textureView);
     Result CreateCommandBuffer(const CommandBufferVKDesc& commandBufferVKDesc, CommandBuffer*& commandBuffer);
-    Result CreateCommandBuffer(const CommandBufferD3D11Desc& commandBufferD3D11Desc, CommandBuffer*& commandBuffer);
     Result CreateCommandBuffer(const CommandBufferD3D12Desc& commandBufferD3D12Desc, CommandBuffer*& commandBuffer);
     Result CreatePipelineLayout(const PipelineLayoutDesc& pipelineLayoutDesc, PipelineLayout*& pipelineLayout);
     Result CreateDescriptorPool(const DescriptorPoolDesc& descriptorPoolDesc, DescriptorPool*& descriptorPool);
@@ -232,7 +222,6 @@ private:
     RayTracingInterface m_iRayTracingImpl = {};
     VideoInterface m_iVideoImpl = {};
     SwapChainInterface m_iSwapChainImpl = {};
-    WrapperD3D11Interface m_iWrapperD3D11Impl = {};
     WrapperD3D12Interface m_iWrapperD3D12Impl = {};
     WrapperMetalInterface m_iWrapperMetalImpl = {};
     WrapperVKInterface m_iWrapperVKImpl = {};
@@ -245,4 +234,4 @@ private:
     Lock m_Lock;
 };
 
-} // namespace nri
+} // namespace openrhi

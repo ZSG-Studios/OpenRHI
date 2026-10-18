@@ -27,7 +27,7 @@ MTL::TextureDescriptor* TextureMetal::NewNativeDesc(MemoryLocation location) con
     const Dim_t layerNum = std::max(m_Desc.layerNum, (Dim_t)1);
     const Sample_t sampleNum = std::max(m_Desc.sampleNum, (Sample_t)1);
 
-    // Converter maps 1D textures to height-one 2D textures. This also preserves NRI mipmaps, which Metal's native 1D textures can't represent
+    // Height-one 2D textures preserve mipmapped 1D texture semantics
     MTL::TextureType type = MTL::TextureType2D;
 
     if (m_Desc.type == TextureType::TEXTURE_3D)
@@ -148,7 +148,7 @@ Result TextureMetal::Bind(MemoryMetal& memory, uint64_t offset) {
     return m_Texture ? Result::SUCCESS : Result::FAILURE;
 }
 
-NRI_INLINE void TextureMetal::GetMemoryDesc(MemoryLocation location, MemoryDesc& memoryDesc) const {
+OPENRHI_INLINE void TextureMetal::GetMemoryDesc(MemoryLocation location, MemoryDesc& memoryDesc) const {
     MTL::TextureDescriptor* desc = NewNativeDesc(location);
     MTL::SizeAndAlign requirements = m_Device.GetNativeObject()->heapTextureSizeAndAlign(desc);
     desc->release();
@@ -188,7 +188,7 @@ MTL::Texture* TextureMetal::GetDrawableView(MTL::PixelFormat format) {
             return m_DrawableViews[i].view;
     }
 
-    NRI_CHECK(m_DrawableViewNum < GetCountOf(m_DrawableViews), "Too many view formats of a swap chain texture");
+    OPENRHI_CHECK(m_DrawableViewNum < GetCountOf(m_DrawableViews), "Too many view formats of a swap chain texture");
 
     MTL::Texture* view = m_DrawableViewNum < GetCountOf(m_DrawableViews) ? m_Texture->newTextureView(format) : nullptr;
 
@@ -200,7 +200,7 @@ MTL::Texture* TextureMetal::GetDrawableView(MTL::PixelFormat format) {
     return view;
 }
 
-NRI_INLINE void TextureMetal::SetDebugName(const char* name) {
+OPENRHI_INLINE void TextureMetal::SetDebugName(const char* name) {
     if (!m_Texture)
         return;
 

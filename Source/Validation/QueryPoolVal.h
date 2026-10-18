@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct QueryPoolVal final : public ObjectVal {
     QueryPoolVal(DeviceVal& device, QueryPool* queryPool, QueryType queryType, uint32_t queryNum);
@@ -26,7 +26,7 @@ struct QueryPoolVal final : public ObjectVal {
     void ResetQueries(uint32_t offset, uint32_t num);
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     uint32_t GetQuerySize() const;
@@ -36,4 +36,4 @@ private:
     QueryType m_QueryType;
 };
 
-} // namespace nri
+} // namespace openrhi

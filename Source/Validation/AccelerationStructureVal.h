@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct AccelerationStructureVal final : public ObjectVal {
     AccelerationStructureVal(DeviceVal& device, AccelerationStructure* accelerationStructure, bool isBoundToMemory, const AccelerationStructureDesc* desc = nullptr)
@@ -43,7 +43,7 @@ struct AccelerationStructureVal final : public ObjectVal {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     uint64_t GetUpdateScratchBufferSize() const;
@@ -62,4 +62,4 @@ private:
     bool m_IsBoundToMemory = false;
 };
 
-} // namespace nri
+} // namespace openrhi

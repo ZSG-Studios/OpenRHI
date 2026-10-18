@@ -1,5 +1,6 @@
-name: NRI SDK
+name: OpenRHI SDK
 on:
+  workflow_dispatch:
   pull_request:
     branches:
       - main
@@ -7,6 +8,13 @@ on:
     branches:
       - main
 jobs:
+  Source-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify backend source boundary
+        run: cmake -DROOT="$GITHUB_WORKSPACE" -P Tests/SourceBoundary.cmake
+
   Build-Windows:
     runs-on: windows-latest
     steps:
@@ -16,10 +24,13 @@ jobs:
           submodules: true
 
       - name: Deploy
-        run: .\Scripts\Windows\1-Deploy.bat -DNRI_ENABLE_NIS_SDK=ON
+        run: .\Scripts\Windows\1-Deploy.bat -DOPENRHI_ENABLE_NIS_SDK=ON -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
 
       - name: Build
         run: .\Scripts\Windows\2-Build.bat
+
+      - name: Test dummy backend and source boundary
+        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract)" --output-on-failure
 
       - name: Prepare SDK
         run: .\Scripts\Windows\3-PrepareSDK.bat
@@ -27,8 +38,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NRI SDK (Windows x64)
-          path: _NRI_SDK
+          name: OpenRHI SDK (Windows x64)
+          path: _OpenRHI_SDK
 
   Build-Windows-ARM64:
     runs-on: windows-2022
@@ -39,7 +50,7 @@ jobs:
           submodules: true
 
       - name: Deploy
-        run: .\Scripts\Windows\1-Deploy.bat -G "Visual Studio 17 2022" -A ARM64 -DNRI_ENABLE_NIS_SDK=ON
+        run: .\Scripts\Windows\1-Deploy.bat -G "Visual Studio 17 2022" -A ARM64 -DOPENRHI_ENABLE_NIS_SDK=ON -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
 
       - name: Build
         run: .\Scripts\Windows\2-Build.bat
@@ -47,11 +58,14 @@ jobs:
       - name: Prepare SDK
         run: .\Scripts\Windows\3-PrepareSDK.bat
 
+      - name: Audit native binary exports
+        run: ctest --test-dir _Build -C Release -R OpenRHI.WindowsBinaryBoundary --output-on-failure
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NRI SDK (Windows ARM64)
-          path: _NRI_SDK
+          name: OpenRHI SDK (Windows ARM64)
+          path: _OpenRHI_SDK
 
   Build-Windows-ARM64EC:
     runs-on: windows-2022
@@ -62,7 +76,7 @@ jobs:
           submodules: true
 
       - name: Deploy
-        run: .\Scripts\Windows\1-Deploy.bat -G "Visual Studio 17 2022" -A ARM64EC -DNRI_ENABLE_NIS_SDK=ON
+        run: .\Scripts\Windows\1-Deploy.bat -G "Visual Studio 17 2022" -A ARM64EC -DOPENRHI_ENABLE_NIS_SDK=ON -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
 
       - name: Build
         run: .\Scripts\Windows\2-Build.bat
@@ -70,14 +84,24 @@ jobs:
       - name: Prepare SDK
         run: .\Scripts\Windows\3-PrepareSDK.bat
 
+      - name: Audit native binary exports
+        run: ctest --test-dir _Build -C Release -R OpenRHI.WindowsBinaryBoundary --output-on-failure
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NRI SDK (Windows ARM64EC)
-          path: _NRI_SDK
+          name: OpenRHI SDK (Windows ARM64EC)
+          path: _OpenRHI_SDK
 
   Build-Ubuntu:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            nis: 'ON'
+          - os: ubuntu-24.04-arm
+            nis: 'ON'
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -95,10 +119,13 @@ jobs:
           sudo apt-get install -y libx11-dev libwayland-dev ninja-build
 
       - name: Deploy
-        run: bash Scripts/Linux/1-Deploy.sh -DNRI_ENABLE_NIS_SDK=ON
+        run: bash Scripts/Linux/1-Deploy.sh -DOPENRHI_ENABLE_NIS_SDK=${{ matrix.nis }} -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
 
       - name: Build
         run: bash Scripts/Linux/2-Build.sh
+
+      - name: Test dummy backend and source boundary
+        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract)" --output-on-failure
 
       - name: Prepare SDK
         run: bash Scripts/Linux/3-PrepareSDK.sh
@@ -106,8 +133,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NRI SDK (Linux x64)
-          path: _NRI_SDK
+          name: OpenRHI SDK (Linux ${{ runner.arch }})
+          path: _OpenRHI_SDK
 
   Build-Android-ARM64:
     runs-on: ubuntu-latest
@@ -129,8 +156,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake"
           -DANDROID_ABI=arm64-v8a
-          -DANDROID_PLATFORM=android-24
-          -DNRI_ENABLE_NIS_SDK=ON
+          -DANDROID_PLATFORM=android-33
+          -DOPENRHI_ENABLE_NIS_SDK=ON -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
 
       - name: Build
         run: cmake --build _Build --parallel
@@ -141,8 +168,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NRI SDK (Android ARM64)
-          path: _NRI_SDK
+          name: OpenRHI SDK (Android ARM64)
+          path: _OpenRHI_SDK
 
   Build-macOS:
     runs-on: macos-latest
@@ -158,43 +185,21 @@ jobs:
           cmake-version: 'latest'
 
       - name: Install dependencies
-        run: brew install ninja
-
-      - name: Setup Vulkan SDK
         run: |
-          version=$(curl --fail --silent --show-error --location --retry 3 https://vulkan.lunarg.com/sdk/latest/mac.txt)
-          sdk="$RUNNER_TEMP/VulkanSDK/macOS"
-          echo "VULKAN_SDK_VERSION=$version" >> "$GITHUB_ENV"
-          echo "VULKAN_SDK=$sdk" >> "$GITHUB_ENV"
-          echo "$sdk/bin" >> "$GITHUB_PATH"
-          echo "DYLD_LIBRARY_PATH=$sdk/lib/VulkanLoader/lib:$sdk/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}" >> "$GITHUB_ENV"
-
-      - name: Cache Vulkan SDK
-        id: vulkan-cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/VulkanSDK
-          key: vulkan-sdk-macos-${{ runner.arch }}-${{ env.VULKAN_SDK_VERSION }}
-
-      - name: Install Vulkan SDK
-        if: steps.vulkan-cache.outputs.cache-hit != 'true'
-        run: |
-          curl --fail --location --retry 3 \
-            "https://sdk.lunarg.com/sdk/download/$VULKAN_SDK_VERSION/mac/vulkansdk-macos-$VULKAN_SDK_VERSION.zip" \
-            --output "$RUNNER_TEMP/vulkan-sdk.zip"
-          unzip -q "$RUNNER_TEMP/vulkan-sdk.zip" -d "$RUNNER_TEMP/vulkan-installer"
-          installer="vulkansdk-macOS-$VULKAN_SDK_VERSION"
-          sudo "$RUNNER_TEMP/vulkan-installer/$installer.app/Contents/MacOS/$installer" \
-            --root "$RUNNER_TEMP/VulkanSDK" --accept-licenses --default-answer --confirm-command install
+          brew install ninja
+          xcodebuild -downloadComponent MetalToolchain
 
       - name: Deploy
         run: >-
           bash Scripts/MacOS/1-Deploy.sh
-          -DNRI_ENABLE_NIS_SDK=ON
-          -DNRI_ENABLE_IMGUI_EXTENSION=ON
+          -DOPENRHI_ENABLE_NIS_SDK=ON -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
+          -DOPENRHI_ENABLE_METAL_SUPPORT=ON
 
       - name: Build
         run: bash Scripts/MacOS/2-Build.sh
+
+      - name: Test dummy backend and source boundary
+        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract)" --output-on-failure
 
       - name: Prepare SDK
         run: bash Scripts/MacOS/3-PrepareSDK.sh
@@ -202,5 +207,44 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: NRI SDK (macOS ${{ runner.arch }})
-          path: _NRI_SDK
+          name: OpenRHI SDK (macOS ${{ runner.arch }})
+          path: _OpenRHI_SDK
+
+  Build-iOS:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        sdk: [iphoneos, iphonesimulator]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: 'latest'
+      - name: Install Metal toolchain
+        run: xcodebuild -downloadComponent MetalToolchain
+      - name: Configure native Metal static library
+        run: >-
+          cmake -S . -B _Build -G Xcode
+          -DCMAKE_SYSTEM_NAME=iOS
+          -DCMAKE_OSX_SYSROOT=${{ matrix.sdk }}
+          -DCMAKE_OSX_ARCHITECTURES=arm64
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=26.0
+          -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO
+          -DOPENRHI_ENABLE_METAL_SUPPORT=ON
+          -DOPENRHI_ENABLE_NIS_SDK=ON
+          -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON
+          -DOPENRHI_STATIC_LIBRARY=ON
+      - name: Build
+        run: cmake --build _Build --config Release --parallel
+      - name: Package
+        run: |
+          mkdir -p _OpenRHI_SDK/Lib/Release
+          cp -R Include CMake _OpenRHI_SDK/
+          cp LICENSE.txt THIRD_PARTY_NOTICES.md README.md MIGRATION.md QUALIFICATION.md SHADERS.md openrhi.natvis _OpenRHI_SDK/
+          find _Bin -name 'libOpenRHI.a' -exec cp {} _OpenRHI_SDK/Lib/Release/ \;
+          find _Bin -type d -name ThirdPartyLicenses -exec cp -R {} _OpenRHI_SDK/Lib/Release/ \;
+          test -f _OpenRHI_SDK/Lib/Release/libOpenRHI.a
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenRHI SDK (iOS ${{ matrix.sdk }} ARM64)
+          path: _OpenRHI_SDK

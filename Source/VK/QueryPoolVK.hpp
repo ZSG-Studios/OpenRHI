@@ -42,7 +42,7 @@ Result QueryPoolVK::Create(const QueryPoolDesc& queryPoolDesc) {
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateQueryPool(m_Device, &poolInfo, m_Device.GetVkAllocationCallbacks(), &m_Handle);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateQueryPool");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateQueryPool");
 
     m_QuerySize = (m_Type == VK_QUERY_TYPE_PIPELINE_STATISTICS ? (m_Device.GetDesc().features.meshShader ? 13 : 11) : 1) * sizeof(uint64_t);
 
@@ -58,11 +58,11 @@ Result QueryPoolVK::Create(const QueryPoolVKDesc& queryPoolVKDesc) {
     return Result::SUCCESS;
 }
 
-NRI_INLINE void QueryPoolVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void QueryPoolVK::SetDebugName(const char* name) {
     m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_QUERY_POOL, (uint64_t)m_Handle, name);
 }
 
-NRI_INLINE void QueryPoolVK::Reset(uint32_t offset, uint32_t num) {
+OPENRHI_INLINE void QueryPoolVK::Reset(uint32_t offset, uint32_t num) {
     const auto& vk = m_Device.GetDispatchTable();
     vk.ResetQueryPool(m_Device, m_Handle, offset, num);
 }

@@ -17,7 +17,7 @@ Result FenceVK::Create(uint64_t initialValue) {
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateSemaphore((VkDevice)m_Device, &semaphoreCreateInfo, m_Device.GetVkAllocationCallbacks(), &m_Handle);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateSemaphore");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateSemaphore");
 
     return Result::SUCCESS;
 }
@@ -29,11 +29,11 @@ Result FenceVK::Create(const FenceVKDesc& fenceVKDesc) {
     return Result::SUCCESS;
 }
 
-NRI_INLINE void FenceVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void FenceVK::SetDebugName(const char* name) {
     m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_SEMAPHORE, (uint64_t)m_Handle, name);
 }
 
-NRI_INLINE uint64_t FenceVK::GetFenceValue() const {
+OPENRHI_INLINE uint64_t FenceVK::GetFenceValue() const {
     uint64_t value = 0;
 
     const auto& vk = m_Device.GetDispatchTable();
@@ -42,16 +42,16 @@ NRI_INLINE uint64_t FenceVK::GetFenceValue() const {
     return value;
 }
 
-NRI_INLINE Result FenceVK::Wait(uint64_t value) {
+OPENRHI_INLINE Result FenceVK::Wait(uint64_t value) {
     VkSemaphoreWaitInfo semaphoreWaitInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
     semaphoreWaitInfo.semaphoreCount = 1;
     semaphoreWaitInfo.pSemaphores = &m_Handle;
     semaphoreWaitInfo.pValues = &value;
 
     const auto& vk = m_Device.GetDispatchTable();
-    VkResult vkResult = vk.WaitSemaphores((VkDevice)m_Device, &semaphoreWaitInfo, MsToUs(NRI_TIMEOUT_FENCE));
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "WaitSemaphores");
-    NRI_RETURN_ON_FAILURE(&m_Device, vkResult == VK_SUCCESS, Result::FAILURE, "WaitSemaphores() timed out!");
+    VkResult vkResult = vk.WaitSemaphores((VkDevice)m_Device, &semaphoreWaitInfo, MsToUs(OPENRHI_TIMEOUT_FENCE));
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "WaitSemaphores");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, vkResult == VK_SUCCESS, Result::FAILURE, "WaitSemaphores() timed out!");
 
     return Result::SUCCESS;
 }

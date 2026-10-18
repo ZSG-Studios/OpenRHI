@@ -24,7 +24,7 @@ static inline Result CreatePlacedImplementation(DeviceMetal& device, Memory* mem
 DeviceMetal::DeviceMetal(const CallbackInterface& callbacks, const AllocationCallbacks& allocationCallbacks)
     : DeviceBase(callbacks, allocationCallbacks), m_ResidencyReferences(GetStdAllocator()), m_InternalShaders(*this) {
     m_Desc.graphicsAPI = GraphicsAPI::METAL;
-    m_Desc.nriVersion = NRI_VERSION;
+    m_Desc.openrhiVersion = OPENRHI_VERSION;
 }
 
 DeviceMetal::~DeviceMetal() {
@@ -33,19 +33,11 @@ DeviceMetal::~DeviceMetal() {
             Destroy(GetAllocationCallbacks(), queue);
     }
 
-    if (m_Constants)
-        m_Constants->release();
-
     if (m_Compiler)
         m_Compiler->release();
 
     if (m_Residency)
         m_Residency->release();
-
-#if NRI_ENABLE_METAL_SHADER_CONVERTER
-    if (m_TessellatorTables)
-        m_TessellatorTables->release();
-#endif
 
     if (m_Device)
         m_Device->release();
@@ -53,7 +45,7 @@ DeviceMetal::~DeviceMetal() {
 
 Result DeviceMetal::Create(const DeviceCreationDesc& desc, const DeviceCreationMetalDesc& metalDesc) {
     if (desc.enableGraphicsAPIValidation)
-        NRI_REPORT_WARNING(this, "'enableGraphicsAPIValidation' is ignored, use 'MTL_DEBUG_LAYER=1'");
+        OPENRHI_REPORT_WARNING(this, "'enableGraphicsAPIValidation' is ignored, use 'MTL_DEBUG_LAYER=1'");
 
     m_Device = (MTL::Device*)metalDesc.mtlDevice;
 
@@ -75,6 +67,8 @@ Result DeviceMetal::Create(const DeviceCreationDesc& desc, const DeviceCreationM
         }
 
         // The adapter may come from another API (i.e. merged by name)
+        if (!m_Device && desc.adapterDesc)
+            return Result::INVALID_ARGUMENT;
         if (!m_Device)
             m_Device = MTL::CreateSystemDefaultDevice();
 
@@ -94,7 +88,7 @@ Result DeviceMetal::Create(const DeviceCreationDesc& desc, const DeviceCreationM
         residencyDesc->release();
 
         if (!m_Residency) {
-            NRI_REPORT_ERROR(this, "newResidencySet() failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
+            OPENRHI_REPORT_ERROR(this, "newResidencySet() failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
 
             return Result::OUT_OF_MEMORY;
         }
@@ -105,7 +99,7 @@ Result DeviceMetal::Create(const DeviceCreationDesc& desc, const DeviceCreationM
         compilerDesc->release();
 
         if (!m_Compiler) {
-            NRI_REPORT_ERROR(this, "newCompiler() failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
+            OPENRHI_REPORT_ERROR(this, "newCompiler() failed: %s", error ? error->localizedDescription()->utf8String() : "unknown error");
 
             return Result::FAILURE;
         }
@@ -116,20 +110,15 @@ Result DeviceMetal::Create(const DeviceCreationDesc& desc, const DeviceCreationM
     if (result != Result::SUCCESS)
         return result;
 
-    m_Constants = m_Device->newBuffer(64, MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked);
-
-    if (!m_Constants)
-        return Result::OUT_OF_MEMORY;
-
-    m_ConstantsAddress = m_Constants->gpuAddress();
-
-    uint16_t* constants = (uint16_t*)m_Constants->contents();
-    memset(constants, 0, 64);
-    constants[8] = 1;
-    constants[16] = 2;
-    AddResidency(m_Constants);
-
     FillDesc(*desc.adapterDesc);
+    m_Desc.nativeCapabilities = DeviceCapabilityBits::METAL_4;
+    if (m_Device->supportsFamily(MTL::GPUFamilyApple9) || m_Device->supportsFamily(MTL::GPUFamilyApple10))
+        m_Desc.nativeCapabilities |= DeviceCapabilityBits::APPLE_GPU_FAMILY_9;
+    if (m_Device->supportsFamily(MTL::GPUFamilyApple10))
+        m_Desc.nativeCapabilities |= DeviceCapabilityBits::APPLE_GPU_FAMILY_10;
+    Result compatibility = CheckDeviceRequirements(desc, m_Desc);
+    if (compatibility != Result::SUCCESS)
+        return compatibility;
     memset(m_Desc.adapterDesc.queueNum, 0, sizeof(m_Desc.adapterDesc.queueNum));
 
     for (uint32_t i = 0; i < desc.queueFamilyNum; i++) {
@@ -183,7 +172,7 @@ void DeviceMetal::RemoveResidency(MTL::Allocation* allocation) {
     std::lock_guard<std::mutex> lock(m_ResidencyLock);
 
     auto it = m_ResidencyReferences.find(allocation);
-    NRI_CHECK(it != m_ResidencyReferences.end(), "Unexpected residency removal");
+    OPENRHI_CHECK(it != m_ResidencyReferences.end(), "Unexpected residency removal");
 
     if (it == m_ResidencyReferences.end())
         return;
@@ -222,33 +211,7 @@ void DeviceMetal::RemoveQueueResidencySet(MTL::ResidencySet* residencySet) {
     }
 }
 
-#if NRI_ENABLE_METAL_SHADER_CONVERTER
-MTL::GPUAddress DeviceMetal::GetTessellatorTables() {
-    MTL::GPUAddress address = m_TessellatorTablesAddress.load(std::memory_order_acquire);
-
-    if (address)
-        return address;
-
-    std::lock_guard<std::mutex> lock(m_TessellatorTablesLock);
-
-    if (!m_TessellatorTables) {
-        m_TessellatorTables = m_Device->newBuffer(IRRuntimeTessellatorTablesSize(), MTL::ResourceStorageModeShared);
-
-        if (!m_TessellatorTables)
-            return 0;
-
-        IRRuntimeLoadTessellatorTables(m_TessellatorTables);
-        AddResidency(m_TessellatorTables);
-    }
-
-    address = m_TessellatorTables->gpuAddress();
-    m_TessellatorTablesAddress.store(address, std::memory_order_release);
-
-    return address;
-}
-#endif
-
-NRI_INLINE Result DeviceMetal::GetQueue(QueueType type, uint32_t index, Queue*& queue) {
+OPENRHI_INLINE Result DeviceMetal::GetQueue(QueueType type, uint32_t index, Queue*& queue) {
     queue = nullptr;
 
     const uint32_t queueType = (uint32_t)type;
@@ -264,39 +227,39 @@ NRI_INLINE Result DeviceMetal::GetQueue(QueueType type, uint32_t index, Queue*& 
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result DeviceMetal::CreatePlacedBuffer(Memory* memory, uint64_t offset, const BufferDesc& bufferDesc, Buffer*& buffer) {
+OPENRHI_INLINE Result DeviceMetal::CreatePlacedBuffer(Memory* memory, uint64_t offset, const BufferDesc& bufferDesc, Buffer*& buffer) {
     return CreatePlacedImplementation<BufferMetal>(*this, memory, offset, bufferDesc, buffer);
 }
 
-NRI_INLINE Result DeviceMetal::CreatePlacedTexture(Memory* memory, uint64_t offset, const TextureDesc& textureDesc, Texture*& texture) {
+OPENRHI_INLINE Result DeviceMetal::CreatePlacedTexture(Memory* memory, uint64_t offset, const TextureDesc& textureDesc, Texture*& texture) {
     return CreatePlacedImplementation<TextureMetal>(*this, memory, offset, textureDesc, texture);
 }
 
-NRI_INLINE Result DeviceMetal::CreatePlacedAccelerationStructure(Memory* memory, uint64_t offset, const AccelerationStructureDesc& accelerationStructureDesc, AccelerationStructure*& accelerationStructure) {
+OPENRHI_INLINE Result DeviceMetal::CreatePlacedAccelerationStructure(Memory* memory, uint64_t offset, const AccelerationStructureDesc& accelerationStructureDesc, AccelerationStructure*& accelerationStructure) {
     return CreatePlacedImplementation<AccelerationStructureMetal>(*this, memory, offset, accelerationStructureDesc, accelerationStructure);
 }
 
-NRI_INLINE FormatSupportBits DeviceMetal::GetFormatSupport(Format format) const {
+OPENRHI_INLINE FormatSupportBits DeviceMetal::GetFormatSupport(Format format) const {
     return GetFormatSupportMetal(*m_Device, format);
 }
 
-NRI_INLINE bool DeviceMetal::IsUpscalerSupported(UpscalerType upscalerType) const {
-    return nri::IsUpscalerSupported(m_Desc, upscalerType) && IsMetalFxSupportedMetal(m_Device, upscalerType);
+OPENRHI_INLINE bool DeviceMetal::IsUpscalerSupported(UpscalerType upscalerType) const {
+    return openrhi::IsUpscalerSupported(m_Desc, upscalerType) && IsMetalFxSupportedMetal(m_Device, upscalerType);
 }
 
-NRI_INLINE void DeviceMetal::GetMemoryDesc2(const BufferDesc& bufferDesc, MemoryLocation memoryLocation, MemoryDesc& memoryDesc) {
+OPENRHI_INLINE void DeviceMetal::GetMemoryDesc2(const BufferDesc& bufferDesc, MemoryLocation memoryLocation, MemoryDesc& memoryDesc) {
     BufferMetal buffer(*this);
     buffer.Create(bufferDesc);
     buffer.GetMemoryDesc(memoryLocation, memoryDesc);
 }
 
-NRI_INLINE void DeviceMetal::GetMemoryDesc2(const TextureDesc& textureDesc, MemoryLocation memoryLocation, MemoryDesc& memoryDesc) {
+OPENRHI_INLINE void DeviceMetal::GetMemoryDesc2(const TextureDesc& textureDesc, MemoryLocation memoryLocation, MemoryDesc& memoryDesc) {
     TextureMetal texture(*this);
     texture.Create(textureDesc);
     texture.GetMemoryDesc(memoryLocation, memoryDesc);
 }
 
-NRI_INLINE void DeviceMetal::GetMemoryDesc2(const AccelerationStructureDesc& accelerationStructureDesc, MemoryLocation memoryLocation, MemoryDesc& memoryDesc) {
+OPENRHI_INLINE void DeviceMetal::GetMemoryDesc2(const AccelerationStructureDesc& accelerationStructureDesc, MemoryLocation memoryLocation, MemoryDesc& memoryDesc) {
     const MTL::AccelerationStructureSizes sizes = GetAccelerationStructureSizes(*this, accelerationStructureDesc);
     const uint32_t instanceNum = accelerationStructureDesc.type == AccelerationStructureType::TOP_LEVEL ? accelerationStructureDesc.geometryOrInstanceNum : 0;
 
@@ -304,7 +267,7 @@ NRI_INLINE void DeviceMetal::GetMemoryDesc2(const AccelerationStructureDesc& acc
     GetAccelerationStructureMemoryDesc(*this, accelerationStructureDesc.type, sizes.accelerationStructureSize, instanceNum, memoryLocation, memoryDesc, headerOffset);
 }
 
-NRI_INLINE Result DeviceMetal::BindBufferMemory(const BindBufferMemoryDesc* bindBufferMemoryDescs, uint32_t bindBufferMemoryDescNum) {
+OPENRHI_INLINE Result DeviceMetal::BindBufferMemory(const BindBufferMemoryDesc* bindBufferMemoryDescs, uint32_t bindBufferMemoryDescNum) {
     for (uint32_t i = 0; i < bindBufferMemoryDescNum; i++) {
         const BindBufferMemoryDesc& desc = bindBufferMemoryDescs[i];
         const Result result = ((BufferMetal*)desc.buffer)->Bind(*(MemoryMetal*)desc.memory, desc.offset);
@@ -316,7 +279,7 @@ NRI_INLINE Result DeviceMetal::BindBufferMemory(const BindBufferMemoryDesc* bind
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result DeviceMetal::BindTextureMemory(const BindTextureMemoryDesc* bindTextureMemoryDescs, uint32_t bindTextureMemoryDescNum) {
+OPENRHI_INLINE Result DeviceMetal::BindTextureMemory(const BindTextureMemoryDesc* bindTextureMemoryDescs, uint32_t bindTextureMemoryDescNum) {
     for (uint32_t i = 0; i < bindTextureMemoryDescNum; i++) {
         const BindTextureMemoryDesc& desc = bindTextureMemoryDescs[i];
         const Result result = ((TextureMetal*)desc.texture)->Bind(*(MemoryMetal*)desc.memory, desc.offset);
@@ -328,7 +291,7 @@ NRI_INLINE Result DeviceMetal::BindTextureMemory(const BindTextureMemoryDesc* bi
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result DeviceMetal::BindAccelerationStructureMemory(const BindAccelerationStructureMemoryDesc* bindAccelerationStructureMemoryDescs, uint32_t bindAccelerationStructureMemoryDescNum) {
+OPENRHI_INLINE Result DeviceMetal::BindAccelerationStructureMemory(const BindAccelerationStructureMemoryDesc* bindAccelerationStructureMemoryDescs, uint32_t bindAccelerationStructureMemoryDescNum) {
     for (uint32_t i = 0; i < bindAccelerationStructureMemoryDescNum; i++) {
         const BindAccelerationStructureMemoryDesc& desc = bindAccelerationStructureMemoryDescs[i];
         const Result result = ((AccelerationStructureMetal*)desc.accelerationStructure)->Bind(*(MemoryMetal*)desc.memory, desc.offset);
@@ -340,7 +303,7 @@ NRI_INLINE Result DeviceMetal::BindAccelerationStructureMemory(const BindAcceler
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result DeviceMetal::WaitIdle() {
+OPENRHI_INLINE Result DeviceMetal::WaitIdle() {
     for (uint32_t i = 0; i < QUEUE_TYPE_NUM; i++) {
         for (uint32_t j = 0; j < m_Desc.adapterDesc.queueNum[i]; j++) {
             Result result = m_Queues[i][j]->WaitIdle();
@@ -353,7 +316,7 @@ NRI_INLINE Result DeviceMetal::WaitIdle() {
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result DeviceMetal::QueryVideoMemoryInfo(MemoryLocation memoryLocation, VideoMemoryInfo& videoMemoryInfo) const {
+OPENRHI_INLINE Result DeviceMetal::QueryVideoMemoryInfo(MemoryLocation memoryLocation, VideoMemoryInfo& videoMemoryInfo) const {
     MaybeUnused(memoryLocation);
 
     // Apple silicon shares one memory budget across device and host-visible allocations
@@ -369,6 +332,12 @@ void DeviceMetal::Destruct() {
 
 void DeviceMetal::FillDesc(const AdapterDesc& adapterDesc) {
     m_Desc.adapterDesc = adapterDesc;
+    m_Desc.adapterDesc.memoryBudgetKnown = true;
+    m_Desc.adapterDesc.vendorId = 0x106b;
+    m_Desc.adapterDesc.appleGpuFamily = m_Device->supportsFamily(MTL::GPUFamilyApple10) ? 10 : (m_Device->supportsFamily(MTL::GPUFamilyApple9) ? 9 : 0);
+    m_Desc.adapterDesc.architecture = m_Device->hasUnifiedMemory() ? Architecture::INTEGRATED : Architecture::DISCRETE;
+    m_Desc.adapterDesc.videoMemorySize = m_Device->recommendedMaxWorkingSetSize();
+    m_Desc.adapterDesc.memoryBudget = m_Desc.adapterDesc.videoMemorySize > m_Device->currentAllocatedSize() ? m_Desc.adapterDesc.videoMemorySize - m_Device->currentAllocatedSize() : 0;
     m_Desc.viewport.maxNum = 16;
     m_Desc.viewport.boundsMin = -32768;
     m_Desc.viewport.boundsMax = 32767;
@@ -549,13 +518,12 @@ void DeviceMetal::FillDesc(const AdapterDesc& adapterDesc) {
     m_Desc.other.texelGatherOffsetMin = -8;
     m_Desc.other.texelGatherOffsetMax = 7;
     m_Desc.other.samplerLodBiasMax = 15.984375f; // Largest positive S4.6 native sampler bias
-    // Metal 4 devices meet Apple7's baseline; Converter also supports these
-    // scalar types and SM6 wave/packed-dot intrinsics
+    // Native scalar and subgroup capabilities of the required Apple GPU families
     m_Desc.shaderFeatures.nativeI16 = true;
     m_Desc.shaderFeatures.nativeF16 = true;
     m_Desc.shaderFeatures.nativeI64 = true;
     m_Desc.shaderFeatures.atomicsF32 = true;
-    // MSL has only 64-bit "atomic_min/max", Converter rejects 64-bit "InterlockedAdd/Exchange/Or/..."
+    // Full 64-bit atomic operations are queried separately from native integer arithmetic
     m_Desc.shaderFeatures.atomicsI64 = false;
     m_Desc.shaderFeatures.barycentric = true;
     m_Desc.shaderFeatures.rasterizedOrderedView = true;
@@ -571,32 +539,9 @@ void DeviceMetal::FillDesc(const AdapterDesc& adapterDesc) {
     m_Desc.shaderFeatures.unnormalizedCoordinates = true;
     m_Desc.shaderFeatures.viewportIndex = true;
     m_Desc.shaderFeatures.layerIndex = true;
-    // DXIL uses Metal Shader Converter framebuffer fetches. Native MSL can use
-    // color inputs (for example, `float4 value [[color(1)]]`) directly
+    // Slang subpass inputs map to native framebuffer fetches
     m_Desc.shaderFeatures.inputAttachments = true;
-    m_Desc.shaderFeatures.drawParameters = true; // root data emulation works for native and converted shaders (see "NRI.metal")
+    m_Desc.shaderFeatures.drawParameters = true; // root data provides the draw parameters (see "OpenRHI.slang")
     m_Desc.shaderFeatures.drawIndex = true;
     m_Desc.features.flexibleMultiview = m_Desc.other.viewMaxNum > 1;
-#if NRI_ENABLE_METAL_SHADER_CONVERTER
-    m_Desc.shaderStage.vertex.attributeMaxNum = CONVERTED_VERTEX_ATTRIBUTE_NUM;
-    m_Desc.shaderModel = NriShaderModel(6, 8);
-    m_Desc.features.shaderBytecodeDXIL = true;
-    // Converter GS/TS emulation dispatches object threadgroups proportionally to the primitive count, which quickly exceeds the
-    // 1024 threadgroups per mesh grid limit of Apple7/Apple8
-    m_Desc.features.geometryShader = m_Device->supportsFamily(MTL::GPUFamilyApple9);
-    m_Desc.features.tessellationShader = m_Desc.features.geometryShader;
-
-    // Ray tracing pipelines are DXIL-only (Converter's DXR emulation). Metal 4 acceleration structures require Apple9+ (despite "supportsRaytracing")
-    if (m_Device->supportsFamily(MTL::GPUFamilyApple9)) {
-        m_Desc.tiers.rayTracing = 2;
-        m_Desc.memoryAlignment.scratchBufferOffset = 256;
-        m_Desc.memoryAlignment.shaderBindingTable = 64;
-        m_Desc.shaderStage.rayTracing.shaderGroupIdentifierSize = sizeof(IRShaderIdentifier);
-        m_Desc.shaderStage.rayTracing.shaderBindingTableMaxStride = 4096;
-        m_Desc.shaderStage.rayTracing.recursionMaxDepth = 31;
-        m_Desc.accelerationStructure.primitiveMaxNum = 1u << 24;
-        m_Desc.accelerationStructure.geometryMaxNum = 1u << 20;
-        m_Desc.accelerationStructure.instanceMaxNum = 1u << 20;
-    }
-#endif
 }

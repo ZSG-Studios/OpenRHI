@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 constexpr uint32_t VIDEO_DECODE_MAX_PIC_ENTRY_SLOT = 127;
 constexpr uint32_t VIDEO_D3D12_ENCODE_SUPPORT_PROBE_SIZE = 512;
@@ -70,7 +70,7 @@ static inline VideoAV1SequenceDesc GetDefaultVideoAV1SequenceDesc(uint32_t width
     return desc;
 }
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
 
 using VideoEncodeAV1TilesLayoutD3D12 = D3D12_VIDEO_ENCODER_AV1_PICTURE_CONTROL_SUBREGIONS_LAYOUT_DATA_TILES;
 using VideoEncodeAV1PostEncodeValuesD3D12 = D3D12_VIDEO_ENCODER_AV1_POST_ENCODE_VALUES;
@@ -527,4 +527,4 @@ static inline bool IsVideoEncodeCodecSupported(ID3D12VideoDevice* videoDevice, V
 
 #endif
 
-} // namespace nri
+} // namespace openrhi

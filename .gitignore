@@ -10,12 +10,17 @@
 build.ninja
 compile_commands.json
 *.log
+!Qualification/**/*.log
 *.ninja
 
 # generated
 _Bin/
 _Build/
 _Shaders/
-_NRI_SDK/
+_OpenRHI_SDK/
 _Tmp/
-NRIAgilitySDK.h
+OpenRHIAgilitySDK.h
+
+# Python qualification tooling
+__pycache__/
+*.pyc

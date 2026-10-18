@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct PipelineLayoutVal final : public ObjectVal {
     PipelineLayoutVal(DeviceVal& device, PipelineLayout* pipelineLayout, const PipelineLayoutDesc& pipelineLayoutDesc);
@@ -23,4 +23,4 @@ private:
     Vector<DescriptorRangeDesc> m_DescriptorRangeDescs;
 };
 
-} // namespace nri
+} // namespace openrhi

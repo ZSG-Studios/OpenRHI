@@ -44,7 +44,7 @@ Result MicromapVK::Create(const MicromapDesc& micromapDesc) {
 }
 
 Result MicromapVK::AllocateAndBindMemory(MemoryLocation memoryLocation, float priority, bool committed) {
-    NRI_CHECK(m_Buffer, "Unexpected");
+    OPENRHI_CHECK(m_Buffer, "Unexpected");
 
     Result result = m_Buffer->AllocateAndBindMemory(memoryLocation, priority, committed);
     if (result == Result::SUCCESS)
@@ -54,7 +54,7 @@ Result MicromapVK::AllocateAndBindMemory(MemoryLocation memoryLocation, float pr
 }
 
 Result MicromapVK::BindMemory(const MemoryVK* memory, uint64_t offset) {
-    NRI_CHECK(m_Buffer, "Unexpected");
+    OPENRHI_CHECK(m_Buffer, "Unexpected");
 
     // Bind memory
     if (memory) {
@@ -76,13 +76,13 @@ Result MicromapVK::BindMemory(const MemoryVK* memory, uint64_t offset) {
 
         const auto& vk = m_Device.GetDispatchTable();
         VkResult vkResult = vk.CreateMicromapEXT(m_Device, &createInfo, m_Device.GetVkAllocationCallbacks(), &m_Handle);
-        NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateMicromapEXT");
+        OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateMicromapEXT");
     }
 
     return Result::SUCCESS;
 }
 
-NRI_INLINE void MicromapVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void MicromapVK::SetDebugName(const char* name) {
     m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_MICROMAP_EXT, (uint64_t)m_Handle, name);
     m_Buffer->SetDebugName(name);
 }

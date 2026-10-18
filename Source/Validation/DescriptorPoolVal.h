@@ -4,7 +4,7 @@
 
 #include "DescriptorSetVal.h"
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorPoolVal final : public ObjectVal {
     DescriptorPoolVal(DeviceVal& device, DescriptorPool* descriptorPool, uint32_t descriptorSetMaxNum)
@@ -36,7 +36,7 @@ struct DescriptorPoolVal final : public ObjectVal {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     void Reset();
@@ -51,4 +51,4 @@ private:
     Lock m_Lock;
 };
 
-} // namespace nri
+} // namespace openrhi

@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorSetVK final : public DebugNameBase {
     inline DescriptorSetVK() {
@@ -30,7 +30,7 @@ struct DescriptorSetVK final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     DeviceVK* m_Device = nullptr;
@@ -38,4 +38,4 @@ private:
     const DescriptorSetDesc* m_Desc = nullptr;
 };
 
-} // namespace nri
+} // namespace openrhi

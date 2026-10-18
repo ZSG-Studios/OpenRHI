@@ -2,7 +2,7 @@
 
 #pragma once
 
-// Keep metal-cpp's private implementation symbols out of the NRI binary's exported symbol table
+// Keep metal-cpp's private implementation symbols out of the OpenRHI binary's exported symbol table
 #define METALCPP_SYMBOL_VISIBILITY_HIDDEN
 
 #include <Metal/Metal.hpp>
@@ -10,22 +10,9 @@
 #include <mutex>
 #include <shared_mutex>
 
-#if NRI_ENABLE_METAL_SHADER_CONVERTER
-#    define IR_RUNTIME_METALCPP
-#    define IR_RUNTIME_METAL4
-#    include <metal_irconverter/metal_irconverter.h>
-
-// "API_AVAILABLE" makes runtime functions visible (exported)
-#    pragma push_macro("API_AVAILABLE")
-#    undef API_AVAILABLE
-#    define API_AVAILABLE(...)
-#    include <metal_irconverter_runtime/metal_irconverter_runtime.h>
-#    pragma pop_macro("API_AVAILABLE")
-#endif
-
 #include "SharedExternal.h"
 
-namespace nri {
+namespace openrhi {
 
 struct DeviceMetal;
 struct MemoryMetal;
@@ -45,7 +32,7 @@ struct PipelineCacheMetal;
 struct QueryPoolMetal;
 struct SwapChainMetal;
 
-// Metal factory methods and encoder creation return autoreleased objects. NRI can be called from threads without
+// Metal factory methods and encoder creation return autoreleased objects. OpenRHI can be called from threads without
 // an autorelease pool, so drain them locally on paths that run repeatedly (retain what must outlive the scope)
 struct AutoreleasePoolMetal final {
     inline AutoreleasePoolMetal()
@@ -65,21 +52,14 @@ constexpr uint32_t QUEUE_TYPE_NUM = 3;
 constexpr uint32_t QUEUE_NUM_PER_TYPE = 4;
 constexpr uint32_t DRAW_INDIRECT_MAX_NUM = 1 << 16;
 
-// Argument-table slots shared by native and converted shaders (see "NRI.metal"). Converted slots match "kIR*BindPoint"
+// Native Slang argument-table slots (see "OpenRHI.slang")
 constexpr uint32_t ARGUMENT_SLOT_RESOURCE_HEAP = 0;
 constexpr uint32_t ARGUMENT_SLOT_SAMPLER_HEAP = 1;
 constexpr uint32_t ARGUMENT_SLOT_ROOT = 2;
-constexpr uint32_t ARGUMENT_SLOT_MULTIVIEW = 3;      // native only
-constexpr uint32_t ARGUMENT_SLOT_DRAW_ARGUMENTS = 4; // converted only
-constexpr uint32_t ARGUMENT_SLOT_DRAW_UNIFORMS = 5;  // converted only
+constexpr uint32_t ARGUMENT_SLOT_MULTIVIEW = 3; // native only
 constexpr uint32_t ARGUMENT_SLOT_VERTEX_BUFFER_BASE = 6;
 
-// Converted vertex shaders read stage-in attributes from "kIRStageInAttributeStartIndex + reflected attribute index"
-constexpr uint32_t CONVERTED_VERTEX_ATTRIBUTE_BASE = 11;
-constexpr uint32_t CONVERTED_VERTEX_ATTRIBUTE_NUM = 20;
-static_assert(CONVERTED_VERTEX_ATTRIBUTE_BASE + CONVERTED_VERTEX_ATTRIBUTE_NUM == 31, "'MTLVertexDescriptor' has 31 attributes");
-
-// Argument table slots of internal shaders ("Shaders/InternalMetal.metal"). "CmdClearAttachments" uses "INTERNAL_SLOT_CONSTANTS" in the
+// Argument table slots of internal shaders ("Shaders/InternalMetal.slang"). "CmdClearAttachments" uses "INTERNAL_SLOT_CONSTANTS" in the
 // app's argument table, it must not overlap resource heap, sampler heap and root slots. It shares a slot with "ARGUMENT_SLOT_MULTIVIEW",
 // which is rebound by the next draw (the pipeline becomes dirty)
 constexpr uint32_t INTERNAL_SLOT_KERNEL_CONSTANTS = 0; // indirect draw preparation
@@ -90,61 +70,19 @@ constexpr uint32_t INTERNAL_SLOT_TEXTURE = 0;
 
 static_assert(INTERNAL_SLOT_CONSTANTS > ARGUMENT_SLOT_ROOT, "'INTERNAL_SLOT_CONSTANTS' must not overlap heap and root slots");
 
-// Reserved DXIL register spaces
-constexpr uint32_t DRAW_EMULATION_SPACE = 999;    // "NRI_BASE_ATTRIBUTES_EMULATION_SPACE" in "NRI.hlsl"
-constexpr uint32_t FRAMEBUFFER_FETCH_SPACE = 998; // input attachments
+// Draw emulation register space
+constexpr uint32_t DRAW_EMULATION_SPACE = 999; // "OPENRHI_BASE_ATTRIBUTES_EMULATION_SPACE" in "OpenRHI.slang"
 
-// Descriptor table entry ("IRDescriptorTableEntry" / "NriDescriptorEntry")
+// Descriptor table entry ("OpenRhiDescriptorEntry")
 struct DescriptorEntryMetal {
     uint64_t bufferAddress; // buffer GPU address or sampler resource ID
     uint64_t resourceId;    // texture resource ID
-    uint64_t metadata;      // see "NRI.metal"
+    uint64_t metadata;      // see "OpenRHI.slang"
 };
 
-static_assert(sizeof(DescriptorEntryMetal) == 24, "Metal Shader Converter descriptor ABI changed");
+static_assert(sizeof(DescriptorEntryMetal) == 24, "Native descriptor ABI changed");
 
 constexpr uint64_t DESCRIPTOR_ENTRY_SIZE = sizeof(DescriptorEntryMetal);
-
-// Converted shader, a private format for "PipelineCacheMetal" entries and Metal converter bundles (little-endian): the header, then data at offsets
-// from the start (within "size"): 4-byte aligned "ConvertedVertexInputMetal" array, null-terminated strings and the 8-byte aligned metallib
-constexpr uint32_t CONVERTED_SHADER_MAGIC = 0x5343524E; // "NRCS"
-constexpr uint32_t CONVERTED_SHADER_VERSION = 1;
-constexpr uint32_t CONVERTED_SHADER_SAMPLER_LOD_BIAS = 1 << 0;
-constexpr uint32_t CONVERTED_SHADER_DUAL_SOURCE_BLENDING = 1 << 1;
-
-struct ConvertedVertexInputMetal {
-    uint32_t nameOffset;     // lower-case semantic name and index, i.e. "texcoord1" (reflection "vertex_inputs[].name")
-    uint32_t attributeIndex; // reflection "vertex_inputs[].index", less than "CONVERTED_VERTEX_ATTRIBUTE_NUM"
-};
-
-struct ConvertedShaderHeaderMetal {
-    uint32_t magic;
-    uint32_t version;
-    uint64_t rootSignatureHash;
-    uint32_t size;
-    StageBits stage;
-    uint32_t flags; // "CONVERTED_SHADER_*"
-    uint32_t gpuFamily;
-    uint32_t inputTopology;
-    uint32_t sampleMask;
-    uint32_t threadGroupSize[3];
-    uint32_t payloadSize;
-    uint32_t entryPointOffset;
-    uint32_t functionNameOffset;
-    uint32_t vertexInputOffset;
-    uint32_t vertexInputNum;
-    uint32_t metallibOffset;
-    uint32_t metallibSize;
-};
-
-static_assert(sizeof(ConvertedShaderHeaderMetal) == 80 && sizeof(ConvertedVertexInputMetal) == 8, "Converted shader layout is fixed");
-
-// "DispatchRaysIndirectDesc" is read by "NriPrepareRaysIndirect" and matches "IRDispatchRaysDescriptor"
-static_assert(offsetof(DispatchRaysIndirectDesc, width) == 88 && sizeof(DispatchRaysIndirectDesc) == 104, "'NriPrepareRaysIndirect' layout mismatch");
-#if NRI_ENABLE_METAL_SHADER_CONVERTER
-static_assert(sizeof(DispatchRaysIndirectDesc) == sizeof(IRDispatchRaysDescriptor), "'DispatchRaysIndirectDesc' must match 'IRDispatchRaysDescriptor'");
-static_assert(offsetof(DispatchRaysIndirectDesc, width) == offsetof(IRDispatchRaysDescriptor, Width), "'DispatchRaysIndirectDesc' must match 'IRDispatchRaysDescriptor'");
-#endif
 
 // Texture atomics: 32-bit "R32Uint" and "R32Sint", 64-bit min/max "RG32Uint" (Apple8+)
 static inline bool IsAtomicFormat(MTL::Device& device, Format format) {
@@ -177,6 +115,6 @@ static inline MTL4::FunctionDescriptor* NewFunctionDescriptor(MTL::Library* libr
     return specialized;
 }
 
-} // namespace nri
+} // namespace openrhi
 
 #include "DeviceMetal.h"

@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct QueryPoolMetal final : public DebugNameBase {
     inline QueryPoolMetal(DeviceMetal& device) : m_Device(device) {
@@ -33,7 +33,7 @@ struct QueryPoolMetal final : public DebugNameBase {
     }
 
     void Reset(uint32_t offset, uint32_t num);
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     DeviceMetal& m_Device;
@@ -43,4 +43,4 @@ private:
     uint32_t m_QuerySize = sizeof(uint64_t);
 };
 
-} // namespace nri
+} // namespace openrhi

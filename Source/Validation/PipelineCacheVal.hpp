@@ -4,6 +4,6 @@ PipelineCacheVal::PipelineCacheVal(DeviceVal& device, PipelineCache* pipelineCac
     : ObjectVal(device, pipelineCache) {
 }
 
-NRI_INLINE Result PipelineCacheVal::GetData(void* dst, uint64_t& size) {
+OPENRHI_INLINE Result PipelineCacheVal::GetData(void* dst, uint64_t& size) {
     return GetCoreInterfaceImpl().GetPipelineCacheData(*GetImpl(), dst, size);
 }

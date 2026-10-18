@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct VideoSessionParametersVal final : public ObjectVal {
     VideoSessionParametersVal(DeviceVal& device, VideoSessionParameters* impl, VideoSessionVal& session, const VideoSessionParametersDesc& desc);
@@ -18,4 +18,4 @@ private:
     std::array<uint8_t, 64> m_H265PpsToSpsPlusOne = {};
     std::array<uint8_t, 64> m_H265PpsToVpsPlusOne = {};
 };
-} // namespace nri
+} // namespace openrhi

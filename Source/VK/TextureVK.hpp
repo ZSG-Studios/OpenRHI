@@ -30,7 +30,7 @@ Result TextureVK::Create(const TextureDesc& textureDesc) {
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateImage(m_Device, &info, m_Device.GetVkAllocationCallbacks(), &m_Handle);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateImage");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateImage");
 
     return Result::SUCCESS;
 }
@@ -38,7 +38,7 @@ Result TextureVK::Create(const TextureDesc& textureDesc) {
 Result TextureVK::Create(const TextureVKDesc& textureVKDesc) {
     m_Desc = {};
     m_Desc.type = GetTextureType((VkImageType)textureVKDesc.vkImageType);
-    m_Desc.format = VKFormatToNRIFormat((VkFormat)textureVKDesc.vkFormat);
+    m_Desc.format = VKFormatToOpenRHIFormat((VkFormat)textureVKDesc.vkFormat);
     m_Desc.width = textureVKDesc.width;
     m_Desc.height = textureVKDesc.height;
     m_Desc.depth = textureVKDesc.depth;
@@ -88,7 +88,7 @@ Result TextureVK::Create(const TextureVKDesc& textureVKDesc) {
 }
 
 Result TextureVK::AllocateAndBindMemory(MemoryLocation memoryLocation, float priority, bool committed) {
-    NRI_CHECK(m_Handle, "Unexpected");
+    OPENRHI_CHECK(m_Handle, "Unexpected");
 
     MemoryDesc memoryDesc = {};
     GetMemoryDesc(memoryLocation, memoryDesc);
@@ -112,17 +112,17 @@ Result TextureVK::AllocateAndBindMemory(MemoryLocation memoryLocation, float pri
     VmaAllocationInfo allocationInfo = {};
 
     VkResult vkResult = vmaAllocateMemory(m_Device.GetVma(), &memoryRequirements, &allocationCreateInfo, &m_VmaAllocation, &allocationInfo);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vmaAllocateMemory");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vmaAllocateMemory");
 
     vkResult = vmaBindImageMemory(m_Device.GetVma(), m_VmaAllocation, m_Handle);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vmaBindImageMemory");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vmaBindImageMemory");
 
     return Result::SUCCESS;
 }
 
 Result TextureVK::BindMemory(const MemoryVK& memory, uint64_t offset) {
-    NRI_CHECK(m_Handle, "Unexpected");
-    NRI_CHECK(m_OwnsNativeObjects, "Not for wrapped objects");
+    OPENRHI_CHECK(m_Handle, "Unexpected");
+    OPENRHI_CHECK(m_OwnsNativeObjects, "Not for wrapped objects");
 
     VkBindImageMemoryInfo bindImageMemoryInfo = {VK_STRUCTURE_TYPE_BIND_IMAGE_MEMORY_INFO};
     bindImageMemoryInfo.image = m_Handle;
@@ -131,7 +131,7 @@ Result TextureVK::BindMemory(const MemoryVK& memory, uint64_t offset) {
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.BindImageMemory2(m_Device, 1, &bindImageMemoryInfo);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkBindImageMemory2");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkBindImageMemory2");
 
     return Result::SUCCESS;
 }
@@ -152,6 +152,6 @@ void TextureVK::GetMemoryDesc(MemoryLocation memoryLocation, MemoryDesc& memoryD
     m_Device.GetMemoryDesc(memoryLocation, requirements.memoryRequirements, dedicatedRequirements, memoryDesc);
 }
 
-NRI_INLINE void TextureVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void TextureVK::SetDebugName(const char* name) {
     m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_IMAGE, (uint64_t)m_Handle, name);
 }

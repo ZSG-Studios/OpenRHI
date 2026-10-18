@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct DescriptorHeapD3D12 final : public DebugNameBase {
     inline DescriptorHeapD3D12(DeviceD3D12& device)
@@ -22,7 +22,7 @@ struct DescriptorHeapD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     Result CreateHeap(DescriptorHeapType type, uint32_t descriptorNum);
@@ -36,4 +36,4 @@ private:
     uint32_t m_HeapNum = 0;
 };
 
-} // namespace nri
+} // namespace openrhi

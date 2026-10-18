@@ -1,272 +1,46 @@
-# NVIDIA RENDER INTERFACE (NRI)
+# OpenRHI
 
-[![Status](https://github.com/NVIDIA-RTX/NRI/actions/workflows/build.yml/badge.svg)](https://github.com/NVIDIA-RTX/NRI/actions/workflows/build.yml)
+OpenRHI is a high-performance rendering hardware interface for D3D12, Vulkan, and native Metal 4. It provides an explicit C/C++ API, native resource access, user-controlled allocation and synchronization, device capability reports, and creation-time architecture profiles.
 
-*NRI* is a modular, extensible, low-level abstract rendering interface that was designed to support all low-level features of *D3D12* and *Vulkan* GAPIs. At the same time, it aims to simplify usage and reduce the amount of code needed (especially compared with VK).
+Third-party attribution and license terms are preserved in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [LICENSE.txt](LICENSE.txt).
 
-Goals:
-- Generalization and unification of *D3D12* ([spec](https://microsoft.github.io/DirectX-Specs/)) and VK ([spec](https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html))
-- Explicitness (providing access to low-level features of modern GAPIs)
-- Quality-of-life and high-level extensions (e.g., streaming and upscaling)
-- Low overhead
-- Cross-platform and platform independence (AMD/INTEL friendly)
-- *D3D11* support ([spec](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm)) (as much as possible)
+| Platform | Backend | Baseline |
+|---|---|---|
+| Windows 11 x64/ARM64 | D3D12 | Feature level 12_2, SM 6.6, Enhanced Barriers; stable Agility SDK 1.619.6 |
+| Linux x64/ARM64 | Vulkan | Vulkan 1.3 minimum; 1.4 preferred |
+| Android ARM64, API 33+ | Vulkan | Vulkan 1.3 minimum; 1.4 preferred |
+| macOS/iOS/iPadOS 26+ | Metal 4 | Apple GPU family 9+ |
+| Explicit automated-test configuration | NONE | `OPENRHI_ENABLE_NONE_SUPPORT=ON` |
 
-Non-goals:
-- Exposing entities not existing in GAPIs
-- High-level (*D3D11*-like) abstraction
-- Hidden management of any kind (except for some high-level extensions where it's desired)
-- Automatic barriers (better handled in a higher-level abstraction)
+Vulkan requires dynamic rendering, synchronization2, maintenance4, buffer device addresses, timeline semaphores, runtime descriptor arrays, partially bound descriptors, and sampled-image nonuniform indexing. Creation verifies the feature bits and returns structured diagnostics for missing requirements.
 
-Supported GAPIs:
-- *Vulkan 1.4+, 1.3++ or 1.2+++* - advertises modern Vulkan compatibility, with a *Vulkan 1.2* core + _VK_KHR_synchronization2_ baseline
-- *D3D12*
-- *D3D11*
-- *WebGPU* (through [wgpu-native](https://github.com/gfx-rs/wgpu-native))
-- *Metal* (through [MoltenVK](https://github.com/KhronosGroup/MoltenVK))
-- *Metal 4* (native, through [metal-cpp](https://developer.apple.com/metal/cpp/))
-- None / dummy (everything is supported but does nothing)
+## Build
 
-## WHY NRI?
+Use CMake 3.30+ and a C++17 toolchain. Windows builds use the Windows SDK and Agility SDK; Apple builds use Xcode 26+ with the Metal toolchain. Dependencies are fetched at pinned revisions through their public interfaces.
 
-There is [NVRHI](https://github.com/NVIDIA-RTX/NVRHI), which offers a *D3D11*-like abstraction layer, implying some overhead. There is [vkd3d-proton](https://github.com/HansKristian-Work/vkd3d-proton), which was designed for *D3D12* emulation using *Vulkan*. There is [nvpro-samples](https://github.com/nvpro-samples), which explores all "dark corners" of *Vulkan* usage, but does not offer any cross-API support. There are some other good, unmentioned projects, but *NRI* was designed to offer a reasonably simple, low-overhead, and high-performance render interface suitable for game development, professional rendering and hobby projects. Additionally, *NRI* can serve as a middleware for integrations. For instance, the [NRD integration layer](https://github.com/NVIDIA-RTX/NRD/tree/master/Integration) is based on *NRI*, unifying multiple GAPI support within a single codebase.
+```sh
+cmake -S . -B _Build -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
+cmake --build _Build --config Release --parallel
+ctest --test-dir _Build -C Release --output-on-failure
+```
 
-## KEY FEATURES
- - *Multi-API support* - generalized common denominator for *D3D12*, *Vulkan*, and *D3D11* (default *D3D11* behavior is changed to match *D3D12*/VK using *NVAPI* or **AMD AGS** libraries, where applicable)
- - *C/C++ compatible* - native interface, compatible with both languages (can be used as a *shared* or *static* library)
- - *High performance* - low overhead with zero memory allocations at runtime, honored user-provided memory allocator
- - *Modern hardware tech* - support for Ray Tracing, Mesh Shaders, descriptor indexing (including directly indexed descriptor heaps) and more
- - *Mobile-ready* - optimized for Tile-Based Rendering (TBR/TBDR) architectures and friendly to mobile-oriented API designs
- - *Portable API shape* - maps cleanly to constrained GAPIs, including WebGPU and consoles
- - *D3D12 Ultimate* - full support, including Enhanced Barriers
- - *Platform Flexibility* - Windows, Linux, MacOS, and Android support
- - *Developer Experience* - integrated GAPI- and NRI- validation, VK [printf](https://github.com/KhronosGroup/*Vulkan*-ValidationLayers/blob/main/docs/debug_printf.md), and timeline annotations (GAPI, [NVTX](https://github.com/NVIDIA/NVTX) and [PIX](https://devblogs.microsoft.com/pix/winpixeventruntime/), if "WinPixEventRuntime.dll" is nearby)
- - *Memory Management* - deep integration with *AMD Virtual Memory Allocator* to ease memory management and memory reuse
+Production builds enable their platform backend by default. Link the `OpenRHI` CMake target and include `OpenRHI.h`. Native wrapper entrypoints follow the supported platform. The platform scripts deploy, build, and package the SDK into `_OpenRHI_SDK`.
 
-Available interfaces:
- - `NRI.h` - core functionality
- - `NRIDeviceCreation.h` - device creation and related functionality
- - `NRIHelper.h` - a collection of various helpers to ease use of the core interface
- - `NRIDescriptorHeap.h` - directly indexed descriptor heaps
- - `NRIImgui.h` - a light-weight *ImGui* renderer (no *ImGui* dependency)
- - `NRILowLatency.h` - low latency support (aka *NVIDIA REFLEX*)
- - `NRIMeshShader.h` - mesh shaders
- - `NRIRayTracing.h` - ray tracing
- - `NRIStreamer.h` - a convenient way to stream data into resources
- - `NRISwapChain.h` - swap chain and related functionality
- - `NRIUpscaler.h` - a configurable collection of common upscalers (*NIS*, *FSR*, *DLSS-SR*, *DLSS-RR*)
+## Shaders
 
-Repository organization:
-- there is only `main` branch used for development
-- stable versions are in `Releases` section
+Author shaders in Slang 2026.20 and compile them with `CMake/OpenRHISlang.cmake`. The build produces native DXIL, SPIR-V, or metallib plus reflection and matching pipeline metadata. ImGui, NIS, and Metal helper kernels use this same chain. [Shader integration and ABI](SHADERS.md) describes application setup and migration.
 
-## BUILD INSTRUCTIONS
+## Devices and qualification
 
-- Install [*Cmake*](https://cmake.org/download/) 3.30+
-- MacOS: install prerequisites
-    - Xcode command line tools
-    - Ninja
-    - [Vulkan SDK](https://vulkan.lunarg.com/sdk/home#mac), then source its `setup-env.sh`
-- Build (variant 1) - using *Git* and *CMake* explicitly
-    - Clone project and init submodules
-    - Generate and build the project using *CMake*
-    - To build the binary with static MSVC runtime, add `-DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"` parameter when deploying the project
-- Build (variant 2) - by running scripts:
-    - To deploy the project, run `Scripts/<Platform>/1-Deploy`
-    - To build the project, run `Scripts/<Platform>/2-Build`
-    - To package the SDK, run `Scripts/<Platform>/3-PrepareSDK`
-    - To clean generated files, run `Scripts/<Platform>/4-Clean`
+Explicit adapter selection stays on the requested device. Automatic selection evaluates compatible devices in deterministic preference order. Device profiles separate actual capabilities from conservative upload, queue, and wave recommendations. Architecture recognition alone leaves tuning disabled.
 
-`<Platform>` is `Windows`, `Linux` or `MacOS`. Use `.bat` on Windows; run `.sh` scripts with `bash` on Linux and MacOS.
+The first measurement target is the AMD RX 9070 XT. The hardware matrix also includes NVIDIA Blackwell, Intel Xe2/Xe3, Apple M/A-series, Qualcomm Adreno, Arm Mali, and Samsung Xclipse. Exact per-device and driver receipts establish qualification.
 
-Scripts resolve the NRI root from their own location, so they can be launched from any working directory.
+- [API migration](MIGRATION.md)
+- [Qualification gates and measurement tools](QUALIFICATION.md)
+- [Hardware targets and identity provenance](Profiles/targets.json)
+- [Recorded device qualification](Profiles/qualification.json)
+- [RX 9070 XT measurements and coverage](Qualification/RX9070XT-Windows/README.md)
+- [CI builds](https://github.com/ZSG-Studios/OpenRHI/actions/workflows/build.yml)
 
-Notes:
-- *Xlib* and *Wayland* can be both enabled
-- Minimal supported client is Windows 8.1+
-- *Metal 4* backend requires macOS 26+ or iOS 26+ (iPadOS included) and Xcode 26+ (with `MetalToolchain` component), *metal-cpp* is fetched automatically, native `.metallib` shaders must follow `NRI.metal` ABI, *DXIL* support requires *Metal Shader Converter* 4.0.1 (macOS and iOS devices, no simulator), offline converted *DXIL* (*ShaderMake* `--metalFromDXIL` bundles) works everywhere (see `NRIWrapperMetal.h`)
-- *iOS*: `-DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos|iphonesimulator -DCMAKE_OSX_ARCHITECTURES=arm64` (a separate build folder per SDK, with the *Xcode* generator *MetalFX* linking follows `CMAKE_OSX_SYSROOT`, static library by default, no *VK*, *WebGPU*, *NVTX* and *NIS*, no *MetalFX* and *Metal Shader Converter* in the simulator)
-- static `NRI` provides *metal-cpp* private implementation (`NS/MTL/CA/MTLFX_PRIVATE_IMPLEMENTATION`), set `NRI_METAL_CPP_PRIVATE_IMPLEMENTATION = OFF` if the app compiles it itself
-- *Metal Shader Converter* is required for building if `NRI_ENABLE_METAL_SHADER_CONVERTER` is on (`/usr/local/lib` on macOS, `/usr/local/lib_iOS` for iOS devices). Apple's *Metal Shader Converter* license permits distributing its dynamic libraries for shader conversion:
-    - shared `NRI` copies `libmetalirconverter.dylib` next to itself and finds it via `@loader_path` or the app `Frameworks` folder, `3-PrepareSDK` puts it into `Lib` (without Apple's license text, which comes with the *Metal Shader Converter* installer)
-    - static `NRI` leaves bundling to the app, for example:
-    ```cmake
-    set_target_properties(App PROPERTIES BUILD_RPATH "@executable_path" INSTALL_RPATH "@executable_path")
-    add_custom_command(TARGET App POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${NRI_METAL_SHADER_CONVERTER_LIBRARY}" "$<TARGET_FILE_DIR:App>")
-    ```
-    - iOS: embed `libmetalirconverter.dylib` into the app `Frameworks` folder (`@executable_path/Frameworks`) and sign it, the *App Store* may require wrapping it into a `.framework`
-
-## CMAKE OPTIONS
-
-- `NRI_AGILITY_SDK_DIR` - Directory where *Agility SDK* will be copied relative to the directory with binaries
-- `NRI_AGILITY_SDK_VERSION_MAJOR`- *Agility SDK* major version
-- `NRI_AGILITY_SDK_VERSION_MINOR` - *Agility SDK* minor version
-- `NRI_SHADERS_PATH` - Shader output path override
-- `NRI_NVAPI_CUSTOM_PATH` - Path to a custom NVAPI library directory
-- `NRI_METAL_SHADER_CONVERTER_INCLUDE_PATH` - Path to a custom *Metal Shader Converter* include directory
-- `NRI_METAL_SHADER_CONVERTER_LIBRARY` - Path to a custom *Metal Shader Converter* library
-- `NRI_STATIC_LIBRARY` - Build static library (`ON` by default on iOS)
-- `NRI_ENABLE_NVTX_SUPPORT` - Annotations for NVIDIA Nsight Systems
-- `NRI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS` - Enable debug names, host and device annotations
-- `NRI_ENABLE_NONE_SUPPORT` - Enable NONE backend
-- `NRI_ENABLE_VK_SUPPORT` - Enable *Vulkan* backend
-- `NRI_ENABLE_WGPU_SUPPORT` - Enable *WebGPU* backend through *wgpu-native*
-- `NRI_ENABLE_METAL_SUPPORT` - Enable *Metal 4* backend (enabled by default with Xcode 26+ and its `MetalToolchain` component)
-- `NRI_ENABLE_METAL_SHADER_CONVERTER` - Enable *DXIL* support in *Metal* backend through *Metal Shader Converter* (enabled by default if installed)
-- `NRI_METAL_CPP_PRIVATE_IMPLEMENTATION` - Compile *metal-cpp* private implementation into `NRI` (can be disabled only for a static library)
-- `NRI_ENABLE_VALIDATION_SUPPORT` - Enable Validation backend (otherwise `enableNRIValidation` is ignored)
-- `NRI_ENABLE_NIS_SDK` - Enable NVIDIA Image Sharpening SDK
-- `NRI_ENABLE_IMGUI_EXTENSION` - Enable `NRIImgui` extension
-- `NRI_STREAMER_THREAD_SAFE` - `NRIStreamer` thread safety (`OFF` is faster)
-- `NRI_ENABLE_D3D11_SUPPORT` - Enable *D3D11* backend
-- `NRI_ENABLE_D3D12_SUPPORT` - Enable *D3D12* backend
-- `NRI_ENABLE_AMDAGS`- Enable *AMD AGS* library for D3D
-- `NRI_ENABLE_NVAPI` - Enable NVAPI library for D3D
-- `NRI_ENABLE_AGILITY_SDK_SUPPORT` - Enable *Agility SDK* support to unlock access to latest *D3D12* features
-- `NRI_ENABLE_XLIB_SUPPORT` - Enable X11 support
-- `NRI_ENABLE_WAYLAND_SUPPORT` - Enable Wayland support
-- `NRI_ENABLE_NGX_SDK` - Enable *NVIDIA NGX (DLSS)* SDK
-- `NRI_ENABLE_FFX_SDK` - Enable *AMD FSR* SDK (or fallback to *AMD FidelityFX* SDK)
-- `NRI_ENABLE_XESS_SDK` - Enable *INTEL XeSS* SDK
-
-## AGILITY SDK
-
-The bare minimum requirement for *D3D12* backend is *D3D12 Ultimate* (*Windows SDK 10.0.20348*, last pre-*Agility SDK* release). *NRI* can be compiled for this *Windows SDK* using `Scripts/Windows/1-Deploy.bat -DNRI_ENABLE_AGILITY_SDK_SUPPORT=OFF -A "x64,version=10.0.20348.0"` command line. But using the latest *Agility SDK* is highly recommended to get access to most recent *D3D12* features and improved validation. See *Overview* and *Download* sections [*here*](https://devblogs.microsoft.com/directx/directx12agility/) for more details about *Agility SDK*.
-
-Steps (already enabled by default):
-- modify `NRI_AGILITY_SDK_VERSION_MAJOR` and `NRI_AGILITY_SDK_VERSION_MINOR` to the desired value
-- enable or disable `NRI_ENABLE_AGILITY_SDK_SUPPORT`
-- re-deploy project
-- (optional) include auto-generated `NRIAgilitySDK.h` header in the code of your executable using *NRI*
-
-It's safe to compile *NRI* using the default (most likely latest) *Agility SDK* and export some specific `D3D12SDKVersion` in the executable using *NRI*. In this case, *NRI* queries latest "available" interfaces according to the actually loaded `D3D12Core.dll`.
-
-## KNOWN VULKAN EXTENSIONS
-
-Required:
- - _VK_KHR_synchronization2_
- - (APPLE) _VK_KHR_portability_enumeration_
- - (APPLE) _VK_KHR_get_physical_device_properties2_
- - (APPLE) _VK_KHR_portability_subset_
-
-Supported:
- - (Instance) _VK_KHR_get_surface_capabilities2_
- - (Instance) _VK_KHR_surface_
- - (Instance) _VK_KHR_win32_surface_ (_VK_KHR_xlib_surface_, _VK_KHR_wayland_surface_, _VK_KHR_android_surface_, _VK_EXT_metal_surface_)
- - (Instance) _VK_EXT_swapchain_colorspace_
- - (Instance) _VK_EXT_debug_utils_
- - (Instance) _VK_EXT_surface_maintenance1_
- - _VK_KHR_copy_commands2_
- - _VK_KHR_dynamic_rendering_
- - _VK_KHR_swapchain_
- - _VK_KHR_present_id_
- - _VK_KHR_present_wait_
- - _VK_KHR_swapchain_mutable_format_
- - _VK_KHR_push_descriptor_
- - _VK_KHR_maintenance4_
- - _VK_KHR_maintenance5_
- - _VK_KHR_maintenance6_
- - _VK_KHR_maintenance7_
- - _VK_KHR_maintenance8_
- - _VK_KHR_maintenance9_
- - _VK_KHR_maintenance10_
- - _VK_KHR_extended_flags_
- - _VK_KHR_line_rasterization_
- - _VK_KHR_fragment_shading_rate_
- - _VK_KHR_pipeline_library_
- - _VK_KHR_ray_tracing_pipeline_
- - _VK_KHR_acceleration_structure_ (depends on _VK_KHR_deferred_host_operations_)
- - _VK_KHR_ray_query_
- - _VK_KHR_ray_tracing_position_fetch_
- - _VK_KHR_ray_tracing_maintenance1_
- - _VK_KHR_fragment_shader_barycentric_
- - _VK_KHR_shader_clock_
- - _VK_KHR_compute_shader_derivatives_
- - _VK_KHR_unified_image_layouts_
- - _VK_KHR_shader_integer_dot_product_
- - _VK_KHR_shader_untyped_pointers_
- - _VK_KHR_sampler_ycbcr_conversion_
- - _VK_KHR_load_store_op_none_
- - _VK_KHR_dynamic_rendering_local_read_
- - _VK_EXT_extended_dynamic_state_
- - _VK_EXT_calibrated_timestamps_
- - _VK_EXT_pipeline_creation_cache_control_
- - _VK_EXT_pipeline_robustness_
- - _VK_EXT_host_image_copy_
- - _VK_EXT_load_store_op_none_
- - _VK_EXT_image_robustness_
- - _VK_EXT_subgroup_size_control_
- - _VK_EXT_mutable_descriptor_type_
- - _VK_EXT_descriptor_heap_
- - _VK_EXT_swapchain_maintenance1_
- - _VK_EXT_present_mode_fifo_latest_ready_
- - _VK_EXT_opacity_micromap_
- - _VK_EXT_sample_locations_
- - _VK_EXT_conservative_rasterization_
- - _VK_EXT_mesh_shader_
- - _VK_EXT_shader_atomic_float_
- - _VK_EXT_shader_atomic_float2_
- - _VK_EXT_memory_budget_
- - _VK_EXT_memory_priority_
- - _VK_EXT_image_sliced_view_of_3d_
- - _VK_EXT_custom_border_color_
- - _VK_EXT_robustness2_
- - _VK_EXT_fragment_shader_interlock_
- - _VK_EXT_zero_initialize_device_memory_
- - _VK_EXT_device_fault_
- - _VK_KHR_video_queue_
- - _VK_KHR_video_decode_queue_
- - _VK_KHR_video_encode_queue_
- - _VK_KHR_video_decode_h264_
- - _VK_KHR_video_decode_h265_
- - _VK_KHR_video_decode_av1_
- - _VK_KHR_video_encode_h264_
- - _VK_KHR_video_encode_h265_
- - _VK_KHR_video_encode_av1_
- - _VK_KHR_video_maintenance1_
- - _VK_KHR_video_maintenance2_
- - _VK_NV_low_latency2_
- - _VK_NVX_binary_import_
- - _VK_NVX_image_view_handle_
-
-## SAMPLES OVERVIEW
-
-[*NRD sample*](https://github.com/NVIDIA-RTX/NRD-Sample):
-- main sample demonstrating path tracing best practices
-
-[*NRI samples*](https://github.com/NVIDIA-RTX/NRISamples):
-- many samples demonstrating basic usage, also works as unit tests
-
-## C/C++ INTERFACE DIFFERENCES
-
-| C++                   | C                     |
-|-----------------------|-----------------------|
-| `nri::Interface`      | `NriInterface`        |
-| `nri::Enum::MEMBER`   | `NriEnum_MEMBER`      |
-| `nri::CONST`          | `NRI_CONST`           |
-| `nri::nriFunction`    | `nriFunction`         |
-| `nri::Function`       | `nriFunction`         |
-| Reference `&`         | Pointer `*`           |
-
-## ENTITIES
-
-| NRI                     | *D3D11*                                 | *D3D12*                         | VK                           | WGPU                                      |
-|-------------------------|-----------------------------------------|---------------------------------|------------------------------|-------------------------------------------|
-| `Device`                | `ID3D11Device`                          | `ID3D12Device`                  | `VkDevice`                   | `WGPUDevice`                              |
-| `CommandBuffer`         | `ID3D11DeviceContext` (deferred)        | `ID3D12CommandList`             | `VkCommandBuffer`            | `WGPUCommandBuffer`                       |
-| `Queue`                 | `ID3D11DeviceContext` (immediate)       | `ID3D12CommandQueue`            | `VkQueue`                    | `WGPUQueue`                               |
-| `Fence`                 | `ID3D11Fence`                           | `ID3D12Fence`                   | `VkSemaphore` (timeline)     | N/A                                       |
-| `CommandAllocator`      | N/A                                     | `ID3D12CommandAllocator`        | `VkCommandPool`              | N/A                                       |
-| `Buffer`                | `ID3D11Buffer`                          | `ID3D12Resource`                | `VkBuffer`                   | `WGPUBuffer`                              |
-| `Texture`               | `ID3D11Texture`                         | `ID3D12Resource`                | `VkImage`                    | `WGPUTexture`                             |
-| `Memory`                | N/A                                     | `ID3D12Heap`                    | `VkDeviceMemory`             | N/A                                       |
-| `Descriptor`            | `ID3D11*View` or `ID3D11SamplerState`   | `D3D12_CPU_DESCRIPTOR_HANDLE`   | `Vk*View` or `VkSampler`     | `WGPUTextureView`, `WGPUBuffer`, `WGPUSampler` |
-| `DescriptorSet`         | N/A                                     | N/A                             | `VkDescriptorSet`            | N/A                                       |
-| `DescriptorPool`        | N/A                                     | `ID3D12DescriptorHeap`          | `VkDescriptorPool`           | N/A                                       |
-| `PipelineLayout`        | N/A                                     | `ID3D12RootSignature`           | `VkPipelineLayout`           | N/A                                       |
-| `Pipeline`              | `ID3D11*Shader` and `ID3D11*State`      | `ID3D12StateObject`             | `VkPipeline`                 | N/A                                       |
-| `AccelerationStructure` | N/A                                     | `ID3D12Resource`                | `VkAccelerationStructure`    | N/A                                       |
-
-## LICENSE
-
-*NRI* is licensed under the MIT License.
+OpenRHI retains core graphics/compute, descriptor heaps, streaming, ImGui rendering, low latency, mesh shaders, ray tracing, video, and optional upscaler interfaces. Device capability queries describe each backend's available features.

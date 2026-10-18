@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct BufferVK final : public DebugNameBase {
     inline BufferVK(DeviceVK& device)
@@ -47,10 +47,10 @@ struct BufferVK final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     void* Map(uint64_t offset, uint64_t size);
@@ -86,4 +86,4 @@ inline VkDeviceAddress GetBufferDeviceAddress(const Buffer* buffer, uint64_t off
     return ((BufferVK*)buffer)->GetDeviceAddress() + offset;
 }
 
-} // namespace nri
+} // namespace openrhi

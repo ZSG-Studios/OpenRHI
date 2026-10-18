@@ -239,7 +239,7 @@ VideoSessionParametersVK::~VideoSessionParametersVK() {
         vk.DestroyVideoSessionParametersKHR(m_Device, m_Handle, m_Device.GetVkAllocationCallbacks());
 }
 
-NRI_INLINE Result VideoSessionParametersVK::CreateNative(VideoSessionVK& session, const void* pNext) {
+OPENRHI_INLINE Result VideoSessionParametersVK::CreateNative(VideoSessionVK& session, const void* pNext) {
     m_Session = &session;
 
     VkVideoSessionParametersCreateInfoKHR createInfo = {VK_STRUCTURE_TYPE_VIDEO_SESSION_PARAMETERS_CREATE_INFO_KHR};
@@ -248,12 +248,12 @@ NRI_INLINE Result VideoSessionParametersVK::CreateNative(VideoSessionVK& session
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateVideoSessionParametersKHR(m_Device, &createInfo, m_Device.GetVkAllocationCallbacks(), &m_Handle);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateVideoSessionParametersKHR");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateVideoSessionParametersKHR");
 
     return Result::SUCCESS;
 }
 
-NRI_INLINE Result VideoSessionParametersVK::Create(const VideoSessionParametersDesc& videoSessionParametersDesc) {
+OPENRHI_INLINE Result VideoSessionParametersVK::Create(const VideoSessionParametersDesc& videoSessionParametersDesc) {
     VideoSessionVK& session = *(VideoSessionVK*)videoSessionParametersDesc.session;
     m_Session = &session;
     if (session.GetDesc().codec == VideoCodec::H265)
@@ -276,13 +276,13 @@ NRI_INLINE Result VideoSessionParametersVK::Create(const VideoSessionParametersD
             entry = 16;
     }
 
-    Scratch<StdVideoH264SequenceParameterSet> h264Sps = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH264SequenceParameterSet, h264Parameters.sequenceParameterSetNum);
+    Scratch<StdVideoH264SequenceParameterSet> h264Sps = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH264SequenceParameterSet, h264Parameters.sequenceParameterSetNum);
     for (uint32_t i = 0; i < h264Parameters.sequenceParameterSetNum; i++) {
         h264Sps[i] = GetVideoH264SequenceParameterSet(h264Parameters.sequenceParameterSets[i]);
         h264Sps[i].pScalingLists = &defaultScalingLists;
     }
 
-    Scratch<StdVideoH264PictureParameterSet> h264Pps = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH264PictureParameterSet, h264Parameters.pictureParameterSetNum);
+    Scratch<StdVideoH264PictureParameterSet> h264Pps = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH264PictureParameterSet, h264Parameters.pictureParameterSetNum);
     for (uint32_t i = 0; i < h264Parameters.pictureParameterSetNum; i++) {
         h264Pps[i] = GetVideoH264PictureParameterSet(h264Parameters.pictureParameterSets[i]);
         h264Pps[i].pScalingLists = &defaultScalingLists;
@@ -313,7 +313,7 @@ NRI_INLINE Result VideoSessionParametersVK::Create(const VideoSessionParametersD
     return CreateNative(session, session.GetDesc().type == VideoSessionType::DECODE ? (const void*)&decodeInfo : (const void*)&encodeInfo);
 }
 
-NRI_INLINE Result VideoSessionParametersVK::CreateH265(VideoSessionVK& session, const VideoH265SessionParametersDesc* parameters) {
+OPENRHI_INLINE Result VideoSessionParametersVK::CreateH265(VideoSessionVK& session, const VideoH265SessionParametersDesc* parameters) {
     VideoH265VideoParameterSetDesc defaultVps = {};
     VideoH265SequenceParameterSetDesc defaultSps = {};
     VideoH265PictureParameterSetDesc defaultPps = {};
@@ -362,17 +362,17 @@ NRI_INLINE Result VideoSessionParametersVK::CreateH265(VideoSessionVK& session, 
         shortTermRefPicSetNum += sps.numShortTermRefPicSets;
     }
 
-    Scratch<StdVideoH265ProfileTierLevel> vpsProfileTierLevels = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH265ProfileTierLevel, parameters->videoParameterSetNum);
-    Scratch<StdVideoH265ProfileTierLevel> spsProfileTierLevels = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH265ProfileTierLevel, parameters->sequenceParameterSetNum);
-    Scratch<StdVideoH265DecPicBufMgr> vpsDecPicBufMgrs = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH265DecPicBufMgr, parameters->videoParameterSetNum);
-    Scratch<StdVideoH265DecPicBufMgr> spsDecPicBufMgrs = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH265DecPicBufMgr, parameters->sequenceParameterSetNum);
-    Scratch<StdVideoH265VideoParameterSet> videoParameterSets = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH265VideoParameterSet, parameters->videoParameterSetNum);
-    Scratch<StdVideoH265SequenceParameterSet> sequenceParameterSets = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH265SequenceParameterSet, parameters->sequenceParameterSetNum);
-    Scratch<StdVideoH265PictureParameterSet> pictureParameterSets = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH265PictureParameterSet, parameters->pictureParameterSetNum);
-    Scratch<StdVideoH265ScalingLists> spsScalingLists = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH265ScalingLists, parameters->sequenceParameterSetNum);
-    Scratch<StdVideoH265ScalingLists> ppsScalingLists = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH265ScalingLists, parameters->pictureParameterSetNum);
-    Scratch<StdVideoH265ShortTermRefPicSet> shortTermRefPicSets = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH265ShortTermRefPicSet, shortTermRefPicSetNum);
-    Scratch<StdVideoH265LongTermRefPicsSps> longTermRefPicsSps = NRI_ALLOCATE_SCRATCH(m_Device, StdVideoH265LongTermRefPicsSps, parameters->sequenceParameterSetNum);
+    Scratch<StdVideoH265ProfileTierLevel> vpsProfileTierLevels = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH265ProfileTierLevel, parameters->videoParameterSetNum);
+    Scratch<StdVideoH265ProfileTierLevel> spsProfileTierLevels = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH265ProfileTierLevel, parameters->sequenceParameterSetNum);
+    Scratch<StdVideoH265DecPicBufMgr> vpsDecPicBufMgrs = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH265DecPicBufMgr, parameters->videoParameterSetNum);
+    Scratch<StdVideoH265DecPicBufMgr> spsDecPicBufMgrs = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH265DecPicBufMgr, parameters->sequenceParameterSetNum);
+    Scratch<StdVideoH265VideoParameterSet> videoParameterSets = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH265VideoParameterSet, parameters->videoParameterSetNum);
+    Scratch<StdVideoH265SequenceParameterSet> sequenceParameterSets = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH265SequenceParameterSet, parameters->sequenceParameterSetNum);
+    Scratch<StdVideoH265PictureParameterSet> pictureParameterSets = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH265PictureParameterSet, parameters->pictureParameterSetNum);
+    Scratch<StdVideoH265ScalingLists> spsScalingLists = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH265ScalingLists, parameters->sequenceParameterSetNum);
+    Scratch<StdVideoH265ScalingLists> ppsScalingLists = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH265ScalingLists, parameters->pictureParameterSetNum);
+    Scratch<StdVideoH265ShortTermRefPicSet> shortTermRefPicSets = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH265ShortTermRefPicSet, shortTermRefPicSetNum);
+    Scratch<StdVideoH265LongTermRefPicsSps> longTermRefPicsSps = OPENRHI_ALLOCATE_SCRATCH(m_Device, StdVideoH265LongTermRefPicsSps, parameters->sequenceParameterSetNum);
 
     for (uint32_t i = 0; i < parameters->videoParameterSetNum; i++) {
         const VideoH265VideoParameterSetDesc& vps = parameters->videoParameterSets[i];
@@ -450,7 +450,7 @@ NRI_INLINE Result VideoSessionParametersVK::CreateH265(VideoSessionVK& session, 
     return CreateNative(session, session.GetDesc().type == VideoSessionType::DECODE ? (const void*)&decodeInfo : (const void*)&encodeInfo);
 }
 
-NRI_INLINE Result VideoSessionParametersVK::CreateAV1(VideoSessionVK& session, const VideoAV1SessionParametersDesc* parameters) {
+OPENRHI_INLINE Result VideoSessionParametersVK::CreateAV1(VideoSessionVK& session, const VideoAV1SessionParametersDesc* parameters) {
     if (parameters) {
         FillVideoAV1ColorConfig(m_AV1ColorConfig, parameters->sequence);
         m_AV1TimingInfo = {};
@@ -528,7 +528,7 @@ NRI_INLINE Result VideoSessionParametersVK::CreateAV1(VideoSessionVK& session, c
     if (vkResult != VK_SUCCESS || !feedbackInfo.hasOverrides || !dataSize)
         return Result::SUCCESS;
 
-    Scratch<uint8_t> data = NRI_ALLOCATE_SCRATCH(m_Device, uint8_t, dataSize);
+    Scratch<uint8_t> data = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint8_t, dataSize);
     vkResult = vk.GetEncodedVideoSessionParametersKHR(m_Device, &getInfo, &feedbackInfo, &dataSize, data);
     if (vkResult != VK_SUCCESS || !feedbackInfo.hasOverrides || !ApplyVideoEncodeAV1SequenceHeaderOverride(m_AV1SequenceHeader, data, dataSize))
         return Result::SUCCESS;

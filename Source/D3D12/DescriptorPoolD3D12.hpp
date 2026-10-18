@@ -25,7 +25,7 @@ Result DescriptorPoolD3D12::Create(const DescriptorPoolDesc& descriptorPoolDesc)
             ComPtr<ID3D12DescriptorHeap> descriptorHeap;
             D3D12_DESCRIPTOR_HEAP_DESC desc = {(D3D12_DESCRIPTOR_HEAP_TYPE)i, descriptorHeapSize[i], heapFlags, NODE_MASK};
             HRESULT hr = m_Device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap));
-            NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateDescriptorHeap");
+            OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateDescriptorHeap");
 
             descriptorHeapDesc.heap = descriptorHeap;
             descriptorHeapDesc.baseHandleCPU = descriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr;
@@ -90,12 +90,12 @@ DescriptorHandleGPU DescriptorPoolD3D12::GetDescriptorHandleGPU(DescriptorHeapTy
     return descriptorHandleGPU;
 }
 
-NRI_INLINE void DescriptorPoolD3D12::SetDebugName(const char* name) {
+OPENRHI_INLINE void DescriptorPoolD3D12::SetDebugName(const char* name) {
     for (ID3D12DescriptorHeap* descriptorHeap : m_DescriptorHeaps)
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(descriptorHeap, name);
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(descriptorHeap, name);
 }
 
-NRI_INLINE Result DescriptorPoolD3D12::AllocateDescriptorSets(const PipelineLayout& pipelineLayout, uint32_t setIndex, DescriptorSet** descriptorSets, uint32_t instanceNum, uint32_t variableDescriptorNum) {
+OPENRHI_INLINE Result DescriptorPoolD3D12::AllocateDescriptorSets(const PipelineLayout& pipelineLayout, uint32_t setIndex, DescriptorSet** descriptorSets, uint32_t instanceNum, uint32_t variableDescriptorNum) {
     ExclusiveScope lock(m_Lock);
 
     if (m_DescriptorSetNum + instanceNum > m_DescriptorSets.size())
@@ -134,7 +134,7 @@ NRI_INLINE Result DescriptorPoolD3D12::AllocateDescriptorSets(const PipelineLayo
     return Result::SUCCESS;
 }
 
-NRI_INLINE void DescriptorPoolD3D12::Reset() {
+OPENRHI_INLINE void DescriptorPoolD3D12::Reset() {
     ExclusiveScope lock(m_Lock);
 
     for (DescriptorHeapDescD3D12& descriptorHeapDesc : m_DescriptorHeapDescs)

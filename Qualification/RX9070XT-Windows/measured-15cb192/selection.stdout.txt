@@ -1,0 +1,4 @@
+{"schema":1,"vendor_id":4098,"device_id":30032,"uid_low":68064,"uid_high":0,"driver":9007201352878040,"result":0,"supported":7,"required":7,"missing":0,"shader_model":609,"memory_budget":16168480768}
+{"schema":1,"vendor_id":4098,"device_id":5710,"uid_low":77118,"uid_high":0,"driver":9007200633951114,"result":1,"supported":0,"required":7,"missing":7,"shader_model":0,"memory_budget":0}
+{"schema":1,"vendor_id":5140,"device_id":140,"uid_low":77054,"uid_high":0,"driver":2814751477605871,"result":4,"supported":0,"required":7,"missing":7,"shader_model":0,"memory_budget":0}
+Explicit selection, rejection, probe, and automatic selection passed

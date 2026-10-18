@@ -3,24 +3,23 @@ set -e
 
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
-SDK=_NRI_SDK
+SDK=_OpenRHI_SDK
 
-rm -rf "${SDK}"
+bash Scripts/Trash.sh _OpenRHI_SDK
 mkdir -p "${SDK}/Include" "${SDK}/Lib/Debug" "${SDK}/Lib/Release"
 
 cp -R Include/. "${SDK}/Include"
-cp LICENSE.txt README.md nri.natvis "${SDK}"
+cp LICENSE.txt THIRD_PARTY_NOTICES.md README.md MIGRATION.md QUALIFICATION.md openrhi.natvis "${SDK}"
 
-cp -L _Bin/Debug/libNRI.dylib "${SDK}/Lib/Debug"
-cp -L _Bin/Release/libNRI.dylib "${SDK}/Lib/Release"
+cp -L _Bin/Debug/libOpenRHI.dylib "${SDK}/Lib/Debug"
+cp -L _Bin/Release/libOpenRHI.dylib "${SDK}/Lib/Release"
 
-# Metal Shader Converter library, if NRI is built with it
 for CONFIG in Debug Release; do
-    if [ -f "_Bin/${CONFIG}/libmetalirconverter.dylib" ]; then
-        cp -L "_Bin/${CONFIG}/libmetalirconverter.dylib" "${SDK}/Lib/${CONFIG}"
+    if [ -d "_Bin/${CONFIG}/ThirdPartyLicenses" ]; then
+        cp -R "_Bin/${CONFIG}/ThirdPartyLicenses" "${SDK}/Lib/${CONFIG}/"
     fi
 done
 
-if [ -f "${SDK}/Lib/Release/libmetalirconverter.dylib" ]; then
-    echo "${SDK}: 'libmetalirconverter.dylib' is distributed under Apple's Metal Shader Converter license terms (see README.md)"
-fi
+mkdir -p "${SDK}/CMake"
+cp CMake/*.cmake "${SDK}/CMake/"
+cp SHADERS.md "${SDK}/"

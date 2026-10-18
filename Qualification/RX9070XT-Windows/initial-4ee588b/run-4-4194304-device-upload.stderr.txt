@@ -1,0 +1,1 @@
+D3D12::AMD Radeon RX 9070 XT - Using ID3D12Device15

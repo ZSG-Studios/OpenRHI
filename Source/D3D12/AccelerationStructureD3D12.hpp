@@ -52,14 +52,14 @@ void AccelerationStructureD3D12::GetMemoryDesc(MemoryLocation memoryLocation, Me
     m_Device.GetMemoryDesc(memoryLocation, resourceDesc, memoryDesc);
 }
 
-NRI_INLINE void AccelerationStructureD3D12::SetDebugName(const char* name) {
+OPENRHI_INLINE void AccelerationStructureD3D12::SetDebugName(const char* name) {
     m_Buffer->SetDebugName(name);
 }
 
-NRI_INLINE uint64_t AccelerationStructureD3D12::GetHandle() const {
+OPENRHI_INLINE uint64_t AccelerationStructureD3D12::GetHandle() const {
     return m_Buffer->GetDeviceAddress();
 }
 
-NRI_INLINE AccelerationStructureD3D12::operator ID3D12Resource*() const {
+OPENRHI_INLINE AccelerationStructureD3D12::operator ID3D12Resource*() const {
     return (ID3D12Resource*)(*m_Buffer);
 }

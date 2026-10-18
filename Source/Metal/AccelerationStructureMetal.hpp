@@ -23,12 +23,12 @@ static inline MTL::IndexType GetAccelerationStructureIndexType(IndexType indexTy
         MTL::IndexTypeUInt16, // UINT16
         MTL::IndexTypeUInt32, // UINT32
     };
-    NRI_VALIDATE_ARRAY(g_IndexTypes);
+    OPENRHI_VALIDATE_ARRAY(g_IndexTypes);
 
     return g_IndexTypes[(size_t)indexType];
 }
 
-// Formats marked "AccelerationStructure" compatible in "NRIDescs.h" (the last one is "R10_G10_B10_A2_UNORM")
+// Formats marked "AccelerationStructure" compatible in "OpenRHIDescs.h" (the last one is "R10_G10_B10_A2_UNORM")
 constexpr std::array<MTL::AttributeFormat, (size_t)Format::R10_G10_B10_A2_UNORM + 1> g_AccelerationStructureVertexFormats = {
     MTL::AttributeFormatInvalid,               // UNKNOWN
     MTL::AttributeFormatInvalid,               // R8_UNORM
@@ -78,7 +78,7 @@ constexpr std::array<MTL::AttributeFormat, (size_t)Format::R10_G10_B10_A2_UNORM 
     MTL::AttributeFormatInvalid,               // B4_G4_R4_A4_UNORM
     MTL::AttributeFormatUInt1010102Normalized, // R10_G10_B10_A2_UNORM
 };
-NRI_VALIDATE_ARRAY(g_AccelerationStructureVertexFormats);
+OPENRHI_VALIDATE_ARRAY(g_AccelerationStructureVertexFormats);
 
 static inline MTL::AttributeFormat GetAccelerationStructureVertexFormat(Format format) {
     return (size_t)format < g_AccelerationStructureVertexFormats.size() ? g_AccelerationStructureVertexFormats[(size_t)format] : MTL::AttributeFormatInvalid;
@@ -96,7 +96,7 @@ static inline MTL4::AccelerationStructureDescriptor* CreateBottomLevelDescriptor
         return buffer ? ((const BufferMetal*)buffer)->GetGpuAddress() + offset : 0;
     };
 
-    Scratch<NS::Object*> objects = NRI_ALLOCATE_SCRATCH(device, NS::Object*, geometryNum);
+    Scratch<NS::Object*> objects = OPENRHI_ALLOCATE_SCRATCH(device, NS::Object*, geometryNum);
 
     for (uint32_t i = 0; i < geometryNum; i++) {
         const BottomLevelGeometryDesc& geometry = geometries[i];
@@ -186,7 +186,7 @@ static inline uint64_t GetTopLevelHeaderSize(uint32_t instanceNum) {
     return TOP_LEVEL_HEADER_SIZE + uint64_t(instanceNum) * sizeof(uint32_t);
 }
 
-// TLAS memory = AS storage + header (with instance contributions) placed after it, inside the same NRI memory
+// TLAS memory = AS storage + header (with instance contributions) placed after it, inside the same OpenRHI memory
 static inline void GetAccelerationStructureMemoryDesc(DeviceMetal& device, AccelerationStructureType type, uint64_t size, uint32_t instanceNum, MemoryLocation memoryLocation, MemoryDesc& memoryDesc, uint64_t& headerOffset) {
     const MTL::SizeAndAlign accelerationStructure = device.GetNativeObject()->heapAccelerationStructureSizeAndAlign((NS::UInteger)size);
 
@@ -299,12 +299,12 @@ Result AccelerationStructureMetal::Bind(MemoryMetal& memory, uint64_t offset) {
     return Result::SUCCESS;
 }
 
-NRI_INLINE void AccelerationStructureMetal::GetMemoryDesc(MemoryLocation memoryLocation, MemoryDesc& memoryDesc) const {
+OPENRHI_INLINE void AccelerationStructureMetal::GetMemoryDesc(MemoryLocation memoryLocation, MemoryDesc& memoryDesc) const {
     memoryDesc = m_MemoryDesc;
     memoryDesc.type = (MemoryType)memoryLocation;
 }
 
-NRI_INLINE void AccelerationStructureMetal::SetDebugName(const char* name) {
+OPENRHI_INLINE void AccelerationStructureMetal::SetDebugName(const char* name) {
     NS::String* label = NS::String::alloc()->init(name, NS::UTF8StringEncoding);
 
     if (m_AccelerationStructure)

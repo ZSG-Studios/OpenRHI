@@ -2,18 +2,10 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct ShaderLoadDescMetal {
-    PipelineCacheMetal* cache = nullptr; // converted shaders are looked up and added
-    const VertexInputDesc* vertexInput = nullptr;
-    uint8_t* vertexAttributeSlots = nullptr; // converted vertex shaders: receives Metal attribute indices for "vertexInput->attributes"
-    MTL::Library** stageInLibrary = nullptr;
     uint32_t sampleMask = ALL;
-    Topology topology = Topology::MAX_NUM; // "MAX_NUM" - not a primitive pipeline
-    bool emulation = false;
-    bool dualSourceBlending = false;
-    bool failOnCacheMiss = false;
 };
 
 struct PipelineMetal final : public DebugNameBase {
@@ -44,21 +36,10 @@ struct PipelineMetal final : public DebugNameBase {
     MTL::Size GetThreadGroupSize() const;
     MTL::Size GetMeshThreadGroupSize() const;
     MTL::Size GetTaskThreadGroupSize() const;
-    bool IsConverted() const;
-#if NRI_ENABLE_METAL_SHADER_CONVERTER
-    bool IsGeometryEmulation() const;
-    bool IsTessellationEmulation() const;
-    const IRRuntimeGeometryPipelineConfig& GetGeometryConfig() const;
-    const IRRuntimeTessellationPipelineConfig& GetTessellationConfig() const;
-    IRRuntimePrimitiveType GetEmulationPrimitive() const;
-#endif
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     Result LoadFunction(const ShaderDesc& shader, MTL::Library*& library, MTL4::FunctionDescriptor*& function, const ShaderLoadDescMetal& loadDesc);
-#if NRI_ENABLE_METAL_SHADER_CONVERTER
-    Result ConvertShader(const ShaderDesc& shader, const ShaderLoadDescMetal& loadDesc, Vector<uint8_t>& storage, const uint8_t*& container);
-#endif
 
     DeviceMetal& m_Device;
     const PipelineLayoutMetal* m_Layout = nullptr;
@@ -80,14 +61,6 @@ private:
     DepthBiasDesc m_DepthBias = {};
     MTL::Size m_ThreadGroup = MTL::Size(1, 1, 1), m_MeshGroup = MTL::Size(1, 1, 1), m_TaskGroup = MTL::Size(1, 1, 1);
     uint32_t m_MeshPayloadSize = 0;
-    bool m_Converted = false;
-#if NRI_ENABLE_METAL_SHADER_CONVERTER
-    IRRuntimeGeometryPipelineConfig m_GeometryConfig = {};
-    IRRuntimeTessellationPipelineConfig m_TessellationConfig = {};
-    IRRuntimePrimitiveType m_EmulationPrimitive = IRRuntimePrimitiveTypeTriangle;
-    bool m_GeometryEmulation = false;
-    bool m_TessellationEmulation = false;
-#endif
 };
 
-} // namespace nri
+} // namespace openrhi

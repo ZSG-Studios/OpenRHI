@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct FenceD3D12 final : public DebugNameBase {
     inline FenceD3D12(DeviceD3D12& device)
@@ -25,12 +25,12 @@ struct FenceD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(m_Fence, name);
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(m_Fence, name);
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     uint64_t GetFenceValue() const;
@@ -44,4 +44,4 @@ private:
     HANDLE m_Event = 0;
 };
 
-} // namespace nri
+} // namespace openrhi

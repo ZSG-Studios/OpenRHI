@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct SwapChainVK final : public DisplayDescHelper, DebugNameBase {
     SwapChainVK(DeviceVK& device)
@@ -22,10 +22,10 @@ struct SwapChainVK final : public DisplayDescHelper, DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     inline Result GetDisplayDesc(DisplayDesc& displayDesc) {
@@ -54,4 +54,4 @@ private:
     SwapChainBits m_Flags = SwapChainBits::NONE;
 };
 
-} // namespace nri
+} // namespace openrhi

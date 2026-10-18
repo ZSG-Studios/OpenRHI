@@ -1,6 +1,6 @@
 // © 2021 NVIDIA Corporation
 
-NRI_INLINE Result CommandAllocatorVal::CreateCommandBuffer(CommandBuffer*& commandBuffer) {
+OPENRHI_INLINE Result CommandAllocatorVal::CreateCommandBuffer(CommandBuffer*& commandBuffer) {
     CommandBuffer* commandBufferImpl;
     const Result result = GetCoreInterfaceImpl().CreateCommandBuffer(*GetImpl(), commandBufferImpl);
 
@@ -11,6 +11,6 @@ NRI_INLINE Result CommandAllocatorVal::CreateCommandBuffer(CommandBuffer*& comma
     return result;
 }
 
-NRI_INLINE void CommandAllocatorVal::Reset() {
+OPENRHI_INLINE void CommandAllocatorVal::Reset() {
     GetCoreInterfaceImpl().ResetCommandAllocator(*GetImpl());
 }

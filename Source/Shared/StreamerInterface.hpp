@@ -63,7 +63,7 @@ Result StreamerImpl::Create(const StreamerDesc& desc) {
 }
 
 StreamerCopyBatch StreamerImpl::BeginCopyBatch() {
-#if NRI_STREAMER_THREAD_SAFE
+#if OPENRHI_STREAMER_THREAD_SAFE
     ExclusiveScope lock(m_Lock);
 #endif
 
@@ -86,7 +86,7 @@ StreamerCopyBatch StreamerImpl::BeginCopyBatch() {
 }
 
 uint32_t StreamerImpl::StreamConstantData(const void* data, uint32_t dataSize) {
-#if NRI_STREAMER_THREAD_SAFE
+#if OPENRHI_STREAMER_THREAD_SAFE
     ExclusiveScope lock(m_Lock);
 #endif
 
@@ -115,7 +115,7 @@ uint32_t StreamerImpl::StreamConstantData(const void* data, uint32_t dataSize) {
 }
 
 void* StreamerImpl::StreamHostData(const void* data, uint64_t dataSize, uint32_t placementAlignment) {
-#if NRI_STREAMER_THREAD_SAFE
+#if OPENRHI_STREAMER_THREAD_SAFE
     ExclusiveScope lock(m_Lock);
 #endif
 
@@ -150,7 +150,7 @@ void* StreamerImpl::StreamHostData(const void* data, uint64_t dataSize, uint32_t
 }
 
 BufferOffset StreamerImpl::StreamBufferData(const StreamBufferDataDesc& streamBufferDataDesc) {
-#if NRI_STREAMER_THREAD_SAFE
+#if OPENRHI_STREAMER_THREAD_SAFE
     ExclusiveScope lock(m_Lock);
 #endif
 
@@ -185,7 +185,7 @@ BufferOffset StreamerImpl::StreamBufferData(const StreamBufferDataDesc& streamBu
         // Gather requests with destinations
         if (streamBufferDataDesc.dstBuffer) {
             StreamerCopyBatchState& copyBatchState = m_CopyBatches[GetStreamerCopyBatchIndex(streamBufferDataDesc.copyBatch)];
-            NRI_CHECK(copyBatchState.active && copyBatchState.generation == GetStreamerCopyBatchGeneration(streamBufferDataDesc.copyBatch), "Invalid 'copyBatch'");
+            OPENRHI_CHECK(copyBatchState.active && copyBatchState.generation == GetStreamerCopyBatchGeneration(streamBufferDataDesc.copyBatch), "Invalid 'copyBatch'");
 
             BufferUpdateRequest& request = copyBatchState.bufferRequests.emplace_back();
             request = {};
@@ -201,7 +201,7 @@ BufferOffset StreamerImpl::StreamBufferData(const StreamBufferDataDesc& streamBu
 }
 
 BufferOffset StreamerImpl::StreamTextureData(const StreamTextureDataDesc& streamTextureDataDesc) {
-#if NRI_STREAMER_THREAD_SAFE
+#if OPENRHI_STREAMER_THREAD_SAFE
     ExclusiveScope lock(m_Lock);
 #endif
 
@@ -251,7 +251,7 @@ BufferOffset StreamerImpl::StreamTextureData(const StreamTextureDataDesc& stream
 
         // Gather request
         StreamerCopyBatchState& copyBatchState = m_CopyBatches[GetStreamerCopyBatchIndex(streamTextureDataDesc.copyBatch)];
-        NRI_CHECK(copyBatchState.active && copyBatchState.generation == GetStreamerCopyBatchGeneration(streamTextureDataDesc.copyBatch), "Invalid 'copyBatch'");
+        OPENRHI_CHECK(copyBatchState.active && copyBatchState.generation == GetStreamerCopyBatchGeneration(streamTextureDataDesc.copyBatch), "Invalid 'copyBatch'");
 
         TextureUpdateRequest& request = copyBatchState.textureRequests.emplace_back();
         request = {};
@@ -265,12 +265,12 @@ BufferOffset StreamerImpl::StreamTextureData(const StreamTextureDataDesc& stream
 }
 
 void StreamerImpl::CmdCopyStreamedData(CommandBuffer& commandBuffer, StreamerCopyBatch copyBatch) {
-#if NRI_STREAMER_THREAD_SAFE
+#if OPENRHI_STREAMER_THREAD_SAFE
     ExclusiveScope lock(m_Lock);
 #endif
 
     StreamerCopyBatchState& copyBatchState = m_CopyBatches[GetStreamerCopyBatchIndex(copyBatch)];
-    NRI_CHECK(copyBatchState.active && copyBatchState.generation == GetStreamerCopyBatchGeneration(copyBatch), "Invalid 'copyBatch'");
+    OPENRHI_CHECK(copyBatchState.active && copyBatchState.generation == GetStreamerCopyBatchGeneration(copyBatch), "Invalid 'copyBatch'");
 
     // TODO: dynamic buffer(s) is in the persistent state, including "COPY_SOURCE", so there is no need to do a barrier... right? :)
 
@@ -289,7 +289,7 @@ void StreamerImpl::CmdCopyStreamedData(CommandBuffer& commandBuffer, StreamerCop
 }
 
 void StreamerImpl::EndFrame() {
-#if NRI_STREAMER_THREAD_SAFE
+#if OPENRHI_STREAMER_THREAD_SAFE
     ExclusiveScope lock(m_Lock);
 #endif
 

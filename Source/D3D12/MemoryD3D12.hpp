@@ -35,16 +35,16 @@ Result MemoryD3D12::Create(const AllocateMemoryDesc& allocateMemoryDesc) {
         allocInfo.Alignment = allocateMemoryDesc.vma.alignment ? allocateMemoryDesc.vma.alignment : m_HeapDesc.Alignment;
 
         HRESULT hr = m_Device.GetVma()->AllocateMemory(&allocationDesc, &allocInfo, &m_VmaAllocation);
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "D3D12MA::AllocateMemory");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "D3D12MA::AllocateMemory");
     } else {
         HRESULT hr = m_Device->CreateHeap(&m_HeapDesc, IID_PPV_ARGS(&m_Heap));
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateHeap");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device::CreateHeap");
 
         D3D12_RESIDENCY_PRIORITY residencyPriority = (D3D12_RESIDENCY_PRIORITY)ConvertPriority(allocateMemoryDesc.priority);
         if (residencyPriority != 0) {
             ID3D12Pageable* obj = m_Heap.GetInterface();
             hr = m_Device->SetResidencyPriority(1, &obj, &residencyPriority);
-            NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device1::SetResidencyPriority");
+            OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device1::SetResidencyPriority");
         }
     }
 

@@ -116,18 +116,18 @@ constexpr std::array<FormatMetal, (size_t)Format::MAX_NUM> g_Formats = {{
     {MTL::PixelFormatInvalid, MTL::VertexFormatInvalid},                    // D24_UNORM_S8_UINT (unavailable on Apple GPUs)
     {MTL::PixelFormatDepth32Float_Stencil8, MTL::VertexFormatInvalid},      // D32_SFLOAT_S8_UINT
 }};
-NRI_VALIDATE_ARRAY_BY_FIELD(g_Formats, pixelFormat);
+OPENRHI_VALIDATE_ARRAY_BY_FIELD(g_Formats, pixelFormat);
 
-MTL::PixelFormat nri::GetPixelFormatMetal(Format format) {
+MTL::PixelFormat openrhi::GetPixelFormatMetal(Format format) {
     return g_Formats[(size_t)format].pixelFormat;
 }
 
-MTL::VertexFormat nri::GetVertexFormatMetal(Format format) {
+MTL::VertexFormat openrhi::GetVertexFormatMetal(Format format) {
     return g_Formats[(size_t)format].vertexFormat;
 }
 
 // Metal Feature Set Tables (May 21, 2026): "Texture capabilities by pixel format" and "Texture buffer pixel formats" for Apple7+
-nri::FormatSupportBits nri::GetFormatSupportMetal(MTL::Device& device, Format format) {
+openrhi::FormatSupportBits openrhi::GetFormatSupportMetal(MTL::Device& device, Format format) {
     const MTL::PixelFormat pixelFormat = GetPixelFormatMetal(format);
     const MTL::VertexFormat vertexFormat = GetVertexFormatMetal(format);
     const FormatProps& props = GetFormatProps(format);
@@ -199,11 +199,11 @@ nri::FormatSupportBits nri::GetFormatSupportMetal(MTL::Device& device, Format fo
     return support;
 }
 
-MTL::CompareFunction nri::GetCompareMetal(CompareOp compareOp) {
+MTL::CompareFunction openrhi::GetCompareMetal(CompareOp compareOp) {
     constexpr std::array<MTL::CompareFunction, (size_t)CompareOp::MAX_NUM> g_CompareFunctions = {
         MTL::CompareFunctionAlways, MTL::CompareFunctionAlways, MTL::CompareFunctionNever, MTL::CompareFunctionEqual, MTL::CompareFunctionNotEqual,
         MTL::CompareFunctionLess, MTL::CompareFunctionLessEqual, MTL::CompareFunctionGreater, MTL::CompareFunctionGreaterEqual};
-    NRI_VALIDATE_ARRAY(g_CompareFunctions);
+    OPENRHI_VALIDATE_ARRAY(g_CompareFunctions);
 
     return g_CompareFunctions[(uint32_t)compareOp];
 }

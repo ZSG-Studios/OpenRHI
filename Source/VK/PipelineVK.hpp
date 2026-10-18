@@ -9,7 +9,7 @@ static void AddInputAttachmentIndicesFromSpirv(Vector<uint32_t>& inputAttachment
     constexpr uint16_t SPIRV_OP_DECORATE = 71;
     constexpr uint32_t SPIRV_DECORATION_INPUT_ATTACHMENT_INDEX = 43;
 
-    // Remove this parser only if "GraphicsPipelineDesc" provides input attachment indices or NRI requires "attachmentIndex == bindingIndex"
+    // Remove this parser only if "GraphicsPipelineDesc" provides input attachment indices or OpenRHI requires "attachmentIndex == bindingIndex"
     if (!(shaderDesc.stage & StageBits::FRAGMENT_SHADER) || !shaderDesc.bytecode || shaderDesc.size < 5 * sizeof(uint32_t) || (shaderDesc.size & 3))
         return;
 
@@ -120,8 +120,8 @@ Result PipelineVK::Create(const GraphicsPipelineDesc& graphicsPipelineDesc) {
     m_BindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
     // Shaders
-    Scratch<VkPipelineShaderStageCreateInfo> stages = NRI_ALLOCATE_SCRATCH(m_Device, VkPipelineShaderStageCreateInfo, graphicsPipelineDesc.shaderNum);
-    Scratch<VkShaderModule> modules = NRI_ALLOCATE_SCRATCH(m_Device, VkShaderModule, graphicsPipelineDesc.shaderNum);
+    Scratch<VkPipelineShaderStageCreateInfo> stages = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkPipelineShaderStageCreateInfo, graphicsPipelineDesc.shaderNum);
+    Scratch<VkShaderModule> modules = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkShaderModule, graphicsPipelineDesc.shaderNum);
 
     for (uint32_t i = 0; i < graphicsPipelineDesc.shaderNum; i++) {
         const ShaderDesc& shaderDesc = graphicsPipelineDesc.shaders[i];
@@ -136,9 +136,9 @@ Result PipelineVK::Create(const GraphicsPipelineDesc& graphicsPipelineDesc) {
     const bool isDescriptorHeap = pipelineLayoutVK.IsDescriptorHeap();
     const uint32_t mappingMaxNum = pipelineLayoutVK.GetDescriptorHeapMappingMaxNum();
     const uint32_t mappingSamplerMaxNum = pipelineLayoutVK.GetDescriptorHeapSamplerMaxNum();
-    Scratch<VkDescriptorSetAndBindingMappingEXT> mappings = NRI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetAndBindingMappingEXT, mappingMaxNum * graphicsPipelineDesc.shaderNum);
-    Scratch<VkShaderDescriptorSetAndBindingMappingInfoEXT> mappingInfos = NRI_ALLOCATE_SCRATCH(m_Device, VkShaderDescriptorSetAndBindingMappingInfoEXT, isDescriptorHeap ? graphicsPipelineDesc.shaderNum : 0);
-    Scratch<DescriptorHeapMappingSamplerVK> mappingSamplers = NRI_ALLOCATE_SCRATCH(m_Device, DescriptorHeapMappingSamplerVK, mappingSamplerMaxNum * graphicsPipelineDesc.shaderNum);
+    Scratch<VkDescriptorSetAndBindingMappingEXT> mappings = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetAndBindingMappingEXT, mappingMaxNum * graphicsPipelineDesc.shaderNum);
+    Scratch<VkShaderDescriptorSetAndBindingMappingInfoEXT> mappingInfos = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkShaderDescriptorSetAndBindingMappingInfoEXT, isDescriptorHeap ? graphicsPipelineDesc.shaderNum : 0);
+    Scratch<DescriptorHeapMappingSamplerVK> mappingSamplers = OPENRHI_ALLOCATE_SCRATCH(m_Device, DescriptorHeapMappingSamplerVK, mappingSamplerMaxNum * graphicsPipelineDesc.shaderNum);
     if (isDescriptorHeap)
         SetupDescriptorHeapShaderStages(pipelineLayoutVK, stages, graphicsPipelineDesc.shaderNum, mappings, mappingInfos, mappingSamplers);
 
@@ -147,8 +147,8 @@ Result PipelineVK::Create(const GraphicsPipelineDesc& graphicsPipelineDesc) {
     uint32_t attributeNum = vi ? vi->attributeNum : 0u;
     uint32_t streamNum = vi ? vi->streamNum : 0u;
 
-    Scratch<VkVertexInputAttributeDescription> vertexAttributeDescs = NRI_ALLOCATE_SCRATCH(m_Device, VkVertexInputAttributeDescription, attributeNum);
-    Scratch<VkVertexInputBindingDescription> vertexBindingDescs = NRI_ALLOCATE_SCRATCH(m_Device, VkVertexInputBindingDescription, streamNum);
+    Scratch<VkVertexInputAttributeDescription> vertexAttributeDescs = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkVertexInputAttributeDescription, attributeNum);
+    Scratch<VkVertexInputBindingDescription> vertexBindingDescs = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkVertexInputBindingDescription, streamNum);
 
     VkPipelineVertexInputStateCreateInfo vertexInputState = {VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
     vertexInputState.pVertexAttributeDescriptions = vertexAttributeDescs;
@@ -282,7 +282,7 @@ Result PipelineVK::Create(const GraphicsPipelineDesc& graphicsPipelineDesc) {
 
     // Blending
     const OutputMergerDesc& om = graphicsPipelineDesc.outputMerger;
-    Scratch<VkPipelineColorBlendAttachmentState> scratch = NRI_ALLOCATE_SCRATCH(m_Device, VkPipelineColorBlendAttachmentState, om.colorNum);
+    Scratch<VkPipelineColorBlendAttachmentState> scratch = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkPipelineColorBlendAttachmentState, om.colorNum);
 
     VkPipelineColorBlendStateCreateInfo colorBlendState = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
     colorBlendState.logicOpEnable = om.logicOp != LogicOp::NONE ? VK_TRUE : VK_FALSE;
@@ -313,7 +313,7 @@ Result PipelineVK::Create(const GraphicsPipelineDesc& graphicsPipelineDesc) {
     // Formats
     const FormatProps& depthStencilFormatProps = GetFormatProps(om.depthStencilFormat);
 
-    Scratch<VkFormat> colorFormats = NRI_ALLOCATE_SCRATCH(m_Device, VkFormat, om.colorNum);
+    Scratch<VkFormat> colorFormats = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkFormat, om.colorNum);
     for (uint32_t i = 0; i < om.colorNum; i++)
         colorFormats[i] = GetVkFormat(om.colors[i].format);
 
@@ -448,7 +448,7 @@ Result PipelineVK::Create(const GraphicsPipelineDesc& graphicsPipelineDesc) {
 
     if (vkResult == VK_PIPELINE_COMPILE_REQUIRED)
         return Result::FAILURE;
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateGraphicsPipelines");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateGraphicsPipelines");
 
     return Result::SUCCESS;
 }
@@ -469,7 +469,7 @@ Result PipelineVK::Create(const ComputePipelineDesc& computePipelineDesc) {
     VkShaderModule module = VK_NULL_HANDLE;
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateShaderModule(m_Device, &moduleInfo, m_Device.GetVkAllocationCallbacks(), &module);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateShaderModule");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateShaderModule");
 
     VkPipelineShaderStageCreateInfo stage = {
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -484,9 +484,9 @@ Result PipelineVK::Create(const ComputePipelineDesc& computePipelineDesc) {
     const bool isDescriptorHeap = pipelineLayoutVK.IsDescriptorHeap();
     const uint32_t mappingMaxNum = pipelineLayoutVK.GetDescriptorHeapMappingMaxNum();
     const uint32_t mappingSamplerMaxNum = pipelineLayoutVK.GetDescriptorHeapSamplerMaxNum();
-    Scratch<VkDescriptorSetAndBindingMappingEXT> mappings = NRI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetAndBindingMappingEXT, mappingMaxNum);
+    Scratch<VkDescriptorSetAndBindingMappingEXT> mappings = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetAndBindingMappingEXT, mappingMaxNum);
     VkShaderDescriptorSetAndBindingMappingInfoEXT mappingInfo = {VK_STRUCTURE_TYPE_SHADER_DESCRIPTOR_SET_AND_BINDING_MAPPING_INFO_EXT};
-    Scratch<DescriptorHeapMappingSamplerVK> mappingSamplers = NRI_ALLOCATE_SCRATCH(m_Device, DescriptorHeapMappingSamplerVK, mappingSamplerMaxNum);
+    Scratch<DescriptorHeapMappingSamplerVK> mappingSamplers = OPENRHI_ALLOCATE_SCRATCH(m_Device, DescriptorHeapMappingSamplerVK, mappingSamplerMaxNum);
     if (isDescriptorHeap)
         SetupDescriptorHeapShaderStages(pipelineLayoutVK, &stage, 1, mappings, &mappingInfo, mappingSamplers);
 
@@ -525,7 +525,7 @@ Result PipelineVK::Create(const ComputePipelineDesc& computePipelineDesc) {
 
     if (vkResult == VK_PIPELINE_COMPILE_REQUIRED)
         return Result::FAILURE;
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateComputePipelines");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateComputePipelines");
 
     return Result::SUCCESS;
 }
@@ -536,8 +536,8 @@ Result PipelineVK::Create(const RayTracingPipelineDesc& rayTracingPipelineDesc) 
     const PipelineLayoutVK& pipelineLayoutVK = *(PipelineLayoutVK*)rayTracingPipelineDesc.pipelineLayout;
 
     const uint32_t stageNum = rayTracingPipelineDesc.shaderLibrary->shaderNum;
-    Scratch<VkPipelineShaderStageCreateInfo> stages = NRI_ALLOCATE_SCRATCH(m_Device, VkPipelineShaderStageCreateInfo, stageNum);
-    Scratch<VkShaderModule> modules = NRI_ALLOCATE_SCRATCH(m_Device, VkShaderModule, stageNum);
+    Scratch<VkPipelineShaderStageCreateInfo> stages = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkPipelineShaderStageCreateInfo, stageNum);
+    Scratch<VkShaderModule> modules = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkShaderModule, stageNum);
 
     for (uint32_t i = 0; i < stageNum; i++) {
         const ShaderDesc& shaderDesc = rayTracingPipelineDesc.shaderLibrary->shaders[i];
@@ -551,13 +551,13 @@ Result PipelineVK::Create(const RayTracingPipelineDesc& rayTracingPipelineDesc) 
     const bool isDescriptorHeap = pipelineLayoutVK.IsDescriptorHeap();
     const uint32_t mappingMaxNum = pipelineLayoutVK.GetDescriptorHeapMappingMaxNum();
     const uint32_t mappingSamplerMaxNum = pipelineLayoutVK.GetDescriptorHeapSamplerMaxNum();
-    Scratch<VkDescriptorSetAndBindingMappingEXT> mappings = NRI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetAndBindingMappingEXT, mappingMaxNum * stageNum);
-    Scratch<VkShaderDescriptorSetAndBindingMappingInfoEXT> mappingInfos = NRI_ALLOCATE_SCRATCH(m_Device, VkShaderDescriptorSetAndBindingMappingInfoEXT, isDescriptorHeap ? stageNum : 0);
-    Scratch<DescriptorHeapMappingSamplerVK> mappingSamplers = NRI_ALLOCATE_SCRATCH(m_Device, DescriptorHeapMappingSamplerVK, mappingSamplerMaxNum * stageNum);
+    Scratch<VkDescriptorSetAndBindingMappingEXT> mappings = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkDescriptorSetAndBindingMappingEXT, mappingMaxNum * stageNum);
+    Scratch<VkShaderDescriptorSetAndBindingMappingInfoEXT> mappingInfos = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkShaderDescriptorSetAndBindingMappingInfoEXT, isDescriptorHeap ? stageNum : 0);
+    Scratch<DescriptorHeapMappingSamplerVK> mappingSamplers = OPENRHI_ALLOCATE_SCRATCH(m_Device, DescriptorHeapMappingSamplerVK, mappingSamplerMaxNum * stageNum);
     if (isDescriptorHeap)
         SetupDescriptorHeapShaderStages(pipelineLayoutVK, stages, stageNum, mappings, mappingInfos, mappingSamplers);
 
-    Scratch<VkRayTracingShaderGroupCreateInfoKHR> groupArray = NRI_ALLOCATE_SCRATCH(m_Device, VkRayTracingShaderGroupCreateInfoKHR, rayTracingPipelineDesc.shaderGroupNum);
+    Scratch<VkRayTracingShaderGroupCreateInfoKHR> groupArray = OPENRHI_ALLOCATE_SCRATCH(m_Device, VkRayTracingShaderGroupCreateInfoKHR, rayTracingPipelineDesc.shaderGroupNum);
     for (uint32_t i = 0; i < rayTracingPipelineDesc.shaderGroupNum; i++) {
         const ShaderGroupDesc& srcGroup = rayTracingPipelineDesc.shaderGroups[i];
 
@@ -655,7 +655,7 @@ Result PipelineVK::Create(const RayTracingPipelineDesc& rayTracingPipelineDesc) 
 
     if (vkResult == VK_PIPELINE_COMPILE_REQUIRED)
         return Result::FAILURE;
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateRayTracingPipelinesKHR");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateRayTracingPipelinesKHR");
 
     return Result::SUCCESS;
 }
@@ -679,7 +679,7 @@ Result PipelineVK::SetupShaderStage(VkPipelineShaderStageCreateInfo& stage, cons
 
     const auto& vk = m_Device.GetDispatchTable();
     VkResult vkResult = vk.CreateShaderModule(m_Device, &moduleInfo, m_Device.GetVkAllocationCallbacks(), &module);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateShaderModule");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkCreateShaderModule");
 
     stage = {
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -694,25 +694,25 @@ Result PipelineVK::SetupShaderStage(VkPipelineShaderStageCreateInfo& stage, cons
     return Result::SUCCESS;
 }
 
-NRI_INLINE void PipelineVK::SetDebugName(const char* name) {
+OPENRHI_INLINE void PipelineVK::SetDebugName(const char* name) {
     m_Device.SetDebugNameToTrivialObject(VK_OBJECT_TYPE_PIPELINE, (uint64_t)m_Handle, name);
 }
 
-NRI_INLINE Result PipelineVK::WriteShaderGroupIdentifiers(uint32_t baseShaderGroupIndex, uint32_t shaderGroupNum, uint32_t dstStride, void* dst) const {
+OPENRHI_INLINE Result PipelineVK::WriteShaderGroupIdentifiers(uint32_t baseShaderGroupIndex, uint32_t shaderGroupNum, uint32_t dstStride, void* dst) const {
     const size_t identifierSize = m_Device.GetDesc().shaderStage.rayTracing.shaderGroupIdentifierSize;
     const size_t dataSize = (size_t)shaderGroupNum * identifierSize;
 
     const auto& vk = m_Device.GetDispatchTable();
     if (dstStride == identifierSize) {
         VkResult vkResult = vk.GetRayTracingShaderGroupHandlesKHR(m_Device, m_Handle, baseShaderGroupIndex, shaderGroupNum, dataSize, dst);
-        NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkGetRayTracingShaderGroupHandlesKHR");
+        OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkGetRayTracingShaderGroupHandlesKHR");
 
         return Result::SUCCESS;
     }
 
-    Scratch<uint8_t> identifiers = NRI_ALLOCATE_SCRATCH(m_Device, uint8_t, dataSize);
+    Scratch<uint8_t> identifiers = OPENRHI_ALLOCATE_SCRATCH(m_Device, uint8_t, dataSize);
     VkResult vkResult = vk.GetRayTracingShaderGroupHandlesKHR(m_Device, m_Handle, baseShaderGroupIndex, shaderGroupNum, dataSize, identifiers);
-    NRI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkGetRayTracingShaderGroupHandlesKHR");
+    OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkGetRayTracingShaderGroupHandlesKHR");
 
     for (uint32_t i = 0; i < shaderGroupNum; i++)
         memcpy((uint8_t*)dst + (size_t)i * dstStride, &identifiers[i * identifierSize], identifierSize);

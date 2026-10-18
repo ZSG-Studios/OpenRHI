@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct MemoryD3D12 final : public DebugNameBase {
     inline MemoryD3D12(DeviceD3D12& device)
@@ -44,8 +44,8 @@ struct MemoryD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE {
-        NRI_SET_D3D_DEBUG_OBJECT_NAME(m_Heap, name);
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE {
+        OPENRHI_SET_D3D_DEBUG_OBJECT_NAME(m_Heap, name);
         // TODO: m_VmaAllocation->SetName()?
     }
 
@@ -58,4 +58,4 @@ private:
     float m_Priority = 0.0f;
 };
 
-} // namespace nri
+} // namespace openrhi

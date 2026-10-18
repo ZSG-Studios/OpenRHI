@@ -4,7 +4,7 @@
 
 #include <atomic>
 
-namespace nri {
+namespace openrhi {
 
 struct FenceMetal final : public DebugNameBase {
     inline FenceMetal(DeviceMetal& device) : m_Device(device) {
@@ -33,7 +33,7 @@ struct FenceMetal final : public DebugNameBase {
     uint64_t GetValue() const;
     uint64_t NextSignalValue();
     Result Wait(uint64_t value);
-    void SetDebugName(const char* name) NRI_DEBUG_NAME_OVERRIDE;
+    void SetDebugName(const char* name) OPENRHI_DEBUG_NAME_OVERRIDE;
 
 private:
     DeviceMetal& m_Device;
@@ -42,4 +42,4 @@ private:
     bool m_IsSwapChainSemaphore = false;
 };
 
-} // namespace nri
+} // namespace openrhi

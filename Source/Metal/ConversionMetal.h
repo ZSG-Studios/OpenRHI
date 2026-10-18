@@ -2,11 +2,11 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 MTL::PixelFormat GetPixelFormatMetal(Format format);
 MTL::VertexFormat GetVertexFormatMetal(Format format);
 FormatSupportBits GetFormatSupportMetal(MTL::Device& device, Format format);
 MTL::CompareFunction GetCompareMetal(CompareOp compareOp);
 
-} // namespace nri
+} // namespace openrhi

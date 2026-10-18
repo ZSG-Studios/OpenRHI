@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 struct VideoSessionParametersD3D12 final : public DebugNameBase {
     inline VideoSessionParametersD3D12(DeviceD3D12& device)
@@ -42,11 +42,11 @@ struct VideoSessionParametersD3D12 final : public DebugNameBase {
     // DebugNameBase
     //================================================================================================================
 
-    void SetDebugName(const char*) NRI_DEBUG_NAME_OVERRIDE {
+    void SetDebugName(const char*) OPENRHI_DEBUG_NAME_OVERRIDE {
     }
 
     //================================================================================================================
-    // NRI
+    // OpenRHI
     //================================================================================================================
 
     Result Create(const VideoSessionParametersDesc& videoSessionParametersDesc);
@@ -71,4 +71,4 @@ private:
     const VideoAV1SessionParametersDesc* m_AV1Parameters = nullptr;
 };
 
-} // namespace nri
+} // namespace openrhi

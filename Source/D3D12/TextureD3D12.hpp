@@ -16,7 +16,7 @@ Result TextureD3D12::Create(const TextureD3D12Desc& textureD3D12Desc) {
 }
 
 Result TextureD3D12::Allocate(MemoryLocation memoryLocation, float priority, bool committed) {
-    NRI_CHECK(!m_Texture, "Unexpected");
+    OPENRHI_CHECK(!m_Texture, "Unexpected");
 
     D3D12_CLEAR_VALUE clearValue = {GetDxgiFormat(m_Desc.format).typed};
 
@@ -55,15 +55,15 @@ Result TextureD3D12::Allocate(MemoryLocation memoryLocation, float priority, boo
 
     bool isRenderableSurface = desc1.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     if (m_Device.GetVersion() >= 10 && m_Device.GetDesc().features.enhancedBarriers) {
         HRESULT hr = m_Device.GetVma()->CreateResource3(&allocationDesc, &desc1, D3D12_BARRIER_LAYOUT_COMMON, isRenderableSurface ? &clearValue : nullptr, NO_CASTABLE_FORMATS, &m_VmaAllocation, IID_PPV_ARGS(&m_Texture));
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "D3D12MA::CreateResource3");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "D3D12MA::CreateResource3");
     } else
 #endif
     {
         HRESULT hr = m_Device.GetVma()->CreateResource2(&allocationDesc, &desc1, D3D12_RESOURCE_STATE_COMMON, isRenderableSurface ? &clearValue : nullptr, &m_VmaAllocation, IID_PPV_ARGS(&m_Texture));
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "D3D12MA::CreateResource");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "D3D12MA::CreateResource");
     }
 
     // Priority
@@ -71,14 +71,14 @@ Result TextureD3D12::Allocate(MemoryLocation memoryLocation, float priority, boo
     if (residencyPriority != 0 && committed) {
         ID3D12Pageable* obj = m_Texture.GetInterface();
         HRESULT hr = m_Device->SetResidencyPriority(1, &obj, &residencyPriority);
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device1::SetResidencyPriority");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device1::SetResidencyPriority");
     }
 
     return Result::SUCCESS;
 }
 
 Result TextureD3D12::BindMemory(const MemoryD3D12& memory, uint64_t offset) {
-    NRI_CHECK(!m_Texture, "Unexpected");
+    OPENRHI_CHECK(!m_Texture, "Unexpected");
 
     D3D12_CLEAR_VALUE clearValue = {GetDxgiFormat(m_Desc.format).typed};
 
@@ -107,16 +107,16 @@ Result TextureD3D12::BindMemory(const MemoryD3D12& memory, uint64_t offset) {
     bool isCommitted = memory.IsDummy();
     bool isRenderableSurface = desc1.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
-#if NRI_ENABLE_AGILITY_SDK_SUPPORT
+#if OPENRHI_ENABLE_AGILITY_SDK_SUPPORT
     const D3D12_BARRIER_LAYOUT initialLayout = D3D12_BARRIER_LAYOUT_COMMON;
 
     if (m_Device.GetVersion() >= 10 && m_Device.GetDesc().features.enhancedBarriers) {
         if (isCommitted) {
             HRESULT hr = m_Device->CreateCommittedResource3(&heapDesc.Properties, heapFlagsFixed, &desc1, initialLayout, isRenderableSurface ? &clearValue : nullptr, nullptr, NO_CASTABLE_FORMATS, IID_PPV_ARGS(&m_Texture));
-            NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device10::CreateCommittedResource3");
+            OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device10::CreateCommittedResource3");
         } else {
             HRESULT hr = m_Device->CreatePlacedResource2(memory, offset, &desc1, initialLayout, isRenderableSurface ? &clearValue : nullptr, NO_CASTABLE_FORMATS, IID_PPV_ARGS(&m_Texture));
-            NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device10::CreatePlacedResource2");
+            OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device10::CreatePlacedResource2");
         }
     } else
 #endif
@@ -126,10 +126,10 @@ Result TextureD3D12::BindMemory(const MemoryD3D12& memory, uint64_t offset) {
 
         if (isCommitted) {
             HRESULT hr = m_Device->CreateCommittedResource2(&heapDesc.Properties, heapFlagsFixed, &desc1, initialState, isRenderableSurface ? &clearValue : nullptr, nullptr, IID_PPV_ARGS(&m_Texture));
-            NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device8::CreateCommittedResource2");
+            OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device8::CreateCommittedResource2");
         } else {
             HRESULT hr = m_Device->CreatePlacedResource1(memory, offset, &desc1, initialState, isRenderableSurface ? &clearValue : nullptr, IID_PPV_ARGS(&m_Texture));
-            NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device8::CreatePlacedResource1");
+            OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device8::CreatePlacedResource1");
         }
     }
 
@@ -138,7 +138,7 @@ Result TextureD3D12::BindMemory(const MemoryD3D12& memory, uint64_t offset) {
     if (residencyPriority != 0 && isCommitted) {
         ID3D12Pageable* obj = m_Texture.GetInterface();
         HRESULT hr = m_Device->SetResidencyPriority(1, &obj, &residencyPriority);
-        NRI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device1::SetResidencyPriority");
+        OPENRHI_RETURN_ON_BAD_HRESULT(&m_Device, hr, "ID3D12Device1::SetResidencyPriority");
     }
 
     return Result::SUCCESS;

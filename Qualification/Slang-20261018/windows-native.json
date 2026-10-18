@@ -1,0 +1,179 @@
+{
+  "library": {
+    "name": "OpenRHI.dll",
+    "sha256": "2b7ada06b6059e12cbf56e364f601e7fc32644cbfc6b01c7e5b5a67929a428c5"
+  },
+  "shaders": [
+    {
+      "name": "DescriptorCompute",
+      "binary": "DescriptorCompute.dxil",
+      "sha256": "f1cb4a4f695c5813d48e3df4fd08ae83d51db0d343f74735c2f4441d56715167",
+      "reflection_sha256": "c527c8a7cdcdefe2086ff31770df0762533fe71e86ef1e2693699d0019df7d51",
+      "entries": [
+        {
+          "name": "descriptorMain",
+          "stage": "compute",
+          "threads": [
+            64,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "IndirectDraw.vs",
+      "binary": "IndirectDraw.vs.dxil",
+      "sha256": "35d249b99c6c48cf8f95cba66b7e1c23237464c270ae0549e1556b66ceff9d46",
+      "reflection_sha256": "b834d6da8ef7009b2db6e5a76543da81181e7976527f6341b1856b11f6290e2e",
+      "entries": [
+        {
+          "name": "vsMain",
+          "stage": "vertex",
+          "threads": null
+        }
+      ]
+    },
+    {
+      "name": "IndirectDraw.ps",
+      "binary": "IndirectDraw.ps.dxil",
+      "sha256": "c4495f505f99090e9789865e564b80379bc41fc77389394bf6e807f94d79829f",
+      "reflection_sha256": "f79b7e764743100fe6732e3cd6ea089e1cf5cca9c9d4f2c2571f5d980bd43ea0",
+      "entries": [
+        {
+          "name": "psMain",
+          "stage": "fragment",
+          "threads": null
+        }
+      ]
+    },
+    {
+      "name": "MeshDraw",
+      "binary": "MeshDraw.dxil",
+      "sha256": "d30539557d0c482d4da576ef4ecca17fdf6cf658c7c44c85a0a0b329c6b37613",
+      "reflection_sha256": "d64e92a5345f5fd3fa486fb7af9575c448444bf11d1dfde6bbb5ef2db9091c04",
+      "entries": [
+        {
+          "name": "meshMain",
+          "stage": "mesh",
+          "threads": [
+            1,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TaskDraw",
+      "binary": "TaskDraw.dxil",
+      "sha256": "9ca9f941e7d101be26fa3417fa6d18efc73e28234cd83290faca63fe3f83ba02",
+      "reflection_sha256": "cfaa14247ac1323656625a5f7df609d8118144a3f8ddb96c00e9a7758ef8e97c",
+      "entries": [
+        {
+          "name": "taskMain",
+          "stage": "amplification",
+          "threads": [
+            1,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Imgui_vs",
+      "binary": "Imgui_vs.dxil",
+      "sha256": "f67ddb38acfd8a7f7861c5c564e0e8848fd194d5ccd79c726a901a83105c4074",
+      "reflection_sha256": "9bdc3b73abfc4f10a1bdb760e705d5ee1b453d6885baea0ced6c5afc6b166d17",
+      "entries": [
+        {
+          "name": "ImguiVS",
+          "stage": "vertex",
+          "threads": null
+        }
+      ]
+    },
+    {
+      "name": "Imgui_fs",
+      "binary": "Imgui_fs.dxil",
+      "sha256": "37f235b08e858c931653c2c599eb36ad52f7ff96a5123af208d16ca8b9881816",
+      "reflection_sha256": "41c25dfec75fd7a260c7c78137e7e775671913ba593feaaba312b65577e7f834",
+      "entries": [
+        {
+          "name": "ImguiFS",
+          "stage": "fragment",
+          "threads": null
+        }
+      ]
+    },
+    {
+      "name": "NIS_0_0_0",
+      "binary": "NIS_0_0_0.dxil",
+      "sha256": "4ebbbc392d2e05890d08bb7d269b29b406718a5b614df0d3aae64eb7da259873",
+      "reflection_sha256": "58c59e66982cade8263510b3a3f3747e62fa7c8c4d925bf035ddeee5e19aebae",
+      "entries": [
+        {
+          "name": "NisMain",
+          "stage": "compute",
+          "threads": [
+            256,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NIS_0_1_0",
+      "binary": "NIS_0_1_0.dxil",
+      "sha256": "c14c28c2abbc4e3d67ed46d6535fe8647bce643d56b3cd3f1287d4c05cdcf0ac",
+      "reflection_sha256": "58c59e66982cade8263510b3a3f3747e62fa7c8c4d925bf035ddeee5e19aebae",
+      "entries": [
+        {
+          "name": "NisMain",
+          "stage": "compute",
+          "threads": [
+            256,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NIS_1_0_0",
+      "binary": "NIS_1_0_0.dxil",
+      "sha256": "eef4fd6e6ec6da955a07a465c9cfc5c2a93a8fbac08d62c2ce9fbe7f644163c6",
+      "reflection_sha256": "58c59e66982cade8263510b3a3f3747e62fa7c8c4d925bf035ddeee5e19aebae",
+      "entries": [
+        {
+          "name": "NisMain",
+          "stage": "compute",
+          "threads": [
+            256,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "NIS_1_1_0",
+      "binary": "NIS_1_1_0.dxil",
+      "sha256": "80eef07a35790485e5fa1eb70b1b8b02c7a83afbeb9efc62a08625b965ce0d5f",
+      "reflection_sha256": "58c59e66982cade8263510b3a3f3747e62fa7c8c4d925bf035ddeee5e19aebae",
+      "entries": [
+        {
+          "name": "NisMain",
+          "stage": "compute",
+          "threads": [
+            256,
+            1,
+            1
+          ]
+        }
+      ]
+    }
+  ]
+}

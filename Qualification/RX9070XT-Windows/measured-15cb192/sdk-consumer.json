@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "commit": "15cb19275bab0b05d49bdd752eb2a6b7c32a0e0c",
+  "source_dirty": false,
+  "binary_sha256": "109e0a4344ba9bee69b58d67db44c7905e8f27c39051c3f75a500d6bc918dd53",
+  "library_sha256": "55c229f41bfd000983cea3a9e1ffe74df20fbd60af3790ce9005f5c35cf33a1d",
+  "workload_sha256": "80fe6cf775fe56b1d2d885d9171b47e5b1df11ec5db93823f4cd94bc762d0dfd",
+  "shader_sha256": "b638ff8f79b1c48552d62a59542715de30499a15a94ba8e4c0b8b4d5797e9a0f",
+  "toolchain": "MSVC 19.51.36260.0; Windows SDK 10.0.28000.0; Agility SDK 1.619.6; x64 Release",
+  "build_configuration": "Release",
+  "host": {
+    "system": "Windows",
+    "release": "11",
+    "version": "10.0.26300",
+    "machine": "AMD64",
+    "native": {
+      "bios": {
+        "SMBIOSBIOSVersion": "4.43"
+      },
+      "gpu": [
+        {
+          "Name": "AMD Radeon(TM) Graphics",
+          "PNPDeviceID": "PCI\\VEN_1002&DEV_164E&SUBSYS_364E1849&REV_CB\\4&16012499&0&0041",
+          "DriverVersion": "32.0.21045.5002"
+        },
+        {
+          "Name": "AMD Radeon RX 9070 XT",
+          "PNPDeviceID": "PCI\\VEN_1002&DEV_7550&SUBSYS_061A1043&REV_C0\\6&E5247F0&0&00000009",
+          "DriverVersion": "32.0.32015.2008"
+        }
+      ],
+      "os": {
+        "Caption": "Microsoft Windows 11 Pro for Workstations",
+        "BuildNumber": "26300"
+      }
+    },
+    "power_plan": "Power Scheme GUID: e9a42b02-d5df-448d-aa00-03f14749eb61  (Ultimate Performance)"
+  },
+  "power_state": "Active Windows power plan captured in host metadata; current desktop session; clocks and GPU power limit unchanged",
+  "language": "C11",
+  "sdk": "_OpenRHI_SDK",
+  "exit_code": 0,
+  "packaged_library_sha256": "55c229f41bfd000983cea3a9e1ffe74df20fbd60af3790ce9005f5c35cf33a1d",
+  "api": [
+    "openrhiCreateDevice",
+    "openrhiGetDeviceProfile",
+    "openrhiDestroyDevice"
+  ]
+}

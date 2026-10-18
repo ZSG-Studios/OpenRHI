@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace nri {
+namespace openrhi {
 
 enum class DescriptorTypeExt : uint8_t {
     // Must match "DescriptorType"
@@ -95,4 +95,4 @@ private:
     uint64_t m_RootDescriptorOffsetMax = 0;
 };
 
-} // namespace nri
+} // namespace openrhi
