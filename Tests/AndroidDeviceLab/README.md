@@ -6,7 +6,7 @@ The app displays results and writes `files/results.txt`, `files/native.log`, and
 
 ## Build
 
-Use CMake 3.30+, Ninja, Python, a JDK, Android SDK platform 37.0/build-tools 37.0.0, NDK 30.0.16248370, and Slang 2026.20. `Build.ps1` accepts SDK/dependency paths and uses the normal build's pinned Slang distribution. Supply unchanged Vulkan-Headers v1.4.365, VulkanMemoryAllocator commit `3aa921224c154a0d2c43912bc88e1c42ce1f7607`, and ANF commit `a144fbab47ad586adf64c5a1574be73064550f1e`. The checked-in ANF compatibility probe is reused with the corresponding public SDK headers. Khronos Android validation binaries 1.4.363.0 are packaged along with dependency licenses. Vendor sources remain unmodified.
+Use CMake 3.30+, Ninja, Python, a JDK, Android SDK platform 37.0/build-tools 37.0.0, NDK 30.0.16248370, and Slang 2026.20. `Build.ps1` accepts SDK/dependency paths and uses the normal build's pinned Slang distribution. Supply unchanged Vulkan-Headers v1.4.365, VulkanMemoryAllocator commit `bfb2ca99e1e7e9684dc06546b552ee3eff4b10aa`, and ANF commit `a144fbab47ad586adf64c5a1574be73064550f1e`. The checked-in ANF compatibility probe is reused with the corresponding public SDK headers. Khronos Android validation binaries 1.4.363.0 are packaged along with dependency licenses. Vendor sources remain unmodified.
 
 ```powershell
 ./Tests/AndroidDeviceLab/Build.ps1 -Configuration Debug -AnfSdkRoot C:/SDKs/anf -VulkanHeaders C:/SDKs/Vulkan-Headers -VmaRoot C:/SDKs/VulkanMemoryAllocator -ValidationLayer C:/SDKs/validation/arm64-v8a/libVkLayer_khronos_validation.so
@@ -14,6 +14,17 @@ Use CMake 3.30+, Ninja, Python, a JDK, Android SDK platform 37.0/build-tools 37.
 ```
 
 Supply the pinned dependencies explicitly after a clean checkout and run the normal deploy step to acquire Slang. Replace the example `C:/SDKs` paths with your SDK locations. Generated APKs, native builds, and the development signing key stay under `_Tmp/android-native-lab`. Both configurations use a debuggable application manifest for the device lab. This development certificate is local to the lab build.
+
+## Upstream regression executables
+
+Configure the root OpenRHI CMake project for Android ARM64 with `OPENRHI_BUILD_TESTS=ON`. `RunUpstreamRegression.ps1` deploys its native test executables, shaders, optional ANF runtime and dependency licenses to a device test directory, then runs C/C++ format checks, texture-view contracts, device policies, native smoke tests, compressed texture readback, a Vulkan 1.3 instance-cap test, descriptor compute and indirect rendering. The test-only capped loader stays in a separate directory and is preloaded only for the capped invocation.
+
+```powershell
+./Tests/AndroidDeviceLab/RunUpstreamRegression.ps1 -Configuration Debug -BuildDirectory _Build/upstream-android/Debug -BinaryDirectory _Bin/upstream-android/Debug
+./Tests/AndroidDeviceLab/RunUpstreamRegression.ps1 -Configuration Release -BuildDirectory _Build/upstream-android/Release -BinaryDirectory _Bin/upstream-android/Release
+```
+
+Use `-DeviceSerial` when multiple devices are connected. Generated receipts are retained under `_Tmp/upstream-device/`.
 
 ## Run and collect
 

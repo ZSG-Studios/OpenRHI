@@ -257,6 +257,11 @@ Result SwapChainVK::Create(const SwapChainDesc& swapChainDesc) {
     VkSurfaceTransformFlagBitsKHR preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     VkImageUsageFlags swapchainImageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    VkSwapchainPresentScalingCreateInfoKHR scalingInfo = {VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_SCALING_CREATE_INFO_KHR};
+    scalingInfo.scalingBehavior = swapChainDesc.scaling == Scaling::STRETCH ? VK_PRESENT_SCALING_STRETCH_BIT_KHR : VK_PRESENT_SCALING_ONE_TO_ONE_BIT_KHR;
+    scalingInfo.presentGravityX = GetGravity(swapChainDesc.gravityX);
+    scalingInfo.presentGravityY = GetGravity(swapChainDesc.gravityY);
+
     {
         VkPhysicalDeviceSurfaceInfo2KHR surfaceInfo = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR};
         surfaceInfo.surface = m_Surface;
@@ -279,15 +284,20 @@ Result SwapChainVK::Create(const SwapChainDesc& swapChainDesc) {
         VkResult vkResult = vk.GetPhysicalDeviceSurfaceCapabilities2KHR(m_Device, &surfaceInfo, &surfaceCaps2);
         OPENRHI_RETURN_ON_BAD_VKRESULT(&m_Device, vkResult, "vkGetPhysicalDeviceSurfaceCapabilities2KHR");
 
+        // Apply the requested scaling and gravity when supported for this present mode
+        isScalingSupported = (surfacePresentScalingCaps.supportedPresentScaling & scalingInfo.scalingBehavior) != 0
+            && (surfacePresentScalingCaps.supportedPresentGravityX & scalingInfo.presentGravityX) != 0
+            && (surfacePresentScalingCaps.supportedPresentGravityY & scalingInfo.presentGravityY) != 0;
+
         // Caps
         const VkSurfaceCapabilitiesKHR& surfaceCaps = surfaceCaps2.surfaceCapabilities;
-        bool isWidthValid = swapChainDesc.width >= surfaceCaps.minImageExtent.width && swapChainDesc.width <= surfaceCaps.maxImageExtent.width;
-        OPENRHI_RETURN_ON_FAILURE(&m_Device, isWidthValid, Result::INVALID_ARGUMENT, "swapChainDesc.width is out of [%u, %u] range", surfaceCaps.minImageExtent.width,
-            surfaceCaps.maxImageExtent.width);
+        const VkExtent2D& minImageExtent = isScalingSupported ? surfacePresentScalingCaps.minScaledImageExtent : surfaceCaps.minImageExtent;
+        const VkExtent2D& maxImageExtent = isScalingSupported ? surfacePresentScalingCaps.maxScaledImageExtent : surfaceCaps.maxImageExtent;
+        bool isWidthValid = swapChainDesc.width >= minImageExtent.width && swapChainDesc.width <= maxImageExtent.width;
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, isWidthValid, Result::INVALID_ARGUMENT, "swapChainDesc.width is out of [%u, %u] range", minImageExtent.width, maxImageExtent.width);
 
-        bool isHeightValid = swapChainDesc.height >= surfaceCaps.minImageExtent.height && swapChainDesc.height <= surfaceCaps.maxImageExtent.height;
-        OPENRHI_RETURN_ON_FAILURE(&m_Device, isHeightValid, Result::INVALID_ARGUMENT, "swapChainDesc.height is out of [%u, %u] range", surfaceCaps.minImageExtent.height,
-            surfaceCaps.maxImageExtent.height);
+        bool isHeightValid = swapChainDesc.height >= minImageExtent.height && swapChainDesc.height <= maxImageExtent.height;
+        OPENRHI_RETURN_ON_FAILURE(&m_Device, isHeightValid, Result::INVALID_ARGUMENT, "swapChainDesc.height is out of [%u, %u] range", minImageExtent.height, maxImageExtent.height);
 
         // Silently clamp "textureNum" to the supported range
         if (textureNum < surfaceCaps.minImageCount)
@@ -312,10 +322,6 @@ Result SwapChainVK::Create(const SwapChainDesc& swapChainDesc) {
 
         // VK guarantees only COLOR_ATTACHMENT usage for swap chain images; transfer usages are optional
         swapchainImageUsageFlags |= surfaceCaps.supportedUsageFlags & (VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-
-        // TODO: that's the minimal check to detect scaling support
-        if (surfacePresentScalingCaps.supportedPresentScaling != 0 && surfacePresentScalingCaps.supportedPresentGravityX != 0 && surfacePresentScalingCaps.supportedPresentGravityY != 0)
-            isScalingSupported = true;
     }
 
     { // Swap chain
@@ -336,13 +342,8 @@ Result SwapChainVK::Create(const SwapChainDesc& swapChainDesc) {
         swapchainInfo.presentMode = presentMode;
         PNEXTCHAIN_DECLARE(swapchainInfo.pNext);
 
-        VkSwapchainPresentScalingCreateInfoKHR scalingInfo = {VK_STRUCTURE_TYPE_SWAPCHAIN_PRESENT_SCALING_CREATE_INFO_KHR};
-        if (isScalingSupported) {
-            scalingInfo.scalingBehavior = swapChainDesc.scaling == Scaling::STRETCH ? VK_PRESENT_SCALING_STRETCH_BIT_KHR : VK_PRESENT_SCALING_ONE_TO_ONE_BIT_KHR;
-            scalingInfo.presentGravityX = GetGravity(swapChainDesc.gravityX);
-            scalingInfo.presentGravityY = GetGravity(swapChainDesc.gravityY);
+        if (isScalingSupported)
             PNEXTCHAIN_APPEND_STRUCT(scalingInfo);
-        }
 
         // Mutable formats
         VkFormat mutableFormats[2];

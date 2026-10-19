@@ -19,6 +19,10 @@ const char* openrhi::GetDescriptorTypeName(DescriptorType descriptorType) {
     return g_descriptorTypeNames[(uint32_t)descriptorType];
 }
 
+static inline const Buffer* GetGeometryBufferImpl(const Buffer* buffer) {
+    return buffer == HAS_BUFFER ? buffer : OPENRHI_GET_IMPL(Buffer, buffer);
+}
+
 void openrhi::ConvertBottomLevelGeometries(const BottomLevelGeometryDesc* geometries, uint32_t geometryNum, BottomLevelGeometryDesc*& outGeometries, BottomLevelTrianglesMicromapDesc*& outMicromaps) {
     for (uint32_t i = 0; i < geometryNum; i++) {
         const BottomLevelGeometryDesc& src = geometries[i];
@@ -27,18 +31,18 @@ void openrhi::ConvertBottomLevelGeometries(const BottomLevelGeometryDesc* geomet
         dst = src;
 
         if (src.type == BottomLevelGeometryType::TRIANGLES) {
-            dst.triangles.vertexBuffer = OPENRHI_GET_IMPL(Buffer, src.triangles.vertexBuffer);
-            dst.triangles.indexBuffer = OPENRHI_GET_IMPL(Buffer, src.triangles.indexBuffer);
-            dst.triangles.transformBuffer = OPENRHI_GET_IMPL(Buffer, src.triangles.transformBuffer);
+            dst.triangles.vertexBuffer = GetGeometryBufferImpl(src.triangles.vertexBuffer);
+            dst.triangles.indexBuffer = GetGeometryBufferImpl(src.triangles.indexBuffer);
+            dst.triangles.transformBuffer = GetGeometryBufferImpl(src.triangles.transformBuffer);
 
             if (src.triangles.micromap) {
                 dst.triangles.micromap = outMicromaps++;
 
                 *dst.triangles.micromap = *src.triangles.micromap;
                 dst.triangles.micromap->micromap = OPENRHI_GET_IMPL(Micromap, src.triangles.micromap->micromap);
-                dst.triangles.micromap->indexBuffer = OPENRHI_GET_IMPL(Buffer, src.triangles.micromap->indexBuffer);
+                dst.triangles.micromap->indexBuffer = GetGeometryBufferImpl(src.triangles.micromap->indexBuffer);
             }
         } else
-            dst.aabbs.buffer = OPENRHI_GET_IMPL(Buffer, src.aabbs.buffer);
+            dst.aabbs.buffer = GetGeometryBufferImpl(src.aabbs.buffer);
     }
 }

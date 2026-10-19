@@ -7,9 +7,15 @@ string(CONCAT wrong_brand "OPEN" "RHI[A-Za-z]")
 if(exports MATCHES "openrhiCreateDeviceFromVKDevice|openrhiCreateDeviceFromMetalDevice|${old_prefix}|${wrong_brand}")
     message(FATAL_ERROR "Unexpected platform or legacy native export")
 endif()
-if(NOT exports MATCHES "openrhiCreateDeviceFromD3D12Device" OR NOT exports MATCHES "openrhiGetDeviceProfile"
+if(NOT exports MATCHES "openrhiGetDeviceProfile"
     OR NOT exports MATCHES "openrhiConvertOpenRHIFormatToDXGI" OR NOT exports MATCHES "openrhiConvertOpenRHIFormatToVK")
     message(FATAL_ERROR "Required OpenRHI export missing")
+endif()
+# FIXED BY AI: Match native-wrapper export checks to the configured backend
+if(D3D12 AND NOT exports MATCHES "openrhiCreateDeviceFromD3D12Device")
+    message(FATAL_ERROR "Required D3D12 wrapper export missing")
+elseif(NOT D3D12 AND exports MATCHES "openrhiCreateDeviceFromD3D12Device")
+    message(FATAL_ERROR "Unexpected D3D12 wrapper export in a backend-disabled build")
 endif()
 execute_process(COMMAND "${DUMPBIN}" /dependents "${LIBRARY}" OUTPUT_VARIABLE dependencies RESULT_VARIABLE result)
 string(TOLOWER "${dependencies}" dependencies)

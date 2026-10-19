@@ -43,6 +43,7 @@ Explicit adapter selection stays on the requested device. Automatic selection ev
 The first measurement target is the AMD RX 9070 XT. The hardware matrix also includes NVIDIA Blackwell, Intel Xe2/Xe3, Apple M/A-series, Qualcomm Adreno, Arm Mali, and Samsung Xclipse. Exact per-device and driver receipts establish qualification.
 
 - [API migration](Docs/MIGRATION.md)
+- [Upstream integration checklist](Docs/UPSTREAM.md)
 - [Qualification gates and measurement tools](Docs/QUALIFICATION.md)
 - [Hardware targets and identity provenance](Profiles/targets.json)
 - [CI builds](https://github.com/ZSG-Studios/OpenRHI/actions/workflows/build.yml)

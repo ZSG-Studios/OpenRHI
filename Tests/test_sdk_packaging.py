@@ -84,12 +84,12 @@ def run_linux(root, output, bash, optional):
     fixture, script = prepare_fixture(root, output, "Linux")
     names = ["libOpenRHI.so", "ThirdPartyLicenses/vendor/LICENSE.txt"]
     if optional:
-        names.extend(("libnvidia-ngx-dlss.so.310.9.1", "libnvidia-ngx-dlssd.so.310.9.1", "libanf.so",
+        names.extend(("libnvidia-ngx-dlss.so.310.9.16", "libnvidia-ngx-dlssd.so.310.9.16", "libanf.so",
                       "ThirdPartyLicenses/anf/LICENSE.txt", "ThirdPartyLicenses/anf/LICENSE-BSD-3-Clause.txt"))
     for name in names:
         write_file(fixture / "_Bin" / name, name.encode())
     if optional and os.name != "nt":
-        (fixture / "_Bin/libnvidia-ngx-dlss.so").symlink_to("libnvidia-ngx-dlss.so.310.9.1")
+        (fixture / "_Bin/libnvidia-ngx-dlss.so").symlink_to("libnvidia-ngx-dlss.so.310.9.16")
         names.append("libnvidia-ngx-dlss.so")
     result = subprocess.run([bash, script.as_posix()], cwd=output,
                             capture_output=True, text=True)

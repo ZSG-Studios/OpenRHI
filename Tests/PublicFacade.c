@@ -13,6 +13,7 @@
 
 _Static_assert(OpenRhiMember(UpscalerType, ANF) == 8, "Upscaler values changed");
 _Static_assert(OpenRhiMember(UpscalerResourceRole, MAX_NUM) == 4, "Update Vulkan resource requirements arrays");
+_Static_assert(sizeof(((OpenRhiTextureViewDesc*)0)->layout) == sizeof(OpenRhiLayout), "Texture view layout must retain the C facade type");
 
 _Static_assert(OpenRhiMember(GraphicsAPI, NONE) == (1 << 0), "NONE bit changed");
 _Static_assert(OpenRhiMember(GraphicsAPI, D3D12) == (1 << 2), "D3D12 bit changed");

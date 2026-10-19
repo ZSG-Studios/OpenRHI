@@ -382,8 +382,6 @@ HelperDeviceMemoryAllocator::MemoryHeap::MemoryHeap(MemoryType memoryType, const
     , bufferOffsets(stdAllocator)
     , textures(stdAllocator)
     , textureOffsets(stdAllocator)
-    , size(0)
-    , alignment(0)
     , type(memoryType) {
 }
 

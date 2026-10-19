@@ -28,6 +28,14 @@ Pipeline and shader caches belong to the application. Invalidate them across the
 
 Format conversion entrypoints use `openrhiConvertOpenRHIFormatToDXGI` and `openrhiConvertOpenRHIFormatToVK`, paired with `openrhiConvertDXGIFormatToOpenRHI` and `openrhiConvertVKFormatToOpenRHI`. Rebuild against these spellings when updating an early fork checkout.
 
+## Texture-view layouts
+
+`TextureViewDesc::layout` declares the layout expected when the view is used. `UNDEFINED` derives it from the view type and accessible planes. An explicit compatible layout takes precedence over this default, including `GENERAL` and fully or partially read-only depth/stencil layouts. The application records the matching texture barriers and pipeline access settings.
+
+For a sampled depth view used alongside a writable stencil attachment, select `planes = DEPTH` and `layout = DEPTH_READONLY_STENCIL_ATTACHMENT`. A stencil-only sampled view uses `planes = STENCIL` and `layout = DEPTH_ATTACHMENT_STENCIL_READONLY`. Depth/stencil attachment views use the same mixed layout to select their writable planes. Vulkan descriptors and rendering attachments retain explicit layouts, including textures with input-attachment usage.
+
+The added field changes the descriptor layout within API revision 1. Rebuild C/C++ consumers and regenerate dependent language bindings against the matching public headers and SDK.
+
 ## Slang shader integration
 
 Use `.slang` sources and `OpenRHI.slang`, compile through `CMake/OpenRHISlang.cmake`, and consume its native binary and reflection-derived `ShaderDesc`. Rebuild shader binaries and pipeline caches for this API revision. Native Metal pipeline layouts use the root data and typed resource-table ABI in [SHADERS.md](SHADERS.md). The Metal wrapper exposes resource and fence wrapping; shader compilation is explicit in the application build.
