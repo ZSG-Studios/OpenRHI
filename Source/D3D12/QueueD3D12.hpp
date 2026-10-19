@@ -93,3 +93,15 @@ OPENRHI_INLINE Result QueueD3D12::WaitIdle() {
 
     return result;
 }
+
+OPENRHI_INLINE Result QueueD3D12::SetLatencyQueueRole(LatencyQueueRole role) {
+#if OPENRHI_ENABLE_NVAPI
+    NvAPI_Status result = NvAPI_D3D12_NotifyOutOfBandCommandQueue(m_Queue, (NV_OUT_OF_BAND_CQ_TYPE)role);
+
+    return result == NVAPI_OK ? Result::SUCCESS : Result::UNSUPPORTED;
+#else
+    MaybeUnused(role);
+
+    return Result::UNSUPPORTED;
+#endif
+}

@@ -9,7 +9,7 @@ bash Scripts/Trash.sh _OpenRHI_SDK
 mkdir -p "${SDK}/Include" "${SDK}/Lib/Debug" "${SDK}/Lib/Release"
 
 cp -R Include/. "${SDK}/Include"
-cp LICENSE.txt THIRD_PARTY_NOTICES.md README.md MIGRATION.md QUALIFICATION.md openrhi.natvis "${SDK}"
+cp LICENSE.txt THIRD_PARTY_NOTICES.md README.md openrhi.natvis "${SDK}"
 
 cp -L _Bin/Debug/libOpenRHI.dylib "${SDK}/Lib/Debug"
 cp -L _Bin/Release/libOpenRHI.dylib "${SDK}/Lib/Release"
@@ -22,4 +22,4 @@ done
 
 mkdir -p "${SDK}/CMake"
 cp CMake/*.cmake "${SDK}/CMake/"
-cp SHADERS.md "${SDK}/"
+cp -R Docs "${SDK}/"

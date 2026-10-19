@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
-bash Scripts/Trash.sh build _Bin _Build _Shaders _OpenRHI_SDK
+bash Scripts/Trash.sh build _Bin _Build _Shaders _Tmp _OpenRHI_SDK

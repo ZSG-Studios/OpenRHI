@@ -22,6 +22,7 @@
 #endif
 
 #include "SharedExternal.h"
+#include "UpscalerInterface.h"
 
 #define ADAPTER_MAX_NUM 32u
 
@@ -620,6 +621,18 @@ OPENRHI_API Result OPENRHI_CALL openrhiGetInterface(const Device& device, const 
         realInterfaceSize = sizeof(SwapChainInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(SwapChainInterface*)interfacePtr);
+    } else if (hash == Hash(OPENRHI_STRINGIFY(FidelityFXInterface))) {
+        realInterfaceSize = sizeof(FidelityFXInterface);
+        if (realInterfaceSize == interfaceSize)
+            result = deviceBase.FillFunctionTable(*(FidelityFXInterface*)interfacePtr);
+    } else if (hash == Hash(OPENRHI_STRINGIFY(NeuralRadianceCacheInterface))) {
+        realInterfaceSize = sizeof(NeuralRadianceCacheInterface);
+        if (realInterfaceSize == interfaceSize)
+            result = deviceBase.FillFunctionTable(*(NeuralRadianceCacheInterface*)interfacePtr);
+    } else if (hash == Hash(OPENRHI_STRINGIFY(AntiLagInterface))) {
+        realInterfaceSize = sizeof(AntiLagInterface);
+        if (realInterfaceSize == interfaceSize)
+            result = deviceBase.FillFunctionTable(*(AntiLagInterface*)interfacePtr);
     } else if (hash == Hash(OPENRHI_STRINGIFY(UpscalerInterface))) {
         realInterfaceSize = sizeof(UpscalerInterface);
         if (realInterfaceSize == interfaceSize)
@@ -1399,4 +1412,8 @@ OPENRHI_API DeviceRequirements OPENRHI_CALL openrhiGetPlatformRequirements(Graph
     requirements.requiredCapabilities = GetPlatformRequirements(api);
     requirements.minShaderModel = api == GraphicsAPI::D3D12 ? OpenRhiShaderModel(6, 6) : 0;
     return requirements;
+}
+
+OPENRHI_API Result OPENRHI_CALL openrhiGetUpscalerRequirementsVK(UpscalerType type, UpscalerRequirementsVK& requirements) {
+    return GetUpscalerRequirementsVK(type, requirements);
 }

@@ -129,6 +129,21 @@ cmake_dependent_option(OPENRHI_ENABLE_WAYLAND_SUPPORT "Enable Wayland support" O
 cmake_dependent_option(OPENRHI_ENABLE_NGX_SDK "Enable NVIDIA NGX (DLSS) SDK" OFF "(OPENRHI_ENABLE_D3D12_SUPPORT OR OPENRHI_ENABLE_VK_SUPPORT); WIN32 OR NOT IS_ARM64" OFF)
 cmake_dependent_option(OPENRHI_ENABLE_FFX_SDK "Enable AMD FidelityFX SDK" OFF "(OPENRHI_ENABLE_VK_SUPPORT OR OPENRHI_ENABLE_D3D12_SUPPORT); WIN32; NOT IS_ARM64" OFF)
 cmake_dependent_option(OPENRHI_ENABLE_XESS_SDK "Enable INTEL XeSS SDK" OFF "OPENRHI_ENABLE_D3D12_SUPPORT; WIN32; NOT IS_ARM64" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_NRC_SDK "Enable NVIDIA NRC 0.16" OFF "WIN32; OPENRHI_ENABLE_D3D12_SUPPORT" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_ANTILAG2_SDK "Enable AMD Anti-Lag 2" OFF "WIN32; OPENRHI_ENABLE_D3D12_SUPPORT; NOT IS_ARM64" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_ANF_SDK "Enable Qualcomm ANF temporal SR" OFF "ANDROID; IS_ARM64; OPENRHI_ENABLE_VK_SUPPORT" OFF)
+if(OPENRHI_ENABLE_ANF_SDK)
+    set(OPENRHI_ANF_SDK_ROOT "" CACHE PATH "Unmodified ANF SDK 0.43.0 (a144fbab47ad586adf64c5a1574be73064550f1e)")
+    foreach(input public/anf.h public/anf_types.h public/anf_types_vk.h public/anf_sr.h public/anf_fg.h lib/arm64-v8a/libanf.so LICENSE.txt LICENSE-BSD-3-Clause.txt)
+        if(NOT EXISTS "${OPENRHI_ANF_SDK_ROOT}/${input}")
+            message(FATAL_ERROR "ANF SDK input missing: ${OPENRHI_ANF_SDK_ROOT}/${input}")
+        endif()
+    endforeach()
+    file(SHA256 "${OPENRHI_ANF_SDK_ROOT}/lib/arm64-v8a/libanf.so" OPENRHI_ANF_RUNTIME_SHA256)
+    if(NOT OPENRHI_ANF_RUNTIME_SHA256 STREQUAL "284e8a1e0ec0a572eb56b1d06c778def9db0cd09e4ea20564caaa9612089384c")
+        message(FATAL_ERROR "OpenRHI: ANF requires the unmodified SDK 0.43.0 runtime at a144fbab47ad586adf64c5a1574be73064550f1e")
+    endif()
+endif()
 
 # Self-build?
 if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}) # if not submodule
@@ -167,6 +182,9 @@ foreach(opt IN ITEMS
     OPENRHI_ENABLE_NGX_SDK
     OPENRHI_ENABLE_FFX_SDK
     OPENRHI_ENABLE_XESS_SDK
+    OPENRHI_ENABLE_ANF_SDK
+    OPENRHI_ENABLE_NRC_SDK
+    OPENRHI_ENABLE_ANTILAG2_SDK
     OPENRHI_STREAMER_THREAD_SAFE
 )
     if(${opt})
@@ -284,6 +302,20 @@ if(OPENRHI_ENABLE_FFX_SDK)
         )
         list(APPEND DEPS fsr)
     endif()
+endif()
+
+if(OPENRHI_ENABLE_NRC_SDK)
+    fetchcontent_declare(nrc
+        GIT_REPOSITORY "https://github.com/NVIDIA-RTX/NRC.git"
+        GIT_TAG 7de30e4eb2a1a27118eb9a6acf5f715d757240c0
+        SOURCE_SUBDIR "ignore CMakeLists.txt")
+    list(APPEND DEPS nrc)
+endif()
+if(OPENRHI_ENABLE_ANTILAG2_SDK)
+    fetchcontent_declare(antilag2
+        URL "https://github.com/GPUOpen-LibrariesAndSDKs/AntiLag2-SDK/archive/390aa4a8c8655d0ae6e90079db2c85e103a96da3.zip"
+        DOWNLOAD_EXTRACT_TIMESTAMP 1 SOURCE_SUBDIR "ignore CMakeLists.txt")
+    list(APPEND DEPS antilag2)
 endif()
 
 if(OPENRHI_ENABLE_XESS_SDK)
@@ -418,6 +450,7 @@ set(SHARED_SOURCE
     "Source/Shared/ImguiInterface.h"
     "Source/Shared/ImguiInterface.hpp"
     "Source/Shared/Lock.h"
+    "Source/Shared/Latency.h"
     "Source/Shared/NIS.h"
     "Source/Shared/Shared.cpp"
     "Source/Shared/SharedExternal.h"
@@ -427,6 +460,11 @@ set(SHARED_SOURCE
     "Source/Shared/StreamerInterface.hpp"
     "Source/Shared/UpscalerInterface.h"
     "Source/Shared/UpscalerInterface.hpp"
+    "Source/Shared/VendorFeatures.h"
+    "Source/Shared/VendorFeaturesNative.h"
+    "Source/Shared/VendorFeatures.hpp"
+    "Source/Shared/AdrenoNeuralFusion.h"
+    "Source/Shared/AdrenoNeuralFusion.hpp"
     "Source/Shared/SharedVideo.h"
 )
 
@@ -449,13 +487,20 @@ target_include_directories(OpenRHI_Shared
         $<$<BOOL:${OPENRHI_ENABLE_NGX_SDK}>:
             ${ngx_SOURCE_DIR}/include
         >
+        $<$<BOOL:${OPENRHI_ENABLE_ANF_SDK}>:
+            ${OPENRHI_ANF_SDK_ROOT}/public
+        >
         $<$<AND:$<BOOL:${OPENRHI_ENABLE_FFX_SDK}>,$<BOOL:${OPENRHI_ENABLE_D3D12_SUPPORT}>>:
             ${fsr_SOURCE_DIR}/Kits/FidelityFX/api/include
             ${fsr_SOURCE_DIR}/Kits/FidelityFX/upscalers/include
+            ${fsr_SOURCE_DIR}/Kits/FidelityFX/denoisers/include
+            ${fsr_SOURCE_DIR}/Kits/FidelityFX/radiancecache/include
         >
         $<$<AND:$<BOOL:${OPENRHI_ENABLE_FFX_SDK}>,$<NOT:$<BOOL:${OPENRHI_ENABLE_D3D12_SUPPORT}>>>:
             ${ffx_SOURCE_DIR}/ffx-api/include/ffx_api
         >
+        $<$<BOOL:${OPENRHI_ENABLE_NRC_SDK}>:${nrc_SOURCE_DIR}/Include>
+        $<$<BOOL:${OPENRHI_ENABLE_ANTILAG2_SDK}>:${antilag2_SOURCE_DIR}>
         $<$<BOOL:${OPENRHI_ENABLE_XESS_SDK}>:
             ${xess_SOURCE_DIR}/inc/xess
         >
@@ -507,6 +552,24 @@ set_target_properties(OpenRHI_Shared
         INTERFACE_POSITION_INDEPENDENT_CODE ON # ...and propagate to all consumers
         FOLDER "OpenRHI"
 )
+
+if(OPENRHI_ENABLE_NRC_SDK)
+    if(IS_ARM64)
+        set(OPENRHI_NRC_ARCH arm64)
+    else()
+        set(OPENRHI_NRC_ARCH x64)
+    endif()
+    foreach(backend IN ITEMS D3D12 VK)
+        if(OPENRHI_ENABLE_${backend}_SUPPORT)
+            if(backend STREQUAL "VK")
+                set(nrc_native Vulkan)
+            else()
+                set(nrc_native D3D12)
+            endif()
+            target_link_libraries(OpenRHI_Shared PRIVATE "${nrc_SOURCE_DIR}/Lib/${OPENRHI_NRC_ARCH}/NRC_${nrc_native}.lib")
+        endif()
+    endforeach()
+endif()
 
 # NONE
 if(OPENRHI_ENABLE_NONE_SUPPORT)
@@ -922,6 +985,8 @@ if(OPENRHI_ENABLE_VALIDATION_SUPPORT)
         "Source/Validation/SharedVal.h"
         "Source/Validation/SwapChainVal.h"
         "Source/Validation/SwapChainVal.hpp"
+        "Source/Validation/VendorFeaturesVal.h"
+        "Source/Validation/VendorFeaturesVal.hpp"
         "Source/Validation/TextureVal.h"
         "Source/Validation/TextureVal.hpp"
         "Source/Validation/VideoPictureVal.h"
@@ -979,6 +1044,8 @@ set(OPENRHI_EXTENSIONS
     "Include/Extensions/OpenRHIStreamer.h"
     "Include/Extensions/OpenRHISwapChain.h"
     "Include/Extensions/OpenRHIUpscaler.h"
+    "Include/Extensions/OpenRHIVendorFeatures.h"
+    "Include/Extensions/OpenRHIUpscalerVK.h"
     "Include/Extensions/OpenRHIVideo.h"
     "Include/Extensions/OpenRHIWrapperD3D12.h"
     "Include/Extensions/OpenRHIWrapperMetal.h"
@@ -1101,6 +1168,14 @@ foreach(DEPENDENCY IN LISTS DEPS)
 endforeach()
 
 # Copy to the output folder
+if(OPENRHI_ENABLE_ANF_SDK)
+    add_custom_command(TARGET OpenRHI POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${OPENRHI_ANF_SDK_ROOT}/lib/arm64-v8a/libanf.so" "$<TARGET_FILE_DIR:OpenRHI>/"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:OpenRHI>/ThirdPartyLicenses/anf"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${OPENRHI_ANF_SDK_ROOT}/LICENSE.txt" "${OPENRHI_ANF_SDK_ROOT}/LICENSE-BSD-3-Clause.txt" "$<TARGET_FILE_DIR:OpenRHI>/ThirdPartyLicenses/anf/"
+        VERBATIM)
+endif()
+
 if(OPENRHI_ENABLE_AMDAGS)
     find_file(AMD_AGS_DLL
         NAMES
@@ -1186,6 +1261,33 @@ if(OPENRHI_ENABLE_XESS_SDK)
             VERBATIM
         )
     endif()
+endif()
+
+if(OPENRHI_ENABLE_FFX_SDK AND OPENRHI_ENABLE_D3D12_SUPPORT)
+    foreach(effect IN ITEMS denoiser radiancecache)
+        set(runtime "${fsr_SOURCE_DIR}/Kits/FidelityFX/signedbin/amd_fidelityfx_${effect}_dx12.dll")
+        if(NOT EXISTS "${runtime}")
+            message(FATAL_ERROR "Missing FidelityFX ${effect} runtime: ${runtime}")
+        endif()
+        add_custom_command(TARGET OpenRHI POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${runtime}" "$<TARGET_FILE_DIR:OpenRHI>" VERBATIM)
+    endforeach()
+endif()
+if(OPENRHI_ENABLE_NRC_SDK)
+    target_link_options(OpenRHI_Shared INTERFACE /DELAYLOAD:NRC_D3D12.dll)
+    target_link_libraries(OpenRHI_Shared PRIVATE delayimp)
+    foreach(name IN ITEMS NRC_D3D12.dll cudart64_13.dll nvrtc64_130_0.dll nvrtc-builtins64_134.dll)
+        set(runtime "${nrc_SOURCE_DIR}/Bin/${OPENRHI_NRC_ARCH}/${name}")
+        if(NOT EXISTS "${runtime}")
+            message(FATAL_ERROR "Missing pinned NRC runtime: ${runtime}")
+        endif()
+        file(READ "${runtime}" signature LIMIT 40)
+        if(signature MATCHES "version https://git-lfs")
+            message(FATAL_ERROR "NRC runtime is a Git LFS pointer; populate the unmodified pinned SDK with Git LFS: ${runtime}")
+        endif()
+        add_custom_command(TARGET OpenRHI POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${runtime}" "$<TARGET_FILE_DIR:OpenRHI>" VERBATIM)
+    endforeach()
 endif()
 
 # Slang is the sole shader compilation front end

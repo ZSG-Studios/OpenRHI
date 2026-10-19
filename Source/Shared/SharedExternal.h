@@ -37,10 +37,12 @@ typedef uint32_t DXGI_FORMAT;
 #include "Extensions/OpenRHIStreamer.h"
 #include "Extensions/OpenRHISwapChain.h"
 #include "Extensions/OpenRHIUpscaler.h"
+#include "Extensions/OpenRHIVendorFeatures.h"
 #include "Extensions/OpenRHIVideo.h"
 #include "Extensions/OpenRHIWrapperD3D12.h"
 #include "Extensions/OpenRHIWrapperMetal.h"
 #include "Extensions/OpenRHIWrapperVK.h"
+#include "Extensions/OpenRHIUpscalerVK.h"
 
 #include "Lock.h"
 #include "SharedVideo.h"
@@ -525,7 +527,7 @@ private:
 
 template <typename T>
 bool operator==(const StdAllocator<T>& left, const StdAllocator<T>& right) {
-    return left.GetInterface() == right.GetInterface();
+    return &left.GetInterface() == &right.GetInterface();
 }
 
 template <typename T>

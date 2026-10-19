@@ -41,6 +41,7 @@ struct SwapChainVK final : public DisplayDescHelper, DebugNameBase {
     Result SetLatencyMarker(uint64_t presentId, LatencyMarker latencyMarker);
     Result LatencySleep(uint64_t presentId);
     Result GetLatencyReport(LatencyReport& latencyReport);
+    Result GetLatencySleepStatus(LatencySleepStatus& status);
 
 private:
     DeviceVK& m_Device;

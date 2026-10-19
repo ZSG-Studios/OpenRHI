@@ -10,6 +10,38 @@
 #    include <vulkan/vulkan.h>
 #endif
 
+// ANF public SDK integration is compiled only for Android Vulkan
+#if OPENRHI_ENABLE_ANF_SDK
+#    include "AdrenoNeuralFusion.h"
+#    include "AdrenoNeuralFusion.hpp"
+#else
+bool openrhi::IsAnfSupportedVK(VKHandle, VKHandle, VKHandle, const VKExtensions&) {
+    return false;
+}
+#endif
+
+Result openrhi::GetUpscalerRequirementsVK(UpscalerType type, UpscalerRequirementsVK& requirements) {
+    requirements = {};
+#if OPENRHI_ENABLE_ANF_SDK
+    if (type == UpscalerType::ANF) {
+        Anf anf;
+        Result result = anf.Initialize();
+
+        if (result == Result::SUCCESS)
+            result = anf.QueryRequirements(requirements);
+
+        if (result != Result::SUCCESS)
+            requirements = {};
+
+        return result;
+    }
+#else
+    MaybeUnused(type);
+#endif
+
+    return Result::UNSUPPORTED;
+}
+
 //=====================================================================================================================================
 // NIS
 //=====================================================================================================================================
@@ -404,6 +436,7 @@ static inline Result XessConvertError(xess_result_t code) {
 struct Ngx {
     NVSDK_NGX_Handle* handle = nullptr;
     NVSDK_NGX_Parameter* params = nullptr;
+    bool isInitialized = false;
 };
 
 struct RefCounter {
@@ -638,6 +671,9 @@ bool openrhi::IsMetalFxSupportedMetal(NS::Object* device, UpscalerType type) {
 bool openrhi::IsUpscalerSupported(const DeviceDesc& deviceDesc, UpscalerType type) {
     MaybeUnused(deviceDesc, type);
 
+    if (type == UpscalerType::ANF)
+        return deviceDesc.graphicsAPI == GraphicsAPI::VK && deviceDesc.features.adrenoNeuralFusion;
+
 #if OPENRHI_ENABLE_NIS_SDK
     if (type == UpscalerType::NIS) {
         return true;
@@ -676,6 +712,10 @@ bool openrhi::IsUpscalerSupported(const DeviceDesc& deviceDesc, UpscalerType typ
 }
 
 UpscalerImpl::~UpscalerImpl() {
+#if OPENRHI_ENABLE_ANF_SDK
+    if (m_Desc.type == UpscalerType::ANF && m.anf)
+        Destroy<Anf>(((DeviceBase&)m_Device).GetAllocationCallbacks(), m.anf);
+#endif
 #if OPENRHI_ENABLE_NIS_SDK
     if (m_Desc.type == UpscalerType::NIS && m.nis) {
         m_iCore.DestroyDescriptor(m.nis->srvScale);
@@ -734,15 +774,21 @@ UpscalerImpl::~UpscalerImpl() {
 
         const DeviceDesc& deviceDesc = m_iCore.GetDeviceDesc(m_Device);
         void* deviceNative = m_iCore.GetDeviceNativeObject(&m_Device);
-        int32_t refCount = NgxDecrRef(deviceNative);
+        const int32_t refCount = m.ngx->isInitialized ? NgxDecrRef(deviceNative) : -1;
 
 #    if OPENRHI_ENABLE_D3D12_SUPPORT
         if (deviceDesc.graphicsAPI == GraphicsAPI::D3D12) {
-            NVSDK_NGX_Result result = NVSDK_NGX_D3D12_DestroyParameters(m.ngx->params);
-            OPENRHI_CHECK(!m.ngx->params || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D12_DestroyParameters() failed!");
+            NVSDK_NGX_Result result = NVSDK_NGX_Result_Success;
 
-            result = NVSDK_NGX_D3D12_ReleaseFeature(m.ngx->handle);
-            OPENRHI_CHECK(!m.ngx->handle || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D12_ReleaseFeature() failed!");
+            if (m.ngx->handle) {
+                result = NVSDK_NGX_D3D12_ReleaseFeature(m.ngx->handle);
+                OPENRHI_CHECK(result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D12_ReleaseFeature() failed!");
+            }
+
+            if (m.ngx->params) {
+                result = NVSDK_NGX_D3D12_DestroyParameters(m.ngx->params);
+                OPENRHI_CHECK(result == NVSDK_NGX_Result_Success, "NVSDK_NGX_D3D12_DestroyParameters() failed!");
+            }
 
             if (refCount == 0) {
                 result = NVSDK_NGX_D3D12_Shutdown1((ID3D12Device*)deviceNative);
@@ -753,11 +799,17 @@ UpscalerImpl::~UpscalerImpl() {
 
 #    if OPENRHI_ENABLE_VK_SUPPORT
         if (deviceDesc.graphicsAPI == GraphicsAPI::VK) {
-            NVSDK_NGX_Result result = NVSDK_NGX_VULKAN_DestroyParameters(m.ngx->params);
-            OPENRHI_CHECK(!m.ngx->params || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_VULKAN_DestroyParameters() failed!");
+            NVSDK_NGX_Result result = NVSDK_NGX_Result_Success;
 
-            result = NVSDK_NGX_VULKAN_ReleaseFeature(m.ngx->handle);
-            OPENRHI_CHECK(!m.ngx->handle || result == NVSDK_NGX_Result_Success, "NVSDK_NGX_VULKAN_ReleaseFeature() failed!");
+            if (m.ngx->handle) {
+                result = NVSDK_NGX_VULKAN_ReleaseFeature(m.ngx->handle);
+                OPENRHI_CHECK(result == NVSDK_NGX_Result_Success, "NVSDK_NGX_VULKAN_ReleaseFeature() failed!");
+            }
+
+            if (m.ngx->params) {
+                result = NVSDK_NGX_VULKAN_DestroyParameters(m.ngx->params);
+                OPENRHI_CHECK(result == NVSDK_NGX_Result_Success, "NVSDK_NGX_VULKAN_DestroyParameters() failed!");
+            }
 
             if (refCount == 0) {
                 result = NVSDK_NGX_VULKAN_Shutdown1((VkDevice)deviceNative);
@@ -800,6 +852,64 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
 
     UpscalerProps upscalerProps = {};
     GetUpscalerProps(upscalerProps);
+
+#if OPENRHI_ENABLE_ANF_SDK
+    if (upscalerDesc.type == UpscalerType::ANF) {
+        m.anf = Allocate<Anf>(((DeviceBase&)m_Device).GetAllocationCallbacks());
+
+        if (!m.anf)
+            return Result::OUT_OF_MEMORY;
+
+        Result result = m.anf->Initialize();
+
+        if (result != Result::SUCCESS)
+            return result;
+
+        UpscalerRequirementsVK requirements = {};
+        result = m.anf->QueryRequirements(requirements);
+
+        if (result != Result::SUCCESS)
+            return result;
+
+        memcpy(m.anf->resources, requirements.resources, sizeof(m.anf->resources));
+
+        WrapperVKInterface wrapper = {};
+        result = openrhiGetInterface(m_Device, OPENRHI_INTERFACE(WrapperVKInterface), &wrapper);
+
+        if (result != Result::SUCCESS)
+            return result;
+
+        AnfAdapterInfoVulkan adapter = {};
+        adapter.header.type = ANF_STYPE_ADAPTER_INFO_VULKAN;
+        adapter.instance = (VkInstance)wrapper.GetInstanceVK(m_Device);
+        adapter.physicalDevice = (VkPhysicalDevice)wrapper.GetPhysicalDeviceVK(m_Device);
+        adapter.device = (VkDevice)m_iCore.GetDeviceNativeObject(&m_Device);
+        AnfResult nativeResult = m.anf->functions.SetInstanceClientAPIAdapterInfo(m.anf->instance, &adapter.header);
+
+        if (nativeResult != ANF_RESULT_SUCCESS)
+            return ConvertAnfResult(nativeResult);
+
+        AnfSRCreateInfo sr = {};
+        sr.header.type = ANF_STYPE_SR_CREATE_INFO;
+        sr.inputSize = {upscalerProps.renderResolution.w, upscalerProps.renderResolution.h};
+        sr.outputSize = {upscalerDesc.upscaleResolution.w, upscalerDesc.upscaleResolution.h};
+        AnfTechniqueVulkanCreateInfo vk = {};
+        vk.header.type = ANF_STYPE_TECHNIQUE_VULKAN_CREATE_INFO;
+        AnfTechniqueCreateInfo create = {};
+        create.header.type = ANF_STYPE_TECHNIQUE_CREATE_INFO;
+        create.techniqueId = ANF_TECHNIQUE_ID_SR_TEMPORAL;
+        create.maxInFlight = upscalerDesc.maxInFlight ? upscalerDesc.maxInFlight : 1;
+        create.pClientApiCreateInfo = &vk.header;
+        create.pTechniqueGroupCreateInfo = &sr.header;
+
+        nativeResult = m.anf->functions.CreateTechnique(m.anf->instance, &create, &m.anf->technique);
+
+        if (nativeResult != ANF_RESULT_SUCCESS)
+            OPENRHI_REPORT_INFO((DeviceBase*)&m_Device, "ANF CreateTechnique returned %u", (uint32_t)nativeResult);
+
+        return ConvertAnfResult(nativeResult);
+    }
+#endif
 
 #if OPENRHI_ENABLE_NIS_SDK
     if (upscalerDesc.type == UpscalerType::NIS) {
@@ -1190,6 +1300,7 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
                 ngxResult = NVSDK_NGX_D3D12_Init(APPLICATION_ID, path, (ID3D12Device*)deviceNative, &featureCommonInfo);
                 if (ngxResult == NVSDK_NGX_Result_Success) {
                     NgxIncrRef(deviceNative);
+                    m.ngx->isInitialized = true;
                     ngxResult = NVSDK_NGX_D3D12_GetCapabilityParameters(&m.ngx->params);
                 }
             }
@@ -1209,6 +1320,7 @@ Result UpscalerImpl::Create(const UpscalerDesc& upscalerDesc) {
                 ngxResult = NVSDK_NGX_VULKAN_Init(APPLICATION_ID, path, vkInstance, vkPhysicalDevice, (VkDevice)deviceNative, vkGipa, vkGdpa, &featureCommonInfo);
                 if (ngxResult == NVSDK_NGX_Result_Success) {
                     NgxIncrRef(deviceNative);
+                    m.ngx->isInitialized = true;
                     ngxResult = NVSDK_NGX_VULKAN_GetCapabilityParameters(&m.ngx->params);
                 }
             }
@@ -1435,6 +1547,15 @@ void UpscalerImpl::GetUpscalerProps(UpscalerProps& upscalerProps) const {
         upscalerProps.renderResolutionMin = upscalerProps.renderResolution; // no DRS support because of DLSS
 }
 
+const UpscalerResourceRequirementsVK* UpscalerImpl::GetAnfResourceRequirementsVK() const {
+#if OPENRHI_ENABLE_ANF_SDK
+    if (m_Desc.type == UpscalerType::ANF && m.anf)
+        return m.anf->resources;
+#endif
+
+    return nullptr;
+}
+
 void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const DispatchUpscaleDesc& dispatchUpscaleDesc) {
     const UpscalerResource& output = dispatchUpscaleDesc.output;
     const UpscalerResource& input = dispatchUpscaleDesc.input;
@@ -1442,6 +1563,46 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
     const float preExposure = dispatchUpscaleDesc.preExposure == 0.0f ? 1.0f : dispatchUpscaleDesc.preExposure;
 
     MaybeUnused(commandBuffer, output, input, preExposure);
+
+#if OPENRHI_ENABLE_ANF_SDK
+    if (m_Desc.type == UpscalerType::ANF) {
+        ExclusiveScope lock(m.anf->sdkLock);
+
+        const auto& guides = dispatchUpscaleDesc.guides.upscaler;
+        const UpscalerResource resources[] = {guides.depth, guides.mv, input, output};
+        constexpr AnfResourceLabel labels[] = {ANF_RESOURCE_LABEL_DEPTH, ANF_RESOURCE_LABEL_MOTION_VECTORS, ANF_RESOURCE_LABEL_INPUT_COLOR, ANF_RESOURCE_LABEL_OUTPUT_COLOR};
+        AnfResourceParamDesc parameters[4] = {};
+
+        for (uint32_t i = 0; i < GetCountOf(parameters); i++) {
+            const auto& desc = m_iCore.GetTextureDesc(*resources[i].texture);
+            auto& parameter = parameters[i];
+            parameter.header.type = ANF_STYPE_RESOURCE_PARAM_DESC;
+            parameter.resourceLabel = labels[i];
+            auto& resource = parameter.resourceDesc;
+            resource.header.type = ANF_STYPE_RESOURCE_DESC;
+            resource.type = ANF_RESOURCE_TYPE_TEXTURE2D;
+            resource.format = ConvertToAnfFormat(desc.format);
+            resource.layout = i == 3 ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            resource.textureDims = {desc.width, desc.height, {desc.layerNum}, desc.mipNum};
+            resource.resource = (AnfClientResource)m_iCore.GetTextureNativeObject(resources[i].texture);
+        }
+
+        AnfSRDispatch sr = {};
+        sr.header.type = ANF_STYPE_SR_DISPATCH;
+        sr.jitterOffset = {dispatchUpscaleDesc.cameraJitter.x, dispatchUpscaleDesc.cameraJitter.y};
+        AnfTechniqueDispatchInfo dispatch = {};
+        dispatch.header.type = ANF_STYPE_TECHNIQUE_DISPATCH_INFO;
+        dispatch.commandList = (AnfClientCommandList)m_iCore.GetCommandBufferNativeObject(&commandBuffer);
+        dispatch.pResources = parameters;
+        dispatch.numResources = GetCountOf(parameters);
+        dispatch.reset = (dispatchUpscaleDesc.flags & DispatchUpscaleBits::RESET_HISTORY) ? ANF_TRUE : ANF_FALSE;
+        dispatch.pTechniqueGroupDispatchInfo = &sr.header;
+        AnfResult result = m.anf->functions.DispatchTechnique(m.anf->technique, &dispatch);
+
+        if (result != ANF_RESULT_SUCCESS)
+            OPENRHI_REPORT_ERROR((DeviceBase*)&m_Device, "ANF DispatchTechnique failed (%u)", (uint32_t)result);
+    }
+#endif
 
 #if OPENRHI_ENABLE_NIS_SDK
     if (m_Desc.type == UpscalerType::NIS) {

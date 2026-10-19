@@ -61,6 +61,7 @@ OPENRHI_INLINE Result SwapChainVal::SetLatencySleepMode(const LatencySleepMode& 
 
 OPENRHI_INLINE Result SwapChainVal::SetLatencyMarker(uint64_t presentId, LatencyMarker latencyMarker) {
     OPENRHI_RETURN_ON_FAILURE(&m_Device, presentId != 0, Result::INVALID_ARGUMENT, "'presentId' is 0");
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, latencyMarker < LatencyMarker::MAX_NUM && (uint8_t)latencyMarker != 4 && (uint8_t)latencyMarker != 5, Result::INVALID_ARGUMENT, "Invalid latency marker");
     OPENRHI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::ALLOW_LOW_LATENCY, Result::FAILURE, "Swap chain has not been created with 'ALLOW_LOW_LATENCY' flag");
 
     const DeviceDesc& deviceDesc = m_Device.GetDesc();
@@ -86,4 +87,11 @@ OPENRHI_INLINE Result SwapChainVal::GetLatencyReport(LatencyReport& latencyRepor
     OPENRHI_RETURN_ON_FAILURE(&m_Device, deviceDesc.features.lowLatency, Result::FAILURE, "'features.lowLatency' is false");
 
     return GetLowLatencyInterfaceImpl().GetLatencyReport(*GetImpl(), latencyReport);
+}
+
+OPENRHI_INLINE Result SwapChainVal::GetLatencySleepStatus(LatencySleepStatus& status) {
+    status = {};
+    OPENRHI_RETURN_ON_FAILURE(&m_Device, m_SwapChainDesc.flags & SwapChainBits::ALLOW_LOW_LATENCY, Result::INVALID_ARGUMENT, "Swap chain requires ALLOW_LOW_LATENCY");
+
+    return GetLowLatencyInterfaceImpl().GetLatencySleepStatus(*GetImpl(), status);
 }

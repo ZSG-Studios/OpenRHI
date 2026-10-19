@@ -26,9 +26,15 @@ ctest --test-dir _Build -C Release --output-on-failure
 
 Production builds enable their platform backend by default. Link the `OpenRHI` CMake target and include `OpenRHI.h`. Native wrapper entrypoints follow the supported platform. The platform scripts deploy, build, and package the SDK into `_OpenRHI_SDK`.
 
+[Adreno Neural Fusion SR](Docs/ANF.md) covers the optional Android Vulkan upscaler, native requirements, resource setup, runtime packaging and device qualification.
+
+## Language bindings
+
+Zig bindings are maintained in `C:/Zig Engine/Bindings/Zig`. Rust bindings are maintained in `C:/Bevy/integrations/rust_openrhi`, with the `openrhi-sys` and `openrhi-rust` crates. Both consume the public OpenRHI C facade and qualified SDKs; their owning projects retain the binding sources, licenses and validation tooling.
+
 ## Shaders
 
-Author shaders in Slang 2026.20 and compile them with `CMake/OpenRHISlang.cmake`. The build produces native DXIL, SPIR-V, or metallib plus reflection and matching pipeline metadata. ImGui, NIS, and Metal helper kernels use this same chain. [Shader integration and ABI](SHADERS.md) describes application setup and migration.
+Author shaders in Slang 2026.20 and compile them with `CMake/OpenRHISlang.cmake`. The build produces native DXIL, SPIR-V, or metallib plus reflection and matching pipeline metadata. ImGui, NIS, and Metal helper kernels use this same chain. [Shader integration and ABI](Docs/SHADERS.md) describes application setup and migration.
 
 ## Devices and qualification
 
@@ -36,11 +42,26 @@ Explicit adapter selection stays on the requested device. Automatic selection ev
 
 The first measurement target is the AMD RX 9070 XT. The hardware matrix also includes NVIDIA Blackwell, Intel Xe2/Xe3, Apple M/A-series, Qualcomm Adreno, Arm Mali, and Samsung Xclipse. Exact per-device and driver receipts establish qualification.
 
-- [API migration](MIGRATION.md)
-- [Qualification gates and measurement tools](QUALIFICATION.md)
+- [API migration](Docs/MIGRATION.md)
+- [Qualification gates and measurement tools](Docs/QUALIFICATION.md)
 - [Hardware targets and identity provenance](Profiles/targets.json)
-- [Recorded device qualification](Profiles/qualification.json)
-- [RX 9070 XT measurements and coverage](Qualification/RX9070XT-Windows/README.md)
 - [CI builds](https://github.com/ZSG-Studios/OpenRHI/actions/workflows/build.yml)
 
 OpenRHI retains core graphics/compute, descriptor heaps, streaming, ImGui rendering, low latency, mesh shaders, ray tracing, video, and optional upscaler interfaces. Device capability queries describe each backend's available features.
+
+Neural lighting and latency adapters target RTX 50-series and Radeon RX 9000-series or newer: AMD Ray Regeneration and radiance caching use `FidelityFXInterface`, NVIDIA NRC uses `NeuralRadianceCacheInterface`, Reflex uses `LowLatencyInterface`, and Anti-Lag 2 uses `AntiLagInterface`. See [native contracts, build options and frame integration](Docs/VENDOR_FEATURES.md).
+
+## Repository layout
+
+| Directory | Contents |
+|---|---|
+| `Include/` | Public C/C++ API and extensions |
+| `Source/` | Native backends, validation and shared implementation |
+| `Shaders/` | Slang shader sources |
+| `CMake/`, `Scripts/` | Build, packaging and qualification tools |
+| `Tests/` | Maintained contract, platform and native integration tests |
+| `Profiles/` | Device targets and policy data |
+| `Docs/` | Integration, shaders, vendor features and qualification guides |
+| `Resources/` | Project resources |
+
+Builds generate `_Build/` and `_Bin/`; local logs, caches and qualification runs belong under `_Tmp/`. SDK packaging produces `_OpenRHI_SDK/`.

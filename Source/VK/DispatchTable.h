@@ -249,6 +249,7 @@ struct DispatchTable {
     VK_FUNC(GetLatencyTimingsNV);                         // + | +
     VK_FUNC(LatencySleepNV);                              // + | +
     VK_FUNC(SetLatencyMarkerNV);                          // + | +
+    VK_FUNC(QueueNotifyOutOfBandNV);
     VK_FUNC(SetLatencySleepModeNV);                       // + | +
 };
 

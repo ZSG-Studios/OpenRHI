@@ -1,1 +1,0 @@
-Incomplete series: native runner exited successfully but its stdout could not be parsed as JSON for run 1, 64 KiB staging. The old orchestration did not preserve stdout. The revised runner preserves stdout/stderr and requires exactly one structured sample. This incomplete series is excluded from qualification.

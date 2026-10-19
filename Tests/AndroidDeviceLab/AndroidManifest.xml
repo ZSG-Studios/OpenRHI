@@ -1,0 +1,14 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.openrhi.nativelab" android:versionCode="1" android:versionName="1.0">
+    <uses-sdk android:minSdkVersion="33" android:targetSdkVersion="37" />
+    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x00403000" android:required="true" />
+    <application android:label="OpenRHI Native Lab" android:debuggable="true" android:extractNativeLibs="true" android:allowBackup="false" android:theme="@android:style/Theme.Material.NoActionBar">
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <meta-data android:name="com.android.graphics.injectLayers.enable" android:value="true" />
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

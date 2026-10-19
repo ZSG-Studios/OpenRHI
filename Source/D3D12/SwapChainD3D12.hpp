@@ -228,6 +228,7 @@ OPENRHI_INLINE Result SwapChainD3D12::SetLatencySleepMode(const LatencySleepMode
     params.bLowLatencyBoost = latencySleepMode.lowLatencyBoost;
     params.minimumIntervalUs = latencySleepMode.minIntervalUs;
     params.bUseMarkersToOptimize = true;
+    params.bUseMinQueueTime = latencySleepMode.useMinQueueTime;
 
     NvAPI_Status status = NvAPI_D3D_SetSleepMode(m_Device.GetNativeObject(), &params);
 
@@ -276,6 +277,12 @@ OPENRHI_INLINE Result SwapChainD3D12::GetLatencyReport(LatencyReport& latencyRep
 
     if (status == NVAPI_OK) {
         const uint32_t i = 63; // the most recent frame
+        latencyReport.presentId = params.frameReport[i].frameID;
+        latencyReport.cameraConstructedTimeUs = params.frameReport[i].cameraConstructedTime;
+        latencyReport.gpuActiveRenderTimeUs = params.frameReport[i].gpuActiveRenderTimeUs;
+        latencyReport.gpuFrameTimeUs = params.frameReport[i].gpuFrameTimeUs;
+        latencyReport.crossAdapterCopyTimeUs = params.frameReport[i].crossAdapterCopyTimeUs;
+        latencyReport.frameGenerationTimeUs = params.frameReport[i].aiFrameTimeUs;
         latencyReport.inputSampleTimeUs = params.frameReport[i].inputSampleTime;
         latencyReport.simulationStartTimeUs = params.frameReport[i].simStartTime;
         latencyReport.simulationEndTimeUs = params.frameReport[i].simEndTime;
@@ -294,6 +301,31 @@ OPENRHI_INLINE Result SwapChainD3D12::GetLatencyReport(LatencyReport& latencyRep
     }
 
     return Result::FAILURE;
+#else
+    return Result::UNSUPPORTED;
+#endif
+}
+
+OPENRHI_INLINE Result SwapChainD3D12::GetLatencySleepStatus(LatencySleepStatus& status) {
+    status = {};
+#if OPENRHI_ENABLE_NVAPI
+    NV_GET_SLEEP_STATUS_PARAMS native = {NV_GET_SLEEP_STATUS_PARAMS_VER};
+    NvAPI_Status result = NvAPI_D3D_GetSleepStatus(m_Device.GetNativeObject(), &native);
+
+    if (result != NVAPI_OK)
+        return Result::UNSUPPORTED;
+
+    status.lowLatencyMode = native.bLowLatencyMode;
+    status.fullscreenVRR = native.bFsVrr;
+    status.driverVsync = native.bCplVsyncOn;
+    status.gameSleep = native.bUseGameSleep;
+    status.fullscreenIndependentFlip = native.bFullscreenIFlip;
+    status.dynamicFrameGeneration = native.bDfgControl;
+    status.frameGenerationMultiplier = native.fgMultiplier;
+    status.sleepIntervalUs = native.sleepIntervalUs;
+    status.dynamicFrameTimeTargetUs = native.dfgFrameTimeTargetUs;
+
+    return Result::SUCCESS;
 #else
     return Result::UNSUPPORTED;
 #endif

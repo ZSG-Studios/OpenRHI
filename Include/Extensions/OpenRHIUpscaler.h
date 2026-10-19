@@ -18,11 +18,18 @@ OpenRhiEnum(UpscalerType, uint8_t,  // Name                                     
     DLRR,                       // NVIDIA Deep Learning Ray Reconstruction  upscaler-denoiser, NVIDIA only
     METALFX_SPATIAL,            // Apple MetalFX spatial scaler             upscaler, Metal only
     METALFX_TEMPORAL,           // Apple MetalFX temporal scaler            upscaler, Metal only
-    METALFX_DENOISED            // Apple MetalFX temporal denoised scaler   upscaler-denoiser, Metal only
+    METALFX_DENOISED,           // Apple MetalFX temporal denoised scaler   upscaler-denoiser, Metal only
+    ANF                         // Qualcomm Adreno Neural Fusion temporal SR, Vulkan only
 );
 
 // MetalFX: created on the first dispatch (a hitch), resource sizes and formats must not change after it. "output" needs "COLOR_ATTACHMENT" usage.
 // No "DEPTH_LINEAR" and "MV_JITTERED" ("MV_UPSCALED" requires macOS 27). "METALFX_DENOISED": no "MV_UPSCALED", "sss" and "preTransparency", "specularMvOrHitT" is "hit distance"
+
+// ANF: PERFORMANCE (2x), even output dimensions, flags NONE, fixed single-mip/layer/sample 2D images
+// Query OpenRHIUpscalerVK.h requirements before creating the Vulkan device and external-memory images; wrap native images with WrapperVKInterface
+// Guides use SDK depth and unjittered UV motion conventions, mvScale={1,1}, preExposure=0 or 1; input/depth/mv use SHADER_RESOURCE layout, output uses SHADER_RESOURCE_STORAGE
+// Submit on a queue family satisfying the queried queue flags; fence overlapping dispatches to maxInFlight; rebind native graphics state after ANF
+// IsUpscalerSupported reports SDK eligibility; successful CreateUpscaler is required before dispatch
 
 OpenRhiEnum(UpscalerMode, uint8_t,  // Scaling factor       // Min jitter phases (or just use unclamped Halton2D)
     NATIVE,                     // 1.0x                 8
@@ -60,6 +67,7 @@ OpenRhiStruct(UpscalerDesc) {
     OpenRhiOptional uint8_t preset;                         // preset for DLSR or XESS (0 default, >1 presets A, B, C...)
     OpenRhiOptional OpenRhi(Format) outputFormat;               // needed only for NIS, if "shaderFeatures.storageWriteWithoutFormat" is unsupported
     OpenRhiOptional OpenRhiPtr(CommandBuffer) commandBuffer;    // a non-copy-only command buffer in opened state, submission must be done manually ("wait for idle" executed, if not provided)
+    OpenRhiOptional uint32_t maxInFlight;                   // ANF: maximum overlapping dispatches (0 means 1); caller fences resource reuse
 };
 
 OpenRhiStruct(UpscalerProps) {
@@ -77,7 +85,7 @@ OpenRhiStruct(UpscalerResource) {
 };
 
 // Guide buffers
-OpenRhiStruct(UpscalerGuides) {                             // For FSR, XESS, DLSR, METALFX_TEMPORAL
+OpenRhiStruct(UpscalerGuides) {                             // For FSR, XESS, DLSR, METALFX_TEMPORAL, ANF
     OpenRhi(UpscalerResource) mv;                           // .xy - surface motion
     OpenRhi(UpscalerResource) depth;                        // .x - HW depth
     OpenRhiOptional OpenRhi(UpscalerResource) exposure;         // .x - 1x1 exposure
@@ -125,7 +133,7 @@ OpenRhiStruct(DispatchUpscaleDesc) {
 
     // Guides (required "SHADER_RESOURCE" for resource states & descriptors)
     union {                                             // Choosen based on "UpscalerType" passed during creation
-        OpenRhi(UpscalerGuides) upscaler;                   //      FSR, XESS, DLSR, METALFX_TEMPORAL
+        OpenRhi(UpscalerGuides) upscaler;                   //      FSR, XESS, DLSR, METALFX_TEMPORAL, ANF
         OpenRhi(DenoiserGuides) denoiser;                   //      DLRR, METALFX_DENOISED (sRGB not supported)
     } guides;
 

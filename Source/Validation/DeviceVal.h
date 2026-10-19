@@ -118,6 +118,9 @@ struct DeviceVal final : public DeviceBase {
     Result FillFunctionTable(StreamerInterface& table) const override;
     Result FillFunctionTable(SwapChainInterface& table) const override;
     Result FillFunctionTable(UpscalerInterface& table) const override;
+    Result FillFunctionTable(FidelityFXInterface& table) const override;
+    Result FillFunctionTable(NeuralRadianceCacheInterface& table) const override;
+    Result FillFunctionTable(AntiLagInterface& table) const override;
     Result FillFunctionTable(WrapperD3D12Interface& table) const override;
     Result FillFunctionTable(WrapperMetalInterface& table) const override;
     Result FillFunctionTable(WrapperVKInterface& table) const override;

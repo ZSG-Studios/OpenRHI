@@ -7,6 +7,7 @@ struct Ffx;
 struct Xess;
 struct Ngx;
 struct MetalFx;
+struct Anf;
 
 #if OPENRHI_ENABLE_METAL_SUPPORT
 namespace NS {
@@ -17,6 +18,8 @@ class Object;
 namespace openrhi {
 
 bool IsUpscalerSupported(const DeviceDesc& deviceDesc, UpscalerType type);
+bool IsAnfSupportedVK(VKHandle instance, VKHandle physicalDevice, VKHandle device, const VKExtensions& enabledExtensions);
+Result GetUpscalerRequirementsVK(UpscalerType type, UpscalerRequirementsVK& requirements);
 
 #if OPENRHI_ENABLE_METAL_SUPPORT
 // Metal backend hooks for direct encoding into the native command buffer ("MTL4CommandBuffer" of "CommandBufferMetal", since "CommandBuffer" can be a validation wrapper)
@@ -40,19 +43,21 @@ struct UpscalerImpl final : public DebugNameBase {
     Result Create(const UpscalerDesc& desc);
     void GetUpscalerProps(UpscalerProps& upscalerProps) const;
     void CmdDispatchUpscale(CommandBuffer& commandBuffer, const DispatchUpscaleDesc& dispatchUpscaleDesc);
+    const UpscalerResourceRequirementsVK* GetAnfResourceRequirementsVK() const;
 
 private:
     Device& m_Device;
     const CoreInterface& m_iCore;
     UpscalerDesc m_Desc = {};
 
-#if (OPENRHI_ENABLE_NIS_SDK || OPENRHI_ENABLE_FFX_SDK || OPENRHI_ENABLE_XESS_SDK || OPENRHI_ENABLE_NGX_SDK || OPENRHI_ENABLE_METAL_SUPPORT)
+#if (OPENRHI_ENABLE_NIS_SDK || OPENRHI_ENABLE_FFX_SDK || OPENRHI_ENABLE_XESS_SDK || OPENRHI_ENABLE_NGX_SDK || OPENRHI_ENABLE_METAL_SUPPORT || OPENRHI_ENABLE_ANF_SDK)
     union {
         Nis* nis;
         Ffx* ffx;
         Xess* xess;
         Ngx* ngx;
         MetalFx* metalfx;
+        Anf* anf;
     } m = {};
 #endif
 };

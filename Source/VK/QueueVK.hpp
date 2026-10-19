@@ -134,3 +134,15 @@ OPENRHI_INLINE Result QueueVK::WaitIdle() {
 
     return Result::SUCCESS;
 }
+
+OPENRHI_INLINE Result QueueVK::SetLatencyQueueRole(LatencyQueueRole role) {
+    if (role != LatencyQueueRole::RENDER && role != LatencyQueueRole::PRESENT)
+        return Result::UNSUPPORTED;
+
+    VkOutOfBandQueueTypeInfoNV info = {VK_STRUCTURE_TYPE_OUT_OF_BAND_QUEUE_TYPE_INFO_NV};
+    info.queueType = role == LatencyQueueRole::RENDER ? VK_OUT_OF_BAND_QUEUE_TYPE_RENDER_NV : VK_OUT_OF_BAND_QUEUE_TYPE_PRESENT_NV;
+    ExclusiveScope lock(GetLock());
+    m_Device.GetDispatchTable().QueueNotifyOutOfBandNV(m_Handle, &info);
+
+    return Result::SUCCESS;
+}

@@ -1124,6 +1124,13 @@ Result DeviceVK::Create(const DeviceCreationDesc& desc, const DeviceCreationVKDe
             return res;
     }
 
+    { // Optional ANF support is qualified against the enabled device, not the GPU marketing name
+        VKExtensions enabled = desc.vkExtensions;
+        enabled.deviceExtensions = desiredDeviceExts.data();
+        enabled.deviceExtensionNum = (uint32_t)desiredDeviceExts.size();
+        m_Desc.features.adrenoNeuralFusion = IsAnfSupportedVK((VKHandle)m_Instance, (VKHandle)m_PhysicalDevice, (VKHandle)m_Device, enabled);
+    }
+
     // Calibrated timestamps: a CPU time domain is selected from the supported ones
     if (m_VK.GetPhysicalDeviceCalibrateableTimeDomainsEXT) {
         uint32_t timeDomainNum = 0;
@@ -2506,6 +2513,7 @@ Result DeviceVK::ResolveDispatchTable(const Vector<const char*>& desiredDeviceEx
         GET_DEVICE_FUNC(LatencySleepNV);
         GET_DEVICE_FUNC(SetLatencyMarkerNV);
         GET_DEVICE_FUNC(SetLatencySleepModeNV);
+        GET_DEVICE_FUNC(QueueNotifyOutOfBandNV);
     }
 
     return Result::SUCCESS;

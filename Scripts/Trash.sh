@@ -2,7 +2,7 @@
 set -e
 REPOSITORY_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 for NAME in "$@"; do
-    case "$NAME" in build|_Bin|_Build|_Shaders|_OpenRHI_SDK) ;; *) echo "Unsupported generated directory: $NAME" >&2; exit 1 ;; esac
+    case "$NAME" in build|_Bin|_Build|_Shaders|_Tmp|_OpenRHI_SDK) ;; *) echo "Unsupported generated directory: $NAME" >&2; exit 1 ;; esac
     TARGET="$REPOSITORY_ROOT/$NAME"
     if [ -e "$TARGET" ]; then
         echo "Moving to Trash: $TARGET"

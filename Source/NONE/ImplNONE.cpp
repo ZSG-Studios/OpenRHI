@@ -928,11 +928,23 @@ static Result OPENRHI_CALL GetLatencyReport(const SwapChain&, LatencyReport&) {
     return Result::SUCCESS;
 }
 
+static Result OPENRHI_CALL GetLatencySleepStatus(const SwapChain&, LatencySleepStatus& status) {
+    status = {};
+
+    return Result::SUCCESS;
+}
+
+static Result OPENRHI_CALL SetLatencyQueueRole(Queue&, LatencyQueueRole) {
+    return Result::SUCCESS;
+}
+
 Result DeviceNONE::FillFunctionTable(LowLatencyInterface& table) const {
     table.SetLatencySleepMode = ::SetLatencySleepMode;
     table.SetLatencyMarker = ::SetLatencyMarker;
     table.LatencySleep = ::LatencySleep;
     table.GetLatencyReport = ::GetLatencyReport;
+    table.GetLatencySleepStatus = ::GetLatencySleepStatus;
+    table.SetLatencyQueueRole = ::SetLatencyQueueRole;
 
     return Result::SUCCESS;
 }

@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "VendorFeatures.h"
+
 namespace openrhi {
 
 /*
@@ -116,6 +118,36 @@ struct DeviceBase : public DebugNameBaseVal {
 
     virtual Result FillFunctionTable(SwapChainInterface&) const {
         return Result::UNSUPPORTED;
+    }
+
+    virtual Result FillFunctionTable(FidelityFXInterface& table) const {
+#if OPENRHI_ENABLE_FFX_SDK && OPENRHI_ENABLE_D3D12_SUPPORT
+        return FillVendorFeaturesInterface(table);
+#else
+        (void)table;
+
+        return Result::UNSUPPORTED;
+#endif
+    }
+
+    virtual Result FillFunctionTable(NeuralRadianceCacheInterface& table) const {
+#if OPENRHI_ENABLE_NRC_SDK
+        return FillVendorFeaturesInterface(table);
+#else
+        (void)table;
+
+        return Result::UNSUPPORTED;
+#endif
+    }
+
+    virtual Result FillFunctionTable(AntiLagInterface& table) const {
+#if OPENRHI_ENABLE_ANTILAG2_SDK
+        return FillVendorFeaturesInterface(table);
+#else
+        (void)table;
+
+        return Result::UNSUPPORTED;
+#endif
     }
 
     virtual Result FillFunctionTable(UpscalerInterface&) const {

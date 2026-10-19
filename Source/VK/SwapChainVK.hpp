@@ -1,3 +1,5 @@
+#include "Latency.h"
+
 // © 2021 NVIDIA Corporation
 
 constexpr uint32_t PRESENT_MODE_MAX_NUM = 16;
@@ -505,6 +507,9 @@ OPENRHI_INLINE Result SwapChainVK::Present(FenceVK& releaseSemaphore, uint64_t p
 }
 
 OPENRHI_INLINE Result SwapChainVK::SetLatencySleepMode(const LatencySleepMode& latencySleepMode) {
+    if (latencySleepMode.useMinQueueTime)
+        return Result::UNSUPPORTED;
+
     VkLatencySleepModeInfoNV sleepModeInfo = {VK_STRUCTURE_TYPE_LATENCY_SLEEP_MODE_INFO_NV};
     sleepModeInfo.lowLatencyMode = latencySleepMode.lowLatencyMode;
     sleepModeInfo.lowLatencyBoost = latencySleepMode.lowLatencyBoost;
@@ -520,7 +525,12 @@ OPENRHI_INLINE Result SwapChainVK::SetLatencySleepMode(const LatencySleepMode& l
 OPENRHI_INLINE Result SwapChainVK::SetLatencyMarker(uint64_t presentId, LatencyMarker latencyMarker) {
     VkSetLatencyMarkerInfoNV markerInfo = {VK_STRUCTURE_TYPE_SET_LATENCY_MARKER_INFO_NV};
     markerInfo.presentID = presentId;
-    markerInfo.marker = (VkLatencyMarkerNV)latencyMarker;
+    uint32_t nativeMarker = 0;
+
+    if (!GetLatencyMarkerVK(latencyMarker, nativeMarker))
+        return Result::UNSUPPORTED;
+
+    markerInfo.marker = (VkLatencyMarkerNV)nativeMarker;
 
     const auto& vk = m_Device.GetDispatchTable();
     vk.SetLatencyMarkerNV(m_Device, m_Handle, &markerInfo);
@@ -555,8 +565,9 @@ OPENRHI_INLINE Result SwapChainVK::GetLatencyReport(LatencyReport& latencyReport
     vk.GetLatencyTimingsNV(m_Device, m_Handle, &getTimingsInfo);
 
     latencyReport = {};
-    if (getTimingsInfo.timingCount >= 64) {
-        const uint32_t i = 63;
+    if (getTimingsInfo.timingCount) {
+        const uint32_t i = std::min(getTimingsInfo.timingCount, uint32_t(GetCountOf(timingsInfo))) - 1;
+        latencyReport.presentId = timingsInfo[i].presentID;
         latencyReport.inputSampleTimeUs = timingsInfo[i].inputSampleTimeUs;
         latencyReport.simulationStartTimeUs = timingsInfo[i].simStartTimeUs;
         latencyReport.simulationEndTimeUs = timingsInfo[i].simEndTimeUs;
@@ -573,4 +584,10 @@ OPENRHI_INLINE Result SwapChainVK::GetLatencyReport(LatencyReport& latencyReport
     }
 
     return Result::SUCCESS;
+}
+
+OPENRHI_INLINE Result SwapChainVK::GetLatencySleepStatus(LatencySleepStatus& status) {
+    status = {};
+
+    return Result::UNSUPPORTED;
 }

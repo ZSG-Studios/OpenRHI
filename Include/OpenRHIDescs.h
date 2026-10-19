@@ -2335,6 +2335,9 @@ OpenRhiStruct(DeviceDesc) {
         bool pipelineCache;                                       // "PipelineCache" support (NOP fallback if unsupported, except on error)
         bool pipelineCacheControl;                                // "FAIL_ON_CACHE_MISS" enforces "FAILURE", useful for platforms that prohibit runtime PSO compilation (e.g., Xbox GDK)
 
+        // Vendor integration
+        bool adrenoNeuralFusion;                                   // ANF temporal SR: SDK support query succeeds and required Vulkan extensions are enabled
+
         // Other
         bool getMemoryDesc2;                                      // "GetXxxMemoryDesc2" support (VK: requires "maintenance4", D3D: supported)
         bool enhancedBarriers;                                    // VK: supported, D3D12: requires "AgilitySDK"

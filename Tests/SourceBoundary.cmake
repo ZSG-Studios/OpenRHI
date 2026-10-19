@@ -5,7 +5,7 @@ string(CONCAT translation "[Mm]olten" "[Vv][Kk]|[Pp]ortability_[Ee]numeration|[P
 string(CONCAT browser_api "[Ww]eb" "[Gg][Pp][Uu]|[Ww][Gg]" "[Pp][Uu]|[Ww][Gg]" "[Ss][Ll]")
 file(GLOB_RECURSE files LIST_DIRECTORIES false
     "${ROOT}/Include/*" "${ROOT}/Source/*" "${ROOT}/Scripts/*"
-    "${ROOT}/.github/*" "${ROOT}/.agents/*" "${ROOT}/Tests/*")
+    "${ROOT}/.github/*" "${ROOT}/.agents/*" "${ROOT}/Tests/*" "${ROOT}/Docs/*")
 list(APPEND files "${ROOT}/CMakeLists.txt" "${ROOT}/README.md" "${ROOT}/AGENTS.md")
 foreach(path IN LISTS files)
     file(READ "${path}" content)
@@ -15,14 +15,21 @@ foreach(path IN LISTS files)
 endforeach()
 file(GLOB_RECURSE owned
     "${ROOT}/Source/*" "${ROOT}/Include/*" "${ROOT}/Scripts/*" "${ROOT}/CMake/*"
-    "${ROOT}/Shaders/*" "${ROOT}/Tests/*" "${ROOT}/Profiles/*" "${ROOT}/Qualification/*"
+    "${ROOT}/Shaders/*" "${ROOT}/Tests/*" "${ROOT}/Profiles/*" "${ROOT}/Docs/*"
     "${ROOT}/.github/*" "${ROOT}/.agents/*")
 list(APPEND owned "${ROOT}/CMakeLists.txt" "${ROOT}/README.md" "${ROOT}/AGENTS.md"
-    "${ROOT}/MIGRATION.md" "${ROOT}/QUALIFICATION.md" "${ROOT}/SHADERS.md" "${ROOT}/openrhi.natvis")
+    "${ROOT}/openrhi.natvis")
 string(CONCAT legacy_name "(^|[^A-Za-z0-9])([Nn][Rr][Ii]"
     "([A-Z_][A-Za-z0-9_]*|[^A-Za-z0-9_]|$)|[Aa]rc[Rr]ender[A-Za-z0-9_]*)")
 string(CONCAT wrong_brand "OPEN" "RHI[A-Za-z]")
 foreach(path IN LISTS owned)
+    # FIXED BY AI: Packaged vendor notices retain attribution; native binaries have separate export checks
+    if(path MATCHES "[/\\\\]ThirdPartyLicenses[/\\\\]" OR path MATCHES "[^/\\\\]*THIRD_PARTY_NOTICES\\.md$")
+        continue()
+    endif()
+    if(NOT path MATCHES "\\.(h|hpp|cpp|c|cmake|md|txt|json|py|ps1|bat|sh|slang|yml|yaml|natvis|toml|zig|rs|lock)$")
+        continue()
+    endif()
     file(RELATIVE_PATH relative "${ROOT}" "${path}")
     file(READ "${path}" content)
     if(relative MATCHES "${legacy_name}" OR content MATCHES "${legacy_name}|${wrong_brand}")

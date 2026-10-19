@@ -21,6 +21,7 @@ using namespace openrhi;
 #include "ImguiInterface.hpp"
 #include "StreamerInterface.hpp"
 #include "UpscalerInterface.hpp"
+#include "VendorFeatures.hpp"
 
 #include "SharedExternal.hpp"
 #include "SharedLibrary.hpp"

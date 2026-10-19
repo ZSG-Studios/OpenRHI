@@ -1430,6 +1430,18 @@ static Result OPENRHI_CALL GetLatencyReport(const SwapChain& swapChain, LatencyR
     return ((SwapChainVal&)swapChain).GetLatencyReport(latencyReport);
 }
 
+static Result OPENRHI_CALL GetLatencySleepStatus(const SwapChain& swapChain, LatencySleepStatus& status) {
+    return ((SwapChainVal&)swapChain).GetLatencySleepStatus(status);
+}
+
+static Result OPENRHI_CALL SetLatencyQueueRole(Queue& queue, LatencyQueueRole role) {
+    auto& queueVal = (QueueVal&)queue;
+    auto& deviceVal = queueVal.GetDevice();
+    OPENRHI_RETURN_ON_FAILURE(&deviceVal, role < LatencyQueueRole::MAX_NUM, Result::INVALID_ARGUMENT, "Invalid latency queue role");
+
+    return deviceVal.GetLowLatencyInterfaceImpl().SetLatencyQueueRole(*queueVal.GetImpl(), role);
+}
+
 Result DeviceVal::FillFunctionTable(LowLatencyInterface& table) const {
     if (!m_IsExtSupported.lowLatency)
         return Result::UNSUPPORTED;
@@ -1438,6 +1450,8 @@ Result DeviceVal::FillFunctionTable(LowLatencyInterface& table) const {
     table.SetLatencyMarker = ::SetLatencyMarker;
     table.LatencySleep = ::LatencySleep;
     table.GetLatencyReport = ::GetLatencyReport;
+    table.GetLatencySleepStatus = ::GetLatencySleepStatus;
+    table.SetLatencyQueueRole = ::SetLatencyQueueRole;
 
     return Result::SUCCESS;
 }
@@ -2248,6 +2262,12 @@ static Result OPENRHI_CALL CreateUpscaler(Device& device, const UpscalerDesc& up
     if (upscalerDesc.type == UpscalerType::METALFX_DENOISED)
         OPENRHI_RETURN_ON_FAILURE(&deviceVal, !(upscalerDesc.flags & UpscalerBits::MV_UPSCALED), Result::UNSUPPORTED, "'MV_UPSCALED' is unsupported by 'METALFX_DENOISED'");
 
+    if (upscalerDesc.type == UpscalerType::ANF) {
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, upscalerDesc.mode == UpscalerMode::PERFORMANCE, Result::UNSUPPORTED, "ANF requires PERFORMANCE (2x)");
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, upscalerDesc.flags == UpscalerBits::NONE, Result::UNSUPPORTED, "ANF uses the native SDK color, depth and motion conventions");
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, !(upscalerDesc.upscaleResolution.w % 2) && !(upscalerDesc.upscaleResolution.h % 2), Result::INVALID_ARGUMENT, "ANF output dimensions must be even");
+    }
+
     UpscalerImpl* impl = Allocate<UpscalerImpl>(deviceVal.GetAllocationCallbacks(), device, deviceVal.GetCoreInterface());
     Result result = impl->Create(upscalerDesc);
 
@@ -2316,6 +2336,13 @@ static void OPENRHI_CALL CmdDispatchUpscale(CommandBuffer& commandBuffer, Upscal
         OPENRHI_RETURN_ON_FAILURE(&deviceVal, inputSize.w == 0 || (inputDesc.width == inputSize.w && inputDesc.height == inputSize.h), ReturnVoid(), "'input.texture' size must not change for MetalFX");
     }
 
+    if (upscalerVal.m_Desc.type == UpscalerType::ANF) {
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, ((CommandBufferVal&)commandBuffer).CanDispatch(), ReturnVoid(), "ANF requires an open graphics or compute command buffer outside rendering");
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, dispatchUpscaleDesc.mvScale.x == 1.0f && dispatchUpscaleDesc.mvScale.y == 1.0f, ReturnVoid(), "ANF consumes native SDK motion vectors (mvScale must be 1)");
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, dispatchUpscaleDesc.preExposure == 0.0f || dispatchUpscaleDesc.preExposure == 1.0f, ReturnVoid(), "ANF consumes native SDK color (preExposure must be 0 or 1)");
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, !(dispatchUpscaleDesc.flags & DispatchUpscaleBits::USE_SPECULAR_MOTION), ReturnVoid(), "ANF consumes surface motion");
+    }
+
     if (upscalerVal.m_Desc.type == UpscalerType::NIS) {
         const DescriptorVal& outputDescriptorVal = *(DescriptorVal*)dispatchUpscaleDesc.output.descriptor;
         OPENRHI_RETURN_ON_FAILURE(&deviceVal, deviceVal.GetDesc().shaderFeatures.storageWriteWithoutFormat || outputDescriptorVal.GetFormat() == upscalerVal.m_Desc.outputFormat, ReturnVoid(), "'output.descriptor' format does not match 'UpscalerDesc::outputFormat'");
@@ -2368,6 +2395,23 @@ static void OPENRHI_CALL CmdDispatchUpscale(CommandBuffer& commandBuffer, Upscal
             OPENRHI_RETURN_ON_FAILURE(&deviceVal, dispatchUpscaleDesc.settings.fsr.frameTime >= 0.0f, ReturnVoid(), "'settings.fsr.frameTime' must be >= 0");
             OPENRHI_RETURN_ON_FAILURE(&deviceVal, dispatchUpscaleDesc.settings.fsr.viewSpaceToMetersFactor > 0.0f, ReturnVoid(), "'settings.fsr.viewSpaceToMetersFactor' must be > 0");
             OPENRHI_RETURN_ON_FAILURE(&deviceVal, dispatchUpscaleDesc.settings.fsr.sharpness >= 0.0f && dispatchUpscaleDesc.settings.fsr.sharpness <= 1.0f, ReturnVoid(), "'settings.fsr.sharpness' is out of range");
+        }
+    }
+
+    if (upscalerVal.m_Desc.type == UpscalerType::ANF) {
+        const UpscalerResource resources[] = {dispatchUpscaleDesc.input, dispatchUpscaleDesc.output, dispatchUpscaleDesc.guides.upscaler.mv, dispatchUpscaleDesc.guides.upscaler.depth};
+        const UpscalerResourceRequirementsVK* requirements = upscalerImpl->GetAnfResourceRequirementsVK();
+
+        for (uint32_t i = 0; i < GetCountOf(resources); i++) {
+            const TextureDesc& desc = ((TextureVal*)resources[i].texture)->GetDesc();
+            const Dim2_t expected = i == 1 ? upscalerProps.upscaleResolution : upscalerProps.renderResolution;
+            bool formatSupported = false;
+
+            for (uint32_t j = 0; j < requirements[i].formatNum; j++)
+                formatSupported |= desc.format == requirements[i].formats[j];
+
+            OPENRHI_RETURN_ON_FAILURE(&deviceVal, formatSupported, ReturnVoid(), "ANF resource %u has an unsupported format", i);
+            OPENRHI_RETURN_ON_FAILURE(&deviceVal, desc.type == TextureType::TEXTURE_2D && desc.width == expected.w && desc.height == expected.h && desc.layerNum == 1 && desc.mipNum == 1 && desc.sampleNum == 1, ReturnVoid(), "ANF resource %u must be a single-sample 2D image at its creation dimensions with one layer and mip", i);
         }
     }
 
@@ -2587,3 +2631,5 @@ Result DeviceVal::FillFunctionTable(WrapperVKInterface& table) const {
 }
 
 #pragma endregion
+
+#include "VendorFeaturesVal.hpp"

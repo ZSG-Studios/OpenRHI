@@ -47,6 +47,7 @@ struct QueueVK final : public DebugNameBase {
     void GetCalibratedTimestamps(uint64_t& timestampGPU, uint64_t& timestampCPU);
     Result Submit(const QueueSubmitDesc& queueSubmitDesc);
     Result WaitIdle();
+    Result SetLatencyQueueRole(LatencyQueueRole role);
 
 private:
     DeviceVK& m_Device;

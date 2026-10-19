@@ -138,6 +138,11 @@ jobs:
 
   Build-Android-ARM64:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+        anf: ['OFF', 'ON']
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -149,14 +154,24 @@ jobs:
         with:
           cmake-version: 'latest'
 
+      - name: Checkout pinned ANF SDK
+        if: matrix.anf == 'ON'
+        uses: actions/checkout@v4
+        with:
+          repository: SnapdragonGameStudios/adreno-neural-fusion
+          ref: a144fbab47ad586adf64c5a1574be73064550f1e
+          path: _ANF_SDK
+
       - name: Deploy
         run: >-
           bash Scripts/Linux/1-Deploy.sh
           -G Ninja
-          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
           -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake"
           -DANDROID_ABI=arm64-v8a
           -DANDROID_PLATFORM=android-33
+          -DOPENRHI_ENABLE_ANF_SDK=${{ matrix.anf }}
+          -DOPENRHI_ANF_SDK_ROOT="${{ github.workspace }}/_ANF_SDK"
           -DOPENRHI_ENABLE_NIS_SDK=ON -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
 
       - name: Build
@@ -165,11 +180,53 @@ jobs:
       - name: Prepare SDK
         run: bash Scripts/Linux/3-PrepareSDK.sh
 
+      - name: Check ANF runtime and licenses
+        if: matrix.anf == 'ON'
+        run: |
+          test -s _OpenRHI_SDK/Lib/libanf.so
+          test -s _OpenRHI_SDK/Lib/ThirdPartyLicenses/anf/LICENSE.txt
+          test -s _OpenRHI_SDK/Lib/ThirdPartyLicenses/anf/LICENSE-BSD-3-Clause.txt
+          cmp _ANF_SDK/lib/arm64-v8a/libanf.so _OpenRHI_SDK/Lib/libanf.so
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OpenRHI SDK (Android ARM64)
+          name: OpenRHI SDK (Android ARM64 ${{ matrix.configuration }} ANF ${{ matrix.anf }})
           path: _OpenRHI_SDK
+
+  Test-ANF-Contract:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: 'latest'
+      - uses: actions/checkout@v4
+        with:
+          repository: SnapdragonGameStudios/adreno-neural-fusion
+          ref: a144fbab47ad586adf64c5a1574be73064550f1e
+          path: _ANF_SDK
+      - uses: actions/checkout@v4
+        with:
+          repository: KhronosGroup/Vulkan-Headers
+          ref: v1.4.365
+          path: _Vulkan-Headers
+      - name: Configure contract tests
+        run: >-
+          cmake -S . -B _Build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+          -DOPENRHI_ENABLE_VK_SUPPORT=OFF -DOPENRHI_ENABLE_NONE_SUPPORT=ON
+          -DOPENRHI_ENABLE_NIS_SDK=OFF -DOPENRHI_ENABLE_IMGUI_EXTENSION=OFF
+          -DOPENRHI_ENABLE_NVTX_SUPPORT=OFF -DOPENRHI_BUILD_TESTS=ON
+          -DOPENRHI_ANF_SDK_ROOT="${{ github.workspace }}/_ANF_SDK"
+          -DOPENRHI_ANF_TEST_VULKAN_HEADERS="${{ github.workspace }}/_Vulkan-Headers/include"
+      - name: Build and test adapter contract
+        run: |
+          cmake --build _Build --parallel
+          ctest --test-dir _Build --output-on-failure
 
   Build-macOS:
     runs-on: macos-latest
@@ -235,16 +292,64 @@ jobs:
           -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON
           -DOPENRHI_STATIC_LIBRARY=ON
       - name: Build
-        run: cmake --build _Build --config Release --parallel
+        run: |
+          cmake --build _Build --config Debug --parallel
+          cmake --build _Build --config Release --parallel
       - name: Package
         run: |
-          mkdir -p _OpenRHI_SDK/Lib/Release
-          cp -R Include CMake _OpenRHI_SDK/
-          cp LICENSE.txt THIRD_PARTY_NOTICES.md README.md MIGRATION.md QUALIFICATION.md SHADERS.md openrhi.natvis _OpenRHI_SDK/
-          find _Bin -name 'libOpenRHI.a' -exec cp {} _OpenRHI_SDK/Lib/Release/ \;
-          find _Bin -type d -name ThirdPartyLicenses -exec cp -R {} _OpenRHI_SDK/Lib/Release/ \;
-          test -f _OpenRHI_SDK/Lib/Release/libOpenRHI.a
+          mkdir -p _OpenRHI_SDK
+          cp -R Include CMake Docs _OpenRHI_SDK/
+          cp LICENSE.txt THIRD_PARTY_NOTICES.md README.md openrhi.natvis _OpenRHI_SDK/
+          for configuration in Debug Release; do
+            library=$(find _Bin -type f -name libOpenRHI.a \( -path "_Bin/${configuration}/libOpenRHI.a" -o -path "_Bin/${configuration}-*/libOpenRHI.a" \) -print -quit)
+            test -n "${library}"
+            mkdir -p "_OpenRHI_SDK/Lib/${configuration}"
+            cp "${library}" "_OpenRHI_SDK/Lib/${configuration}/"
+            licenses="$(dirname "${library}")/ThirdPartyLicenses"
+            if [ -d "${licenses}" ]; then
+              cp -R "${licenses}" "_OpenRHI_SDK/Lib/${configuration}/"
+            fi
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: OpenRHI SDK (iOS ${{ matrix.sdk }} ARM64)
           path: _OpenRHI_SDK
+
+  Build-Windows-NeuralFeatures:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: NVIDIA-RTX/NRC
+          ref: 7de30e4eb2a1a27118eb9a6acf5f715d757240c0
+          lfs: true
+          path: _NRC_SDK
+      - uses: actions/checkout@v4
+        with:
+          repository: GPUOpen-LibrariesAndSDKs/AntiLag2-SDK
+          ref: 390aa4a8c8655d0ae6e90079db2c85e103a96da3
+          path: _ANTILAG2_SDK
+      - uses: actions/checkout@v4
+        with:
+          repository: KhronosGroup/Vulkan-Headers
+          ref: v1.4.365
+          path: _Vulkan-Headers
+      - name: Configure native adapters
+        run: >-
+          cmake -S . -B _Build -A x64
+          -DOPENRHI_ENABLE_NONE_SUPPORT=ON -DOPENRHI_BUILD_TESTS=ON
+          -DOPENRHI_ENABLE_IMGUI_EXTENSION=OFF -DOPENRHI_ENABLE_NIS_SDK=OFF
+          -DOPENRHI_ENABLE_FFX_SDK=ON -DOPENRHI_ENABLE_NRC_SDK=ON -DOPENRHI_ENABLE_ANTILAG2_SDK=ON
+          -DFETCHCONTENT_SOURCE_DIR_NRC="${{ github.workspace }}/_NRC_SDK"
+          -DFETCHCONTENT_SOURCE_DIR_ANTILAG2="${{ github.workspace }}/_ANTILAG2_SDK"
+          -DOPENRHI_REFLEX_TEST_VULKAN_HEADERS="${{ github.workspace }}/_Vulkan-Headers/include"
+      - name: Build all provider adapters and tests
+        run: cmake --build _Build --config ${{ matrix.configuration }} --parallel
+      - name: Run host contracts and packaging checks
+        run: >-
+          ctest --test-dir _Build -C ${{ matrix.configuration }} --output-on-failure
+          -R "OpenRHI.(PublicAPI|NONE|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|NeuralRadianceCacheContract|ReflexContract|SDKPackaging)"

@@ -1275,7 +1275,13 @@ void DeviceD3D12::FillDesc(bool disableD3D12EnhancedBarrier) {
     m_Desc.features.tessellationShader = true;
     m_Desc.features.geometryShader = true;
     m_Desc.features.meshShader = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1;
-    m_Desc.features.lowLatency = HasNvExt();
+    m_Desc.features.lowLatency = false;
+#if OPENRHI_ENABLE_NVAPI
+    if (HasNvExt()) {
+        NV_GET_SLEEP_STATUS_PARAMS sleepStatus = {NV_GET_SLEEP_STATUS_PARAMS_VER};
+        m_Desc.features.lowLatency = NvAPI_D3D_GetSleepStatus(m_Device, &sleepStatus) == NVAPI_OK;
+    }
+#endif
     m_Desc.features.componentSwizzle = true;
     m_Desc.features.filterOpMinMax = levels.MaxSupportedFeatureLevel >= D3D_FEATURE_LEVEL_11_1 ? true : false;
     m_Desc.features.logicOp = options.OutputMergerLogicOp != 0;

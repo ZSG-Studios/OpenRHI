@@ -6,6 +6,13 @@
 #include "Extensions/OpenRHIWrapperD3D12.h"
 #include "Extensions/OpenRHIWrapperMetal.h"
 #include "Extensions/OpenRHIWrapperVK.h"
+#include "Extensions/OpenRHIUpscaler.h"
+#include "Extensions/OpenRHIUpscalerVK.h"
+#include "Extensions/OpenRHILowLatency.h"
+#include "Extensions/OpenRHIVendorFeatures.h"
+
+_Static_assert(OpenRhiMember(UpscalerType, ANF) == 8, "Upscaler values changed");
+_Static_assert(OpenRhiMember(UpscalerResourceRole, MAX_NUM) == 4, "Update Vulkan resource requirements arrays");
 
 _Static_assert(OpenRhiMember(GraphicsAPI, NONE) == (1 << 0), "NONE bit changed");
 _Static_assert(OpenRhiMember(GraphicsAPI, D3D12) == (1 << 2), "D3D12 bit changed");
@@ -13,6 +20,11 @@ _Static_assert(OpenRhiMember(GraphicsAPI, VK) == (1 << 3), "VK bit changed");
 _Static_assert(OpenRhiMember(GraphicsAPI, METAL) == (1 << 5), "METAL bit changed");
 
 int OpenRhiCheckPublicHelpers(void) {
+    OpenRhiUpscalerRequirementsVK upscalerRequirements = {0};
+
+    if (openrhiGetUpscalerRequirementsVK(OpenRhiMember(UpscalerType, NIS), &upscalerRequirements) != OpenRhiMember(Result, UNSUPPORTED) || upscalerRequirements.deviceExtensionNum != 0)
+        return 1;
+
     const OpenRhiFormat format = OpenRhiMember(Format, RGBA8_UNORM);
     uint32_t dxgi = openrhiConvertOpenRHIFormatToDXGI(format);
     uint32_t vk = openrhiConvertOpenRHIFormatToVK(format);

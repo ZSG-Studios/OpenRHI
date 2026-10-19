@@ -922,6 +922,14 @@ static Result OPENRHI_CALL GetLatencyReport(const SwapChain& swapChain, LatencyR
     return ((SwapChainVK&)swapChain).GetLatencyReport(latencyReport);
 }
 
+static Result OPENRHI_CALL GetLatencySleepStatus(const SwapChain& swapChain, LatencySleepStatus& status) {
+    return ((SwapChainVK&)swapChain).GetLatencySleepStatus(status);
+}
+
+static Result OPENRHI_CALL SetLatencyQueueRole(Queue& queue, LatencyQueueRole role) {
+    return ((QueueVK&)queue).SetLatencyQueueRole(role);
+}
+
 Result DeviceVK::FillFunctionTable(LowLatencyInterface& table) const {
     if (!m_Desc.features.lowLatency)
         return Result::UNSUPPORTED;
@@ -930,6 +938,8 @@ Result DeviceVK::FillFunctionTable(LowLatencyInterface& table) const {
     table.SetLatencyMarker = ::SetLatencyMarker;
     table.LatencySleep = ::LatencySleep;
     table.GetLatencyReport = ::GetLatencyReport;
+    table.GetLatencySleepStatus = ::GetLatencySleepStatus;
+    table.SetLatencyQueueRole = ::SetLatencyQueueRole;
 
     return Result::SUCCESS;
 }

@@ -13,6 +13,7 @@
 - Resolve profiles at creation. Keep frame execution allocation-free and synchronization/resource ownership explicit. Benchmark execution is an explicit tool invocation.
 - Promote tuned policies only with five repeatable paired runs, correctness/native-validation success, no p95 regression above 5% elsewhere, and three 20-minute sustained runs for mobile. Keep per-device/OS/driver/backend receipts.
 - Keep vendor dependencies unmodified and use their public interfaces.
+- ANF temporal SR uses pinned SDK 0.43.0 on Android ARM64/Vulkan through UpscalerInterface. Keep its requirement query, Validation, recorded dispatch, runtime/license packaging and host contract tests paired; record eligibility queries, technique creation and native dispatch as separate qualification results.
 - Apply `.agents/skills/openrhi-coding-standard/SKILL.md` and `.agents/skills/openrhi-review/SKILL.md`.
 - Maintain selection, capability, source/export, C/C++, build, runtime, packaging, and promotion-gate tests. Report build coverage and measured runtime coverage separately.
 - Move requested local removals to the operating system Recycle Bin/Trash, verify the exact target first, and verify the original path is gone afterward.
@@ -21,3 +22,8 @@
 - Author every shader in Slang (.slang) and compile explicitly with pinned Slang 2026.20 through CMake/OpenRHISlang.cmake. Ship native DXIL, SPIR-V, and metallib outputs with reflection-derived entry and threadgroup metadata. Keep compiler work outside device creation and submission.
 - Keep shader layouts explicit; native Metal resource tables use the documented 24-byte entry ABI. Use queried native FP16 capability when selecting half-precision variants.
 - Keep reflected shader threadgroup dimensions and explicit task payload bytes paired with native binaries; Metal pipeline creation consumes both. Use conservative Metal NIS tile sizes that fit native GPU-validation threadgroup storage.
+
+- Vendor neural lighting targets NVIDIA GeForce RTX 50-series and newer and AMD Radeon RX 9000-series and newer. Expose AMD Ray Regeneration and AMD radiance caching through FidelityFXInterface, NVIDIA NRC through NeuralRadianceCacheInterface, NVIDIA Reflex through LowLatencyInterface and AMD Anti-Lag 2 through AntiLagInterface. Keep pinned native descriptor ABIs, eligibility/provider queries, context creation, dispatch/readback and latency measurements as separate gates; use caller-owned submission, resources and shader-side producers.
+
+- Zig bindings are owned by `C:/Zig Engine/Bindings/Zig`; Rust bindings are owned by `C:/Bevy/integrations/rust_openrhi`. Maintain their language validation and integration gates in those projects and consume OpenRHI through its public C facade and qualified SDKs.
+- Keep maintained integration guides in `Docs/`, reusable tests in `Tests/`, and generated build/cache/log/qualification output under the ignored `_Build/`, `_Bin/` and `_Tmp/` directories. SDK packaging preserves `Docs/` links and licensed runtime deployment.

@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName Microsoft.VisualBasic
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 foreach ($name in ($Names -split ',')) {
-    if ($name -notin @('build', '_Bin', '_Build', '_Shaders', '_OpenRHI_SDK')) {
+    if ($name -notin @('build', '_Bin', '_Build', '_Shaders', '_Tmp', '_OpenRHI_SDK')) {
         throw "Unsupported generated directory: $name"
     }
     $targetPath = [IO.Path]::GetFullPath((Join-Path $repositoryRoot $name))

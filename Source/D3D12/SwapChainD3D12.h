@@ -46,6 +46,7 @@ struct SwapChainD3D12 final : public DisplayDescHelper, DebugNameBase {
     Result SetLatencyMarker(uint64_t presentId, LatencyMarker latencyMarker);
     Result LatencySleep(uint64_t presentId);
     Result GetLatencyReport(LatencyReport& latencyReport);
+    Result GetLatencySleepStatus(LatencySleepStatus& status);
 
 private:
     DeviceD3D12& m_Device;

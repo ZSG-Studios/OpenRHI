@@ -45,6 +45,7 @@ struct QueueD3D12 final : public DebugNameBase {
     void GetCalibratedTimestamps(uint64_t& timestampGPU, uint64_t& timestampCPU);
     Result Submit(const QueueSubmitDesc& queueSubmitDesc);
     Result WaitIdle();
+    Result SetLatencyQueueRole(LatencyQueueRole role);
 
 private:
     DeviceD3D12& m_Device;

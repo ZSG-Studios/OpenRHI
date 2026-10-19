@@ -32,6 +32,24 @@ target_include_directories(OpenRHIDevicePolicy PRIVATE ../Include ../Source/Shar
 target_compile_features(OpenRHIDevicePolicy PRIVATE cxx_std_17)
 add_test(NAME OpenRHI.DevicePolicy COMMAND OpenRHIDevicePolicy)
 
+if(EXISTS "${OPENRHI_ANF_SDK_ROOT}/public/anf.h")
+    find_path(OPENRHI_ANF_TEST_VULKAN_HEADERS vulkan/vulkan.h HINTS "${vulkan_headers_SOURCE_DIR}/include" REQUIRED)
+    add_executable(OpenRHIUpscalerAnfContract UpscalerAnfContract.cpp)
+    target_include_directories(OpenRHIUpscalerAnfContract PRIVATE ../Include ../Source/Shared "${OPENRHI_ANF_SDK_ROOT}/public" "${OPENRHI_ANF_TEST_VULKAN_HEADERS}")
+    target_compile_definitions(OpenRHIUpscalerAnfContract PRIVATE OPENRHI_STATIC_LIBRARY=1 OPENRHI_ENABLE_VK_SUPPORT=1 OPENRHI_ENABLE_ANF_SDK=1)
+    target_compile_features(OpenRHIUpscalerAnfContract PRIVATE cxx_std_17)
+    add_test(NAME OpenRHI.UpscalerAnfContract COMMAND OpenRHIUpscalerAnfContract)
+endif()
+
+if(OPENRHI_ENABLE_NGX_SDK AND OPENRHI_ENABLE_D3D12_SUPPORT)
+    add_executable(OpenRHIUpscalerNgxLifecycle UpscalerNgxLifecycle.cpp)
+    target_include_directories(OpenRHIUpscalerNgxLifecycle PRIVATE ../Include ../Source/Shared "${ngx_SOURCE_DIR}/include")
+    target_compile_definitions(OpenRHIUpscalerNgxLifecycle PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX
+        OPENRHI_ENABLE_D3D12_SUPPORT=1 OPENRHI_ENABLE_NGX_SDK=1)
+    target_compile_features(OpenRHIUpscalerNgxLifecycle PRIVATE cxx_std_17)
+    add_test(NAME OpenRHI.UpscalerNgxLifecycle COMMAND OpenRHIUpscalerNgxLifecycle)
+endif()
+
 add_executable(OpenRHIQualification DeviceQualification.cpp)
 target_link_libraries(OpenRHIQualification PRIVATE OpenRHI)
 target_compile_features(OpenRHIQualification PRIVATE cxx_std_17)
@@ -88,8 +106,61 @@ endif()
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
     add_test(NAME OpenRHI.PromotionGate COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_qualification.py)
+    if(NOT ANDROID AND NOT IOS AND NOT APPLE)
+        add_test(NAME OpenRHI.SDKPackaging COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_sdk_packaging.py
+            --root ${PROJECT_SOURCE_DIR} --output ${PROJECT_BINARY_DIR}/Tests/SDKPackaging)
+    endif()
 endif()
 
 if(Python3_Interpreter_FOUND AND (OPENRHI_ENABLE_D3D12_SUPPORT OR OPENRHI_ENABLE_VK_SUPPORT OR OPENRHI_ENABLE_METAL_SUPPORT))
     add_test(NAME OpenRHI.SlangContract COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_shaders.py "${PROJECT_BINARY_DIR}")
+endif()
+
+if(OPENRHI_ENABLE_FFX_SDK AND OPENRHI_ENABLE_ANTILAG2_SDK AND OPENRHI_ENABLE_D3D12_SUPPORT)
+    add_executable(OpenRHIVendorFeatures VendorFeatures.cpp)
+    target_link_libraries(OpenRHIVendorFeatures PRIVATE OpenRHI d3d12 dxgi)
+    target_include_directories(OpenRHIVendorFeatures PRIVATE
+        "${fsr_SOURCE_DIR}/Kits/FidelityFX/api/include"
+        "${fsr_SOURCE_DIR}/Kits/FidelityFX/denoisers/include"
+        "${fsr_SOURCE_DIR}/Kits/FidelityFX/radiancecache/include"
+        "${agilitysdk_SOURCE_DIR}/build/native/include")
+    target_compile_features(OpenRHIVendorFeatures PRIVATE cxx_std_17)
+    set_target_properties(OpenRHIVendorFeatures PROPERTIES RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenRHI>")
+    add_test(NAME OpenRHI.VendorFeatures.AMD COMMAND OpenRHIVendorFeatures)
+    set_tests_properties(OpenRHI.VendorFeatures.AMD PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 600)
+endif()
+
+if(OPENRHI_ENABLE_NRC_SDK)
+    add_executable(OpenRHINeuralRadianceCacheContract NeuralRadianceCacheContract.cpp)
+    target_include_directories(OpenRHINeuralRadianceCacheContract PRIVATE ../Include ../Source/Shared
+        "${nrc_SOURCE_DIR}/Include" "${agilitysdk_SOURCE_DIR}/build/native/include")
+    target_compile_definitions(OpenRHINeuralRadianceCacheContract PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX
+        OPENRHI_STATIC_LIBRARY=1 OPENRHI_ENABLE_D3D12_SUPPORT=1 OPENRHI_ENABLE_NRC_SDK=1)
+    target_compile_features(OpenRHINeuralRadianceCacheContract PRIVATE cxx_std_17)
+    add_test(NAME OpenRHI.NeuralRadianceCacheContract COMMAND OpenRHINeuralRadianceCacheContract)
+endif()
+
+if(OPENRHI_ENABLE_NVAPI AND OPENRHI_ENABLE_D3D12_SUPPORT)
+    find_path(OPENRHI_REFLEX_TEST_VULKAN_HEADERS vulkan/vulkan_core.h
+        HINTS "${vulkan_headers_SOURCE_DIR}/include" "${OPENRHI_ANF_TEST_VULKAN_HEADERS}")
+    if(OPENRHI_REFLEX_TEST_VULKAN_HEADERS)
+        add_executable(OpenRHIReflexContract ReflexContract.cpp)
+        target_include_directories(OpenRHIReflexContract PRIVATE ../Include ../Source/Shared
+            "${nvapi_SOURCE_DIR}" "${OPENRHI_REFLEX_TEST_VULKAN_HEADERS}")
+        target_compile_definitions(OpenRHIReflexContract PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX OPENRHI_STATIC_LIBRARY=1)
+        target_compile_features(OpenRHIReflexContract PRIVATE cxx_std_17)
+        add_test(NAME OpenRHI.ReflexContract COMMAND OpenRHIReflexContract)
+    endif()
+endif()
+
+if(OPENRHI_ENABLE_NONE_SUPPORT)
+    add_executable(OpenRHIVendorAvailability VendorAvailability.cpp)
+    target_link_libraries(OpenRHIVendorAvailability PRIVATE OpenRHI)
+    target_compile_features(OpenRHIVendorAvailability PRIVATE cxx_std_17)
+    target_compile_definitions(OpenRHIVendorAvailability PRIVATE
+        OPENRHI_TEST_FFX=$<AND:$<BOOL:${OPENRHI_ENABLE_FFX_SDK}>,$<BOOL:${OPENRHI_ENABLE_D3D12_SUPPORT}>>
+        OPENRHI_TEST_NRC=$<BOOL:${OPENRHI_ENABLE_NRC_SDK}>
+        OPENRHI_TEST_ANTILAG=$<BOOL:${OPENRHI_ENABLE_ANTILAG2_SDK}>)
+    set_target_properties(OpenRHIVendorAvailability PROPERTIES RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenRHI>")
+    add_test(NAME OpenRHI.VendorAvailability COMMAND OpenRHIVendorAvailability)
 endif()

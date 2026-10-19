@@ -1907,7 +1907,7 @@ OPENRHI_INLINE void CommandBufferVK::SetIndexBuffer(const Buffer& buffer, uint64
     const BufferVK& bufferVK = (BufferVK&)buffer;
 
     const auto& vk = m_Device.GetDispatchTable();
-    if (m_Device.m_IsSupported.maintenance5) {
+    if (m_Device.m_IsSupported.maintenance5 && vk.CmdBindIndexBuffer2) {
         uint64_t size = bufferVK.GetDesc().size - offset;
         vk.CmdBindIndexBuffer2(m_Handle, bufferVK.GetHandle(), offset, size, GetIndexType(indexType));
     } else
