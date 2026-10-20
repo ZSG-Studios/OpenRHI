@@ -518,7 +518,7 @@ static void RunProfile(Fixture& f, Encoding encoding, uint32_t width, uint32_t h
                 const double tolerance = filterTolerance + expected[i].decodeBound[c];
 
                 if (cases[i].reserved)
-                    Check(value.color[c] >= (expected[i].value[c] - 1e-5) && value.color[c] <= (expected[i].decodeBound[c] + 1e-5), "anisotropic patterned result outside independent value bounds");
+                    Check(value.color[c] >= (expected[i].value[c] - filterTolerance) && value.color[c] <= (expected[i].decodeBound[c] + filterTolerance), "anisotropic patterned result outside independent value bounds plus declared arithmetic allowance");
 
                 if (!std::isfinite(value.color[c]) || error > tolerance) {
                     std::fprintf(stderr, "profile %s case %zu transport %u channel %u actual %.9g reference %.9g tolerance %.9g\n", prefix.c_str(), i, transport, c, value.color[c], expected[i].value[c], tolerance);

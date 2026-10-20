@@ -84,6 +84,7 @@ def main():
                            "operations": ["fixed-view-mip-zero", "explicit-view-relative-LOD", "isotropic-explicit-gradients"],
                            "point_absolute_tolerance": 1 / 255 + 1e-5, "linear_absolute_tolerance": 2 / 255 + 1e-5,
                            "heap_conventional_absolute_tolerance": 1e-6,
+                           "bounded_value_arithmetic_allowance": "same predeclared point/linear filter allowance; never a patterned anisotropic quality reference",
                            "bc4_bc5_decode_interval": "per-texel 1/65535 + 0.03*abs(endpoint0-endpoint1); exact endpoints/special values; propagated through the actual reference filter",
                            "bc7_blocks": "mode 6 only; all-mode compression decode remains separately gated",
                            "odd_originals": "successful exact public factory creation required; SDK94 has no public unaligned-BC capability query"}}
@@ -130,8 +131,6 @@ def main():
             entry = {"cpu": cpu, "executable_sha256": sha(exe), "loaded_library_candidate": str(local_dll), "library_sha256": sha(local_dll)}
             receipt["configurations"][config] = entry
             if args.native:
-                # Set before invocation so failures preserve the true execution boundary
-                receipt["gpu_executed"] = True
                 native = out / (config + "-native")
                 frozen = out / (config + "-frozen")
                 frozen.mkdir()
@@ -144,6 +143,8 @@ def main():
                     shutil.copy2(source, destination)
                 entry["frozen_sha256"] = {str(p.relative_to(out)): sha(p) for p in sorted(frozen.rglob("*")) if p.is_file()}
                 try:
+                    # Set immediately before invocation, after the snapshot is complete
+                    receipt["gpu_executed"] = True
                     stdout = run([exe, "--native-aniso16" if args.anisotropy == 16 else "--native", build / "BindlessMaterialHeap.dxil", build / "BindlessMaterialConventional.dxil", native], out / f"{config}-native.log")
                     summary = json.loads(next(line for line in stdout.splitlines() if line.startswith('{"status":"native_passed"')))
                     assert summary["validation_errors"] == 0 and summary["profiles"] == (32 if args.anisotropy == 16 else 24) and summary["cases"] == (36864 if args.anisotropy == 16 else 41472)
