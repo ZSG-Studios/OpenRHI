@@ -126,6 +126,12 @@ Release immediately invalidates the CPU handle for new publications and moves it
 
 After collection, release the registry retention and notify the owning module that its view/resource borrower has retired; the native object owner releases objects after all borrowers finish. Increment the generation and return the slot to the free list. Quarantine a slot on generation wrap; a stale handle must never become valid again within the registry lifetime. Replacing/growing a heap creates a new registry/heap epoch, migrates live records/descriptors, and retires the old heap after all borrowers finish. Exhaustion returns a concrete allocation failure with used/free/retiring counts. It never silently overwrites a live descriptor.
 
+## Live publication and service-age qualification
+
+Apply the [production live-update contract](QUALIFICATION.md#production-live-update-contract) to each indexed producer/consumer boundary. The consuming owner links authoritative change frame/time and full source revisions to affected transport/regions, valid publication/invalidation, bounded refresh and the generation actually presented. Registry/heap epochs and completed native fences retain their lifetime role alongside that scene-validity contract.
+
+Predeclare maximum service age, first changed-frame validity and current-scene fallback error/duration, refresh under continuous change, and supported motion-rate/displacement boundaries. Preserve stationary-camera world motion, start/stop/reversal, stale-record and memory-pressure controls with the combined pipeline at every phase exit. Native heap/sampling/readback receipts contribute their exact operation/type/lifetime scope; MIRA and module owners supply integrated correctness, latency, deadline and memory evidence to the production ledger.
+
 ## UI, AMD and conventional-pass coexistence
 
 The shared heap persists across module passes. UI and vendor adapters retain their supported public interfaces and native resource contracts. A conventional pass may bind its own pool/layout and replace the currently bound native heaps. On returning to a bindless module pass, bind the shared heap first, then that pass's pipeline layout, pipeline and root payload. Conversely, establish all required conventional state before a UI/vendor pass. Resource-state transitions, FSR/FG COMMON handoffs and fences remain explicit. MIRA's FG/VSync requested defaults are independent of heap availability and remain application-owned.

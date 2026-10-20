@@ -14,6 +14,8 @@ Keep these states distinct:
 
 The snapshot contains interface query results and upscaler support reports. It intentionally carries no application active/enabled state. For latency/vendor effects, interface availability requires a separate native eligibility/context query. Optional SDKs are controlled by the reported `OPENRHI_*` build gate; the UI-qualified default Windows SDK has FFX, NGX, XeSS, NRC, NIS and Anti-Lag 2 gates off, with NVAPI on.
 
+Before live adoption, each option/provider boundary follows the [production live-update contract](QUALIFICATION.md#production-live-update-contract): authoritative setting/content events, affected transport, validity/history reset, bounded scheduling, current-scene fallback and numeric maximum service age. MIRA qualifies first changed-frame error/fallback duration, activation/reset/reconfiguration deadlines, continuous-change refresh and combined-pipeline regressions. Native eligibility/context/dispatch receipts retain their component scope alongside those application results.
+
 `CmdDispatchUpscale` records through a void function-table entry. Track recorded, submitted and completed work separately and use native validation/readback receipts to qualify successful execution. A settings checkbox or an upscaler support query alone is not that evidence.
 
 | Menu family | Public controls and execution contract | Required application integration |

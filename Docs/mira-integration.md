@@ -26,6 +26,12 @@ Windows uses D3D12; Linux and Android use Vulkan; Apple platforms use native Met
 
 MIRA owns the shared typed registry and lifetime protocol; FACET and UVRT consume GPU-selected indices. OpenRHI supplies public heap operations, native limits, descriptor encoding and Validation. Follow [the bindless contract](BINDLESS.md) for shader/root ABI, backend transports, generations, recorded/submitted retirement, UI/vendor rebinding and native migration gates.
 
+## Live feature and generation handoff
+
+Follow the [production live-update contract](QUALIFICATION.md#production-live-update-contract) aligned with UVRT plan v1.5. Each feature/public boundary declares authoritative live events, affected transport/regions, generation validity/invalidation, bounded scheduling, a valid current-scene fallback and numeric maximum service age before adoption. MIRA advances input/simulation/attachments, joins FACET exports with AS/resource publication, orders UVRT work and identifies the generation actually presented. OpenRHI supplies the explicit native resource, capability, queue and completion boundary.
+
+Link the authoritative change frame/time to recorded/submitted/completed native work, consumed source revisions and the first correct presented frame. Declare first-changed-frame fallback error/duration and refresh bounds, including sustained changes, stationary-camera world motion, supported motion-rate boundaries and pressure/reset/recovery. Each phase exit regresses the combined pipeline and records correctness, latency, frame/pass/deadline and memory evidence together. The owning UVRT dynamic ledger retains all required cells, with 154 production cells open at this alignment checkpoint; module/native fixtures contribute their measured contracts.
+
 ## Public API handoff
 
 Include `OpenRHI.h` first, then the required `Extensions/OpenRHI*.h` headers. C++ uses namespace `openrhi`; C uses `OpenRhi*` types and the same `openrhi*` exports. Build all consumers against matching revision-1 headers and binaries.
