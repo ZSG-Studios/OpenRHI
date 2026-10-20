@@ -154,6 +154,10 @@ if(OPENRHI_ENABLE_NGX_SDK AND OPENRHI_ENABLE_D3D12_SUPPORT)
 endif()
 
 add_executable(OpenRHIQualification DeviceQualification.cpp)
+
+if(OPENRHI_ENABLE_D3D12_SUPPORT)
+    add_subdirectory(BindlessMaterial)
+endif()
 target_link_libraries(OpenRHIQualification PRIVATE OpenRHI)
 target_compile_features(OpenRHIQualification PRIVATE cxx_std_17)
 set_target_properties(OpenRHIQualification PROPERTIES RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenRHI>")

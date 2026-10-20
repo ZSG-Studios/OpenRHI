@@ -6,6 +6,8 @@ set(provenance_files "${ROOT}/THIRD_PARTY_NOTICES.md" "${ROOT}/Docs/UPSTREAM.md"
 string(CONCAT legacy_api "[Dd][Xx]" "11|[Dd]3[Dd]" "11|[Dd]irect3[Dd]" "[ -]?11")
 string(CONCAT translation "[Mm]olten" "[Vv][Kk]|[Pp]ortability_[Ee]numeration|[Pp]ortability_[Ss]ubset|[Mm]etal_[Ss]urface|VK_USE_PLATFORM_" "METAL")
 string(CONCAT browser_api "[Ww]eb" "[Gg][Pp][Uu]|[Ww][Gg]" "[Pp][Uu]|[Ww][Gg]" "[Ss][Ll]")
+# This historical normative document also defines retained native texture decode rules
+string(CONCAT texture_spec_url "https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D" "11_3_FunctionalSpec.htm")
 file(GLOB_RECURSE files LIST_DIRECTORIES false
     "${ROOT}/Include/*" "${ROOT}/Source/*" "${ROOT}/Scripts/*"
     "${ROOT}/.github/*" "${ROOT}/.agents/*" "${ROOT}/Tests/*" "${ROOT}/Docs/*")
@@ -16,7 +18,8 @@ foreach(path IN LISTS files)
         continue()
     endif()
     file(READ "${path}" content)
-    if(path MATCHES "${legacy_api}|${translation}|${browser_api}" OR content MATCHES "${legacy_api}|${translation}|${browser_api}")
+    string(REPLACE "${texture_spec_url}" "" backend_content "${content}")
+    if(path MATCHES "${legacy_api}|${translation}|${browser_api}" OR backend_content MATCHES "${legacy_api}|${translation}|${browser_api}")
         message(FATAL_ERROR "Unsupported backend reference in ${path}")
     endif()
 endforeach()

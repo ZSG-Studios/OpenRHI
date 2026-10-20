@@ -1,0 +1,41 @@
+# Bindless BC material operation fixture
+
+This OpenRHI-owned C++17/Slang fixture links the public qualified SDK94 and changes no runtime or provider source. The standalone build copies SDK runtimes into its own ignored build directory. It also participates in the main test build when D3D12 is enabled. GPU execution is an explicit step after coordinating a native window with MAIN.
+
+## CPU build and frozen inputs
+
+From `C:/OpenRHI`:
+
+```powershell
+python Tests/BindlessMaterial/qualify.py --out _Tmp/BindlessMaterial/CPU-Checkpoint
+```
+
+The default command configures only `_Build/BindlessMaterial`, builds Debug and Release, runs the reference executable with `--cpu-only`, checks pinned Slang reflection/DXIL, verifies SDK94 DLL hashes and emits a receipt. It creates no device and submits no work. `cpu-build-receipt.json` binds source, shader/compiler/helper and executable hashes for later `--no-build` execution. A fresh output path preserves each attempt.
+
+After an allocated GPU window:
+
+```powershell
+python Tests/BindlessMaterial/qualify.py --no-build --native --out _Tmp/BindlessMaterial/Native-Checkpoint
+```
+
+The native command verifies the frozen build, runs Debug and Release with OpenRHI and native D3D12 validation, and records the actual loaded DLL path and hash. Raw compressed mip bytes, input case records, independent references, both native outputs, adapter/driver/UID, per-profile errors and retired-owner counts are retained. Repeated direct CTest execution chooses a fresh nested artifact directory. Failure retains its logs and any completed profiles; it never becomes a successful admission receipt.
+
+## Predeclared operation profile
+
+- Exact source/view formats: `BC4_R_UNORM`, `BC5_RG_UNORM`, `BC7_RGBA_UNORM`, `BC7_RGBA_SRGB`. BC7 test blocks use mode 6; decode coverage for other BC7 modes requires additional vectors.
+- Original dimensions: 20x12, 17x9 and 4x20, with complete authored mip chains and distinguishable blocks/mips. Source/view formats match. Each source exposes a full REMAINING view, base-mip-one/two-level view, and last-mip REMAINING view. The original chain is normalized before shifts/subtractions; native `GetDimensions` must match the exact effective view dimensions and level count, including odd mips and one-pixel axes.
+- SDK94 exposes BC compression and sampled-format support but no public unaligned-BC-top-level query. The exact 17x9 source factory must succeed for this complete profile to pass. Preserve that factory/native result separately from the aligned originals. [D3D12 OPTIONS8](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_d3d12_options8) describes the native distinction; no backend query or SDK ABI change is introduced here.
+- Four ordinary normalized-coordinate samplers: NEAREST min/mag/mip or LINEAR min/mag/mip, crossed with CLAMP_TO_EDGE or REPEAT XYZ, AVERAGE reduction, no comparison/integer interpretation, anisotropy 1, zero bias/minimum LOD, maximum LOD 32. Query device limits and retain the public factory results. Anisotropy 16 remains a distinct future profile.
+- Native operations are fixed **view-relative** mip zero, explicit view-relative LOD -0.7/0.27/1.23/3.1/9.2, and explicit isotropic gradients targeting relative LOD -0.7/0.27/1.23. For FACET authored-mip queries, the host/evaluator owns resident-base subtraction and missing-finer-mip policy; this fixture tests the native operation after that translation. Gradients are finite, axis-aligned and isotropic in each selected view's actual dimensions. No ray-stage implicit derivatives are assumed.
+- Eight fractional/interior/outside/seam UV pairs, two independently selected textures, noncontiguous resource slots 5/24/43 and 81/100/119, separate sampler slots 7/19/31/43, case-buffer slot 199 and result slot 211. These are separate resource/sampler namespaces. One heap dispatch covers all combinations; compiler checks require separate varying texture and sampler handles with direct-subscript `NonUniformResourceIndex`. Conventional dispatches bind each exact view/sampler pair to a separate immutable set and consume the same cases.
+- Each profile executes heap -> conventional -> heap with explicit heap/layout/pipeline/root restoration. Two epochs recreate actual native texture/view owners with changed contents, using the same slots only after the previous fence completes. Recording and submitted leases retain both owners; destruction counters and weak references confirm release after completion. Application registry generations, graph-closure retention and sampler-owner retirement retain their host-owned fixtures.
+
+There are 24 format/dimension/epoch profiles and 41,472 sample cases per configuration. Every case checks four color channels and selected view dimensions/levels against an independent scalar oracle, and compares heap/conventional results. The oracle parses BC4/BC5 blocks and BC7 mode-6 bitstreams, expands texels, applies sRGB conversion to RGB while preserving alpha, and performs scalar address, bilinear and mip interpolation. Literal endpoint blocks, analytic filtering/address cases, an sRGB midpoint and odd-image range checks validate the CPU reference independently of the shader.
+
+Reference policy 2 separates the native decode allowance from the original strict quality thresholds. The [functional texture specification](https://microsoft.github.io/DirectX-Specs/d3d/archive/D3D11_3_FunctionalSpec.htm), sections 19.5.2, 19.5.9 and 19.5.11, permits BC4/BC5 UNORM derived texels an absolute decode error below `1/65535 + 0.03*abs(endpoint0-endpoint1)` in normalized space; endpoints and special zero/one values remain exact. UNORM8 endpoint promotion to UNORM16 preserves the same normalized endpoint difference. The oracle assigns that interval only to derived texels, then propagates its radius through the same nonnegative bilinear/mip weights as the ideal reference. BC7 has zero decode radius. Bounds are calculated from compressed input bytes before sampling and do not fit measured output.
+
+For this separate operation profile, per-channel acceptance uses the propagated decode radius plus the predeclared filter allowance: point `1/255 + 1e-5`, linear `2/255 + 1e-5`; heap/conventional parity stays `1e-6` and all outputs must be finite. The original limits remain separately reported strict quality thresholds; `strict_quality_channel_exceedances` counts each transport/channel exceeding them. A specification-interval pass establishes the exercised native operations, while a strict quality promotion requires its own passing measurements. Native validation errors, dimension/range mismatches, expired owners and public-factory failures fail the run. The fixture preserves double-precision ideal references and decode radii before dispatch; each artifact reference record contains two double4 values followed by four uint32 traits (80 bytes).
+
+The first policy-1 native attempt is preserved under `_Tmp/BindlessMaterial/Native-Initial/`. Both SDK configurations stopped in BC4 20x12 epoch zero at the same strict point-reference failure: case 4 yielded 0.4203431308 against ideal 0.4246498599, exceeding `1/255 + 1e-5`. Heap and conventional raw outputs were byte-identical. This result neither establishes a backend defect nor admits the remaining formats/ranges; policy 1 omitted the specification's endpoint-relative decode allowance. The original source/executables/shaders are frozen there. Policy 2 requires a fresh native receipt and keeps the original failed result intact. The runner collects all per-profile failures, including exact odd-original factory failures, and reaches a terminal result for both configurations before returning failure.
+
+The BC4/BC5 and BC7/BPTC block layouts are specified in the [Khronos Data Format Specification](https://registry.khronos.org/DataFormat/specs/1.4/dataformat.1.4.pdf). This implementation adds no third-party decoder or vendor modifications. Successful sampling evidence admits only the exercised format/view/sampler/operation profile. Channel-to-material mapping, normal reconstruction, illumination, live graph publication, mobile/Metal/Vulkan execution and paired performance use their owning qualification gates.
