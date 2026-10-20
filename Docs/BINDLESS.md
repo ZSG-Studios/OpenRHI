@@ -191,6 +191,8 @@ Native policy-2 execution at source `7303453b7716d6306a946edf1838afcc7132010f` r
 
 ## Qualification and migration gates
 
+Hardware sRGB-to-float precision and the unrounded inverse-transfer check are described in the fixture's [sRGB precision notes](../Tests/BindlessMaterial/README.md#hardware-srgb-precision). Keep encoded-space conversion precision, the declared complete-operation arithmetic allowance and actual material-image quality as separate results.
+
 The corrected exact anisotropy-16 operation profile at source `135368c0f2194c88b5cb1dfd337f0562ab64a931` passed Debug/Release SDK94 on RX 9070 XT: 32 profiles and 36,864 cases per configuration, zero validation errors, exact heap/conventional parity and 64 actual texture/view-owner fence retirements. Exact LINEAR/repeat/AVERAGE/max16/min0/bias0/max32 sampler factory inputs are retained and verified. The 32,256 scalar-reference cases had zero original strict scalar-fixture threshold exceedances; 4,608 patterned anisotropic cases passed separately scoped independent value bounds/arithmetic allowance and parity. Constant-field controls provide defined anisotropic reference colors. The tested aligned dimensions/views, BC7 mode-6 vectors and gradient/LOD controls bound this operation evidence; actual module images, producer footprints and performance remain independent. `_Tmp/BindlessMaterial/Native-Aniso16-Corrected/publication.json` and its frozen receipt retain the complete result alongside earlier rejected attempts. Production factories, SDK94 and odd-original admission remain unchanged.
 
 1. Record interface/capabilities, capacities, adapter/OS/driver/backend and the chosen transport; reject unsupported classes before pipeline creation or record publication.
