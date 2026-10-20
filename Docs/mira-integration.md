@@ -88,7 +88,7 @@ On Linux and macOS, run the corresponding `Scripts/Linux/1-Deploy.sh` or `Script
 For an explicit host-only test configuration, configure a separate directory with native/provider gates disabled:
 
 ```powershell
-cmake -S C:/OpenRHI -B C:/OpenRHI/_Build/mira-none -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON -DOPENRHI_ENABLE_D3D12_SUPPORT=OFF -DOPENRHI_ENABLE_VK_SUPPORT=OFF -DOPENRHI_ENABLE_METAL_SUPPORT=OFF -DOPENRHI_ENABLE_NVTX_SUPPORT=OFF
+cmake -S C:/OpenRHI -B C:/OpenRHI/_Build/mira-none -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON -DOPENRHI_ENABLE_D3D12_SUPPORT=OFF -DOPENRHI_ENABLE_VK_SUPPORT=OFF -DOPENRHI_ENABLE_METAL_SUPPORT=OFF -DOPENRHI_ENABLE_NVTX_SUPPORT=OFF -DOPENRHI_ENABLE_IMGUI_EXTENSION=OFF -DOPENRHI_ENABLE_RMLUI_EXTENSION=OFF
 cmake --build C:/OpenRHI/_Build/mira-none --config Release --parallel 8
 ctest --test-dir C:/OpenRHI/_Build/mira-none -C Release --output-on-failure
 ```

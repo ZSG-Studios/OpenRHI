@@ -37,6 +37,12 @@ DEALINGS IN THE SOFTWARE.
 
 Dependency-provided licenses accompany packaged native libraries in ThirdPartyLicenses. NVIDIA Image Scaling retains its source license and algorithm attribution. Compiler and dependency distributions retain their respective license terms.
 
+## UI public-interface integrations
+
+The OpenRHI-authored RmlUi bridge uses the unmodified public API of RmlUi 6.3, commit `ba95ffe8bfb6370efb2cdcca927eaad4710c5413` of https://github.com/mikke89/RmlUi. RmlUi is MIT licensed; its original `LICENSE.txt` remains in the fetched test dependency. The bridge does not copy or modify RmlUi implementation. Applications that link or deploy RmlUi preserve its original license alongside their RmlUi distribution.
+
+The ImGui renderer contract is qualified with Dear ImGui 1.92.9, commit `01380c579715e62fb9a8d6ec0502c4ea83bfde6e` of https://github.com/ocornut/imgui. Dear ImGui is MIT licensed; the unmodified test dependency retains its `LICENSE.txt`. OpenRHI's renderer retains the upstream NVIDIA source attribution. Application-owned ImGui distributions retain Dear ImGui's original license. Neither UI core is linked into the OpenRHI runtime; applications link their context-owning UI cores.
+
 ## Qualcomm Adreno Neural Fusion SDK
 
 The optional Android Vulkan adapter uses the unmodified public ANF SDK 0.43.0 from Snapdragon Game Studios, commit `a144fbab47ad586adf64c5a1574be73064550f1e` of https://github.com/SnapdragonGameStudios/adreno-neural-fusion.

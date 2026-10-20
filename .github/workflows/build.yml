@@ -30,7 +30,7 @@ jobs:
         run: .\Scripts\Windows\2-Build.bat
 
       - name: Test dummy backend and source boundary
-        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract)" --output-on-failure
+        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract|RmlUi)" --output-on-failure
 
       - name: Prepare SDK
         run: .\Scripts\Windows\3-PrepareSDK.bat
@@ -125,7 +125,7 @@ jobs:
         run: bash Scripts/Linux/2-Build.sh
 
       - name: Test dummy backend and source boundary
-        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract)" --output-on-failure
+        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract|RmlUi)" --output-on-failure
 
       - name: Prepare SDK
         run: bash Scripts/Linux/3-PrepareSDK.sh
@@ -256,7 +256,7 @@ jobs:
         run: bash Scripts/MacOS/2-Build.sh
 
       - name: Test dummy backend and source boundary
-        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract)" --output-on-failure
+        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract|RmlUi)" --output-on-failure
 
       - name: Prepare SDK
         run: bash Scripts/MacOS/3-PrepareSDK.sh

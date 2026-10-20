@@ -14,6 +14,8 @@ expected = {
 }
 if (root / 'Imgui_vs.h').exists():
     expected.update(Imgui_vs=('ImguiVS', 'vertex', None), Imgui_fs=('ImguiFS', 'fragment', None))
+if (root / 'RmlUi_vs.h').exists():
+    expected.update(RmlUi_vs=('RmlUiVS', 'vertex', None), RmlUi_fs=('RmlUiFS', 'fragment', None))
 if (root / 'NisShaders.h').exists():
     for name in re.findall(r'#include "(NIS_[0-9_]+)\.h"', (root / 'NisShaders.h').read_text()):
         expected[name] = ('NisMain', 'compute', [256, 1, 1])
@@ -31,13 +33,15 @@ for name, (entry, stage, threads) in expected.items():
     if header.exists():
         text = header.read_text()
         assert f'g_{name}_desc' in text and f'"{entry}"' in text, name
-    if binary.suffix == '.metallib' and name.startswith(('Imgui_', 'NIS_')):
+    if binary.suffix == '.metallib' and name.startswith(('Imgui_', 'RmlUi_', 'NIS_')):
         parameter = next(p for p in reflection['parameters'] if p['name'] == 'root')
         assert parameter['binding']['index'] == 2, name
         fields = parameter['type']['elementType']['fields']
         offsets = {f['name']: f['binding']['offset'] for f in fields}
         if name.startswith('Imgui_'):
             assert offsets == {'constants': 0, 'samplers': 16, 'textures': 24}, offsets
+        elif name.startswith('RmlUi_'):
+            assert offsets == {'constants': 0, 'samplers': 96, 'textures': 104}, offsets
         else:
             assert offsets == {'constants': 0, 'coefficients': 80, 'samplers': 88, 'images': 96}, offsets
     depfile = (directory / f'{name}.d').read_text()

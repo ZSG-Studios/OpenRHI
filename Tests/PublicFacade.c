@@ -10,6 +10,9 @@
 #include "Extensions/OpenRHIUpscalerVK.h"
 #include "Extensions/OpenRHILowLatency.h"
 #include "Extensions/OpenRHIVendorFeatures.h"
+#include "Extensions/OpenRHIRmlUi.h"
+
+_Static_assert(sizeof(OpenRhiRmlUiVertex) == 20, "RmlUi vertex ABI changed");
 
 _Static_assert(OpenRhiMember(UpscalerType, ANF) == 8, "Upscaler values changed");
 _Static_assert(OpenRhiMember(UpscalerResourceRole, MAX_NUM) == 4, "Update Vulkan resource requirements arrays");

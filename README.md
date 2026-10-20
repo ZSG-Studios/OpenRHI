@@ -44,6 +44,8 @@ The first measurement target is the AMD RX 9070 XT. The hardware matrix also inc
 
 - [API migration](Docs/MIGRATION.md)
 - [MIRA module integration and ownership](Docs/mira-integration.md)
+- [ImGui and RmlUi rendering integration](Docs/UI.md)
+- [Module-owned rendering options and activation gates](Docs/OPTIONS.md)
 - [Upstream integration checklist](Docs/UPSTREAM.md)
 - [Qualification gates and measurement tools](Docs/QUALIFICATION.md)
 - [Hardware targets and identity provenance](Profiles/targets.json)

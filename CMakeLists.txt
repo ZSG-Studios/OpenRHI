@@ -58,7 +58,8 @@ option(OPENRHI_STATIC_LIBRARY "Build static library" ${OPENRHI_STATIC_LIBRARY_DE
 option(OPENRHI_ENABLE_DEBUG_NAMES_AND_ANNOTATIONS "Enable debug names, host and device annotations" ON)
 option(OPENRHI_ENABLE_NONE_SUPPORT "Enable NONE test backend" OFF)
 option(OPENRHI_ENABLE_VALIDATION_SUPPORT "Enable Validation backend (otherwise 'enableOpenRHIValidation' is ignored)" ON)
-option(OPENRHI_ENABLE_IMGUI_EXTENSION "Enable 'ImguiInterface' extension" OFF)
+option(OPENRHI_ENABLE_IMGUI_EXTENSION "Enable 'ImguiInterface' extension" ON)
+option(OPENRHI_ENABLE_RMLUI_EXTENSION "Enable 'RmlUiInterface' extension" ON)
 option(OPENRHI_STREAMER_THREAD_SAFE "'StreamerInterface' thread safety (OFF is faster)" ON)
 
 # Metal 4 requires Xcode 26 or newer (AppleClang 17 or newer)
@@ -173,6 +174,7 @@ foreach(opt IN ITEMS
     OPENRHI_ENABLE_VALIDATION_SUPPORT
     OPENRHI_ENABLE_NIS_SDK
     OPENRHI_ENABLE_IMGUI_EXTENSION
+    OPENRHI_ENABLE_RMLUI_EXTENSION
     OPENRHI_ENABLE_D3D12_SUPPORT
     OPENRHI_ENABLE_NVAPI
     OPENRHI_ENABLE_AMDAGS
@@ -449,6 +451,8 @@ set(SHARED_SOURCE
     "Source/Shared/HelperInterface.hpp"
     "Source/Shared/ImguiInterface.h"
     "Source/Shared/ImguiInterface.hpp"
+    "Source/Shared/RmlUiInterface.h"
+    "Source/Shared/RmlUiInterface.hpp"
     "Source/Shared/Lock.h"
     "Source/Shared/Latency.h"
     "Source/Shared/NIS.h"
@@ -1038,6 +1042,9 @@ set(OPENRHI_EXTENSIONS
     "Include/Extensions/OpenRHIDeviceCreation.h"
     "Include/Extensions/OpenRHIHelper.h"
     "Include/Extensions/OpenRHIImgui.h"
+    "Include/Extensions/OpenRHIRmlUi.h"
+    "Include/Extensions/OpenRHIRmlUiAdapter.hpp"
+    "Include/Extensions/OpenRHIOptions.hpp"
     "Include/Extensions/OpenRHILowLatency.h"
     "Include/Extensions/OpenRHIMeshShader.h"
     "Include/Extensions/OpenRHIRayTracing.h"
@@ -1292,7 +1299,7 @@ endif()
 
 # Slang is the sole shader compilation front end
 include(CMake/OpenRHISlang.cmake)
-if(OPENRHI_ENABLE_IMGUI_EXTENSION OR OPENRHI_ENABLE_NIS_SDK)
+if(OPENRHI_ENABLE_IMGUI_EXTENSION OR OPENRHI_ENABLE_RMLUI_EXTENSION OR OPENRHI_ENABLE_NIS_SDK)
     set(OPENRHI_SHADER_HEADERS)
     if(OPENRHI_ENABLE_IMGUI_EXTENSION)
         foreach(stage IN ITEMS vs fs)
@@ -1308,6 +1315,21 @@ if(OPENRHI_ENABLE_IMGUI_EXTENSION OR OPENRHI_ENABLE_NIS_SDK)
             list(APPEND OPENRHI_SHADER_HEADERS "${header}")
         endforeach()
     endif()
+    if(OPENRHI_ENABLE_RMLUI_EXTENSION)
+        foreach(stage IN ITEMS vs fs)
+            if(stage STREQUAL "vs")
+                set(entry RmlUiVS)
+                set(kind vertex)
+            else()
+                set(entry RmlUiFS)
+                set(kind fragment)
+            endif()
+            openrhi_compile_shader(NAME RmlUi_${stage} SOURCE Shaders/RmlUi.slang ENTRY ${entry} STAGE ${kind}
+                INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/Include" HEADER header)
+            list(APPEND OPENRHI_SHADER_HEADERS "${header}")
+        endforeach()
+    endif()
+
     if(OPENRHI_ENABLE_NIS_SDK)
         set(nis_includes "")
         set(nis_table "static const ShaderDesc g_NisShaders[] = {\n")

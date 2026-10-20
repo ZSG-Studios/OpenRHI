@@ -96,6 +96,8 @@ struct DeviceBase : public DebugNameBaseVal {
         return Result::UNSUPPORTED;
     }
 
+    virtual Result FillFunctionTable(RmlUiInterface&) const;
+
     virtual Result FillFunctionTable(LowLatencyInterface&) const {
         return Result::UNSUPPORTED;
     }

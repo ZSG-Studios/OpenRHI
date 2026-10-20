@@ -593,6 +593,10 @@ OPENRHI_API Result OPENRHI_CALL openrhiGetInterface(const Device& device, const 
         realInterfaceSize = sizeof(ImguiInterface);
         if (realInterfaceSize == interfaceSize)
             result = deviceBase.FillFunctionTable(*(ImguiInterface*)interfacePtr);
+    } else if (hash == Hash(OPENRHI_STRINGIFY(RmlUiInterface))) {
+        realInterfaceSize = sizeof(RmlUiInterface);
+        if (realInterfaceSize == interfaceSize)
+            result = deviceBase.FillFunctionTable(*(RmlUiInterface*)interfacePtr);
     } else if (hash == Hash(OPENRHI_STRINGIFY(HelperInterface))) {
         realInterfaceSize = sizeof(HelperInterface);
         if (realInterfaceSize == interfaceSize)

@@ -128,6 +128,7 @@ struct DeviceVal final : public DeviceBase {
 #if OPENRHI_ENABLE_IMGUI_EXTENSION
     Result FillFunctionTable(ImguiInterface& table) const override;
 #endif
+    Result FillFunctionTable(RmlUiInterface& table) const override;
 
     //================================================================================================================
     // OpenRHI

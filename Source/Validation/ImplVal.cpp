@@ -33,8 +33,11 @@
 
 #include "HelperInterface.h"
 #include "ImguiInterface.h"
+#include "RmlUiInterface.h"
 #include "StreamerInterface.h"
 #include "UpscalerInterface.h"
+
+#include <cmath>
 
 using namespace openrhi;
 
@@ -2631,5 +2634,91 @@ Result DeviceVal::FillFunctionTable(WrapperVKInterface& table) const {
 }
 
 #pragma endregion
+
+#if OPENRHI_ENABLE_RMLUI_EXTENSION
+struct RmlUiVal final : public ObjectVal {
+    RmlUiVal(DeviceVal& device, RmlUiImpl* impl)
+        : ObjectVal(device, impl) {
+    }
+
+    RmlUiImpl* GetImpl() const {
+        return (RmlUiImpl*)m_Impl;
+    }
+};
+
+static Result OPENRHI_CALL CreateRmlUiVal(Device& device, const RmlUiDesc& desc, RmlUi*& rmlUi) {
+    rmlUi = nullptr;
+    DeviceVal& deviceVal = (DeviceVal&)device;
+    OPENRHI_RETURN_ON_FAILURE(&deviceVal, desc.maxDrawNum && desc.maxDrawNum < UINT32_MAX, Result::INVALID_ARGUMENT, "RmlUi descriptor budget is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&deviceVal, desc.attachmentFormat > Format::UNKNOWN && desc.attachmentFormat < Format::MAX_NUM, Result::INVALID_ARGUMENT, "RmlUi attachment format is invalid");
+    OPENRHI_RETURN_ON_FAILURE(&deviceVal, std::isfinite(desc.hdrScale) && desc.hdrScale >= 0, Result::INVALID_ARGUMENT, "RmlUi HDR scale is invalid");
+    RmlUiInterface table = {};
+    FillRmlUiInterface(table);
+
+    RmlUi* implementation = nullptr;
+    Result result = table.CreateRmlUi(device, desc, implementation);
+
+    if (result == Result::SUCCESS)
+        rmlUi = (RmlUi*)Allocate<RmlUiVal>(deviceVal.GetAllocationCallbacks(), deviceVal, (RmlUiImpl*)implementation);
+
+    return result;
+}
+
+static void OPENRHI_CALL DestroyRmlUiVal(RmlUi* rmlUi) {
+    if (!rmlUi)
+        return;
+
+    RmlUiVal* val = (RmlUiVal*)rmlUi;
+    Destroy(val->GetImpl());
+    Destroy(val);
+}
+
+static void OPENRHI_CALL ResetRmlUiVal(RmlUi& rmlUi) {
+    ((RmlUiVal&)rmlUi).GetImpl()->Reset();
+}
+
+static Result OPENRHI_CALL CmdDrawRmlUiVal(CommandBuffer& commandBuffer, RmlUi& rmlUi, Dim2_t displaySize, const DrawRmlUiDesc* draws, uint32_t drawNum) {
+    DeviceVal& deviceVal = GetDeviceVal(commandBuffer);
+    OPENRHI_RETURN_ON_FAILURE(&deviceVal, !drawNum || (draws && displaySize.w && displaySize.h), Result::INVALID_ARGUMENT, "RmlUi draws or display size is invalid");
+
+    for (uint32_t i = 0; i < drawNum; i++) {
+        const DrawRmlUiDesc& draw = draws[i];
+        const RmlUiGeometry& geometry = draw.geometry;
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, geometry.vertices.buffer && geometry.indices.buffer && draw.texture, Result::INVALID_ARGUMENT, "RmlUi geometry or texture is NULL");
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, geometry.indexNum % 3 == 0 && geometry.vertexNum, Result::INVALID_ARGUMENT, "RmlUi triangle geometry is invalid");
+        const BufferDesc& vertices = ((BufferVal*)geometry.vertices.buffer)->GetDesc();
+        const BufferDesc& indices = ((BufferVal*)geometry.indices.buffer)->GetDesc();
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, geometry.vertices.offset <= vertices.size && geometry.vertexNum <= ((vertices.size - geometry.vertices.offset) / sizeof(RmlUiVertex)), Result::INVALID_ARGUMENT, "RmlUi vertex range is out of bounds");
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, geometry.indices.offset <= indices.size && geometry.indexNum <= ((indices.size - geometry.indices.offset) / sizeof(uint32_t)), Result::INVALID_ARGUMENT, "RmlUi index range is out of bounds");
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, geometry.indices.offset % sizeof(uint32_t) == 0, Result::INVALID_ARGUMENT, "RmlUi index offset is unaligned");
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, (vertices.usage & BufferUsageBits::VERTEX) != 0 && (indices.usage & BufferUsageBits::INDEX) != 0, Result::INVALID_ARGUMENT, "RmlUi buffer usage is invalid");
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, ((DescriptorVal*)draw.texture)->GetType() == DescriptorType::TEXTURE, Result::INVALID_ARGUMENT, "RmlUi descriptor must be a sampled texture");
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, draw.scissor.x >= 0 && draw.scissor.y >= 0 && (uint32_t(draw.scissor.x) + draw.scissor.width) <= displaySize.w && (uint32_t(draw.scissor.y) + draw.scissor.height) <= displaySize.h, Result::INVALID_ARGUMENT, "RmlUi scissor is out of bounds");
+
+        for (float value : draw.transform)
+            OPENRHI_RETURN_ON_FAILURE(&deviceVal, std::isfinite(value), Result::INVALID_ARGUMENT, "RmlUi transform is not finite");
+
+        OPENRHI_RETURN_ON_FAILURE(&deviceVal, std::isfinite(draw.translation[0]) && std::isfinite(draw.translation[1]), Result::INVALID_ARGUMENT, "RmlUi translation is not finite");
+    }
+
+    return ((RmlUiVal&)rmlUi).GetImpl()->CmdDraw(commandBuffer, displaySize, draws, drawNum);
+}
+#endif
+
+Result DeviceVal::FillFunctionTable(RmlUiInterface& table) const {
+#if OPENRHI_ENABLE_RMLUI_EXTENSION
+    Result result = FillRmlUiInterface(table);
+    table.CreateRmlUi = CreateRmlUiVal;
+    table.DestroyRmlUi = DestroyRmlUiVal;
+    table.ResetRmlUi = ResetRmlUiVal;
+    table.CmdDrawRmlUi = CmdDrawRmlUiVal;
+
+    return result;
+#else
+    MaybeUnused(table);
+
+    return Result::UNSUPPORTED;
+#endif
+}
 
 #include "VendorFeaturesVal.hpp"

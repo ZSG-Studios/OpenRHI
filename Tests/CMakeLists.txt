@@ -1,4 +1,67 @@
 enable_language(C)
+
+if(OPENRHI_ENABLE_RMLUI_EXTENSION)
+    # The bridge is qualified against the original public RmlUi headers/core, independent of the OpenRHI runtime
+    set(RMLUI_FONT_ENGINE "none" CACHE STRING "RmlUi host-contract test font engine")
+    set(RMLUI_SAMPLES OFF CACHE BOOL "RmlUi samples")
+    set(RMLUI_PRECOMPILED_HEADERS OFF CACHE BOOL "RmlUi PCH")
+    FetchContent_Declare(openrhi_rmlui_test
+        URL "https://github.com/mikke89/RmlUi/archive/ba95ffe8bfb6370efb2cdcca927eaad4710c5413.zip"
+        URL_HASH SHA256=ed3162ef67d24b7d91557d710b3734433cfc2a8659c55b4d68a11de38b178487
+        DOWNLOAD_EXTRACT_TIMESTAMP 1)
+    FetchContent_MakeAvailable(openrhi_rmlui_test)
+    add_executable(OpenRHIRmlUiAdapter RmlUiAdapter.cpp)
+    target_link_libraries(OpenRHIRmlUiAdapter PRIVATE OpenRHI RmlUi::Core)
+    target_compile_features(OpenRHIRmlUiAdapter PRIVATE cxx_std_17)
+    set_target_properties(OpenRHIRmlUiAdapter PROPERTIES RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenRHI>")
+    add_test(NAME OpenRHI.RmlUi.Adapter COMMAND OpenRHIRmlUiAdapter)
+    set(ui_shader_outputs)
+    foreach(target IN ITEMS spirv metal)
+        foreach(stage IN ITEMS vs fs)
+            if(stage STREQUAL "vs")
+                set(entry RmlUiVS)
+                set(kind vertex)
+            else()
+                set(entry RmlUiFS)
+                set(kind fragment)
+            endif()
+            openrhi_compile_shader(NAME RmlUiContract_${target}_${stage}
+                SOURCE "${PROJECT_SOURCE_DIR}/Shaders/RmlUi.slang" ENTRY ${entry} STAGE ${kind} TARGET ${target}
+                INCLUDES "${PROJECT_SOURCE_DIR}/Include" OUTPUT binary)
+            list(APPEND ui_shader_outputs "${binary}")
+        endforeach()
+    endforeach()
+    add_custom_target(OpenRHIUIShaderContract ALL DEPENDS ${ui_shader_outputs})
+endif()
+
+if(OPENRHI_ENABLE_IMGUI_EXTENSION)
+    FetchContent_Declare(openrhi_imgui_test
+        URL "https://codeload.github.com/ocornut/imgui/zip/v1.92.9"
+        URL_HASH SHA256=bbdcee6a1d56e38ccddaa58383182b348cfb4f2fc59f47a9ed9ef31f8f966351
+        DOWNLOAD_EXTRACT_TIMESTAMP 1 SOURCE_SUBDIR "ignore CMakeLists.txt")
+    FetchContent_MakeAvailable(openrhi_imgui_test)
+    add_library(OpenRHIImguiTest STATIC
+        "${openrhi_imgui_test_SOURCE_DIR}/imgui.cpp" "${openrhi_imgui_test_SOURCE_DIR}/imgui_draw.cpp"
+        "${openrhi_imgui_test_SOURCE_DIR}/imgui_tables.cpp" "${openrhi_imgui_test_SOURCE_DIR}/imgui_widgets.cpp")
+    target_include_directories(OpenRHIImguiTest PUBLIC "${openrhi_imgui_test_SOURCE_DIR}")
+    target_compile_definitions(OpenRHIImguiTest PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
+endif()
+
+if(OPENRHI_ENABLE_IMGUI_EXTENSION AND OPENRHI_ENABLE_RMLUI_EXTENSION)
+    add_executable(OpenRHIUIRender UIRender.cpp)
+    target_link_libraries(OpenRHIUIRender PRIVATE OpenRHI OpenRHIImguiTest)
+    target_compile_features(OpenRHIUIRender PRIVATE cxx_std_17)
+    set_target_properties(OpenRHIUIRender PROPERTIES RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenRHI>")
+    foreach(backend IN ITEMS D3D12 VK METAL)
+        if(OPENRHI_ENABLE_${backend}_SUPPORT AND NOT ANDROID AND NOT IOS)
+            add_test(NAME OpenRHI.${backend}.UI COMMAND OpenRHIUIRender ${backend})
+            set_tests_properties(OpenRHI.${backend}.UI PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+            if(APPLE)
+                set_tests_properties(OpenRHI.${backend}.UI PROPERTIES ENVIRONMENT "MTL_DEBUG_LAYER=1;MTL_SHADER_VALIDATION=1")
+            endif()
+        endif()
+    endforeach()
+endif()
 add_library(OpenRHICFacade OBJECT PublicFacade.c)
 target_include_directories(OpenRHICFacade PRIVATE ../Include)
 set_target_properties(OpenRHICFacade PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED YES)
@@ -146,6 +209,9 @@ endif()
 
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
+    if(OPENRHI_ENABLE_RMLUI_EXTENSION)
+        add_test(NAME OpenRHI.RmlUi.Shaders COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ui_shaders.py "${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
     add_test(NAME OpenRHI.PromotionGate COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_qualification.py)
     if(NOT ANDROID AND NOT IOS AND NOT APPLE)
         add_test(NAME OpenRHI.SDKPackaging COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_sdk_packaging.py
@@ -195,6 +261,13 @@ if(OPENRHI_ENABLE_NVAPI AND OPENRHI_ENABLE_D3D12_SUPPORT)
 endif()
 
 if(OPENRHI_ENABLE_NONE_SUPPORT)
+    add_executable(OpenRHIUIAvailability UIAvailability.cpp)
+    target_link_libraries(OpenRHIUIAvailability PRIVATE OpenRHI)
+    target_compile_features(OpenRHIUIAvailability PRIVATE cxx_std_17)
+    target_compile_definitions(OpenRHIUIAvailability PRIVATE OPENRHI_TEST_RMLUI=$<BOOL:${OPENRHI_ENABLE_RMLUI_EXTENSION}>)
+    set_target_properties(OpenRHIUIAvailability PROPERTIES RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenRHI>")
+    add_test(NAME OpenRHI.RmlUi.Availability COMMAND OpenRHIUIAvailability)
+
     add_executable(OpenRHIVendorAvailability VendorAvailability.cpp)
     target_link_libraries(OpenRHIVendorAvailability PRIVATE OpenRHI)
     target_compile_features(OpenRHIVendorAvailability PRIVATE cxx_std_17)

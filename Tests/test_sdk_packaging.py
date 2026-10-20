@@ -54,6 +54,12 @@ def check_file(source, packaged):
         raise AssertionError(f"Missing or changed packaged file: {packaged}")
 
 
+def check_ui_headers(fixture):
+    for name in ("OpenRHIImgui.h", "OpenRHIRmlUi.h", "OpenRHIRmlUiAdapter.hpp", "OpenRHIOptions.hpp"):
+        relative = Path("Include/Extensions") / name
+        check_file(fixture / relative, fixture / "_OpenRHI_SDK" / relative)
+
+
 def run_windows(root, output, optional):
     fixture, script = prepare_fixture(root, output, "Windows")
     files = []
@@ -73,6 +79,7 @@ def run_windows(root, output, optional):
                             cwd=output, capture_output=True, text=True)
     (fixture / "prepare.log").write_text(result.stdout + result.stderr)
     result.check_returncode()
+    check_ui_headers(fixture)
     for guide in (fixture / "Docs").glob("*.md"):
         check_file(guide, fixture / "_OpenRHI_SDK/Docs" / guide.name)
     for source, packaged in files:
@@ -95,6 +102,7 @@ def run_linux(root, output, bash, optional):
                             capture_output=True, text=True)
     (fixture / "prepare.log").write_text(result.stdout + result.stderr)
     result.check_returncode()
+    check_ui_headers(fixture)
     for guide in (fixture / "Docs").glob("*.md"):
         check_file(guide, fixture / "_OpenRHI_SDK/Docs" / guide.name)
     for name in names:
