@@ -22,6 +22,10 @@ UVRT owns scene illumination, BRDF evaluation, shadows, environment lighting, an
 
 Windows uses D3D12; Linux and Android use Vulkan; Apple platforms use native Metal 4. Platform baselines are maintained in the [repository overview](../README.md). Generated products belong in `_Build/`, `_Bin/`, `_Tmp/`, and the packaged `_OpenRHI_SDK/`.
 
+## Bindless handoff
+
+MIRA owns the shared typed registry and lifetime protocol; FACET and UVRT consume GPU-selected indices. OpenRHI supplies public heap operations, native limits, descriptor encoding and Validation. Follow [the bindless contract](BINDLESS.md) for shader/root ABI, backend transports, generations, recorded/submitted retirement, UI/vendor rebinding and native migration gates.
+
 ## Public API handoff
 
 Include `OpenRHI.h` first, then the required `Extensions/OpenRHI*.h` headers. C++ uses namespace `openrhi`; C uses `OpenRhi*` types and the same `openrhi*` exports. Build all consumers against matching revision-1 headers and binaries.

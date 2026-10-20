@@ -28,6 +28,8 @@ OpenRhiStruct(WriteSamplerDescriptorsDesc) {
     uint32_t descriptorIndex;
 };
 
+// Caller owns index allocation, resource lifetime and retirement of published records and recorded/submitted GPU uses
+// Referenced slots stay initialized and unchanged until every borrower has retired; see Docs/BINDLESS.md
 // Threadsafe: yes, except writes to overlapping descriptor indices require external synchronization
 OpenRhiStruct(DescriptorHeapInterface) {
     // Create
@@ -42,6 +44,7 @@ OpenRhiStruct(DescriptorHeapInterface) {
     OpenRhi(Result)     (OPENRHI_CALL *WriteSamplerDescriptors)         (OpenRhiRef(DescriptorHeap) descriptorHeap, const OpenRhiPtr(WriteSamplerDescriptorsDesc) writeDescs, uint32_t writeDescNum);
 
     // Command buffer
+    // Bind the heap before a directly indexed pipeline layout; establish the layout and roots again after switching heaps
     // {
         void            (OPENRHI_CALL *CmdSetDescriptorHeap)        (OpenRhiRef(CommandBuffer) commandBuffer, const OpenRhiRef(DescriptorHeap) descriptorHeap);
     // }

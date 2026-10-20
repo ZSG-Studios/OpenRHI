@@ -10,6 +10,7 @@
 #    include "OpenRHIAgilitySDK.h"
 #endif
 
+#include "Extensions/OpenRHIDescriptorHeap.h"
 #include "Extensions/OpenRHIDeviceCreation.h"
 #include "Extensions/OpenRHIHelper.h"
 #include "Extensions/OpenRHIMeshShader.h"
@@ -74,6 +75,8 @@ struct Fixture {
     PipelineLayout* layout = nullptr;
     Pipeline* pipeline = nullptr;
     DescriptorPool* pool = nullptr;
+    DescriptorHeap* heap = nullptr;
+    DescriptorHeapInterface heaps = {};
     DescriptorSet* set = nullptr;
     Descriptor* views[2] = {};
     Buffer* outputs[2] = {};
@@ -147,6 +150,9 @@ struct Fixture {
         if (pool)
             core.DestroyDescriptorPool(pool);
 
+        if (heap)
+            heaps.DestroyDescriptorHeap(heap);
+
         for (auto b : outputs)
             if (b)
                 core.DestroyBuffer(b);
@@ -214,7 +220,7 @@ struct Fixture {
         core.CmdBarrier(*command, batch);
     }
 
-    void Compute(const char* path) {
+    void Compute(const char* path, bool directHeap = false) {
         std::ifstream file(path, std::ios::binary | std::ios::ate);
         REQUIRE(file.good());
         auto size = file.tellg();
@@ -230,6 +236,16 @@ struct Fixture {
         layoutDesc.descriptorSets = &setDesc;
         layoutDesc.descriptorSetNum = 1;
         layoutDesc.shaderStages = StageBits::COMPUTE_SHADER;
+        RootConstantDesc indices = {0, 8, StageBits::COMPUTE_SHADER};
+
+        if (directHeap) {
+            layoutDesc.flags |= PipelineLayoutBits::RESOURCE_HEAP_DIRECTLY_INDEXED;
+            layoutDesc.descriptorSets = nullptr;
+            layoutDesc.descriptorSetNum = 0;
+            layoutDesc.rootConstants = &indices;
+            layoutDesc.rootConstantNum = 1;
+        }
+
         REQUIRE(core.CreatePipelineLayout(*device, layoutDesc, layout) == Result::SUCCESS);
         ComputePipelineDesc pipelineDesc = {};
         pipelineDesc.pipelineLayout = layout;
@@ -241,8 +257,13 @@ struct Fixture {
         DescriptorPoolDesc poolDesc = {};
         poolDesc.descriptorSetMaxNum = 1;
         poolDesc.storageStructuredBufferMaxNum = 2;
-        REQUIRE(core.CreateDescriptorPool(*device, poolDesc, pool) == Result::SUCCESS);
-        REQUIRE(core.AllocateDescriptorSets(*pool, *layout, 0, &set, 1, 0) == Result::SUCCESS);
+        if (directHeap) {
+            REQUIRE(openrhiGetInterface(*device, OPENRHI_INTERFACE(DescriptorHeapInterface), &heaps) == Result::SUCCESS);
+            REQUIRE(heaps.CreateDescriptorHeap(*device, {64, 0}, heap) == Result::SUCCESS);
+        } else {
+            REQUIRE(core.CreateDescriptorPool(*device, poolDesc, pool) == Result::SUCCESS);
+            REQUIRE(core.AllocateDescriptorSets(*pool, *layout, 0, &set, 1, 0) == Result::SUCCESS);
+        }
 
         for (uint32_t i = 0; i < 2; i++) {
             outputs[i] = BufferAt(2048, MemoryLocation::DEVICE, BufferUsageBits::SHADER_RESOURCE_STORAGE);
@@ -252,16 +273,32 @@ struct Fixture {
             view.size = 2048;
             REQUIRE(core.CreateBufferView(view, views[i]) == Result::SUCCESS);
         }
-        UpdateDescriptorRangeDesc update = {set, 0, 0, views, 2};
-        core.UpdateDescriptorRanges(&update, 1);
+        const uint32_t slots[] = {7, 29};
+
+        if (directHeap) {
+            const WriteResourceDescriptorsDesc writes[] = {{views[0], slots[0]}, {views[1], slots[1]}};
+            REQUIRE(heaps.WriteResourceDescriptors(*heap, writes, 2) == Result::SUCCESS);
+        } else {
+            UpdateDescriptorRangeDesc update = {set, 0, 0, views, 2};
+            core.UpdateDescriptorRanges(&update, 1);
+        }
         Begin();
 
         for (auto output : outputs)
             Barrier(output, AccessBits::NONE, StageBits::NONE, AccessBits::SHADER_RESOURCE_STORAGE, StageBits::COMPUTE_SHADER);
+        if (directHeap)
+            heaps.CmdSetDescriptorHeap(*command, *heap);
+
         core.CmdSetPipelineLayout(*command, BindPoint::COMPUTE, *layout);
         core.CmdSetPipeline(*command, *pipeline);
-        SetDescriptorSetDesc binding = {0, set, BindPoint::COMPUTE};
-        core.CmdSetDescriptorSet(*command, binding);
+
+        if (directHeap) {
+            SetRootConstantsDesc constants = {0, slots, sizeof(slots), 0, BindPoint::COMPUTE};
+            core.CmdSetRootConstants(*command, constants);
+        } else {
+            SetDescriptorSetDesc binding = {0, set, BindPoint::COMPUTE};
+            core.CmdSetDescriptorSet(*command, binding);
+        }
         DispatchDesc dispatch = {16, 1, 1};
         core.CmdDispatch(*command, dispatch);
 
@@ -531,6 +568,7 @@ int main(int argc, char** argv) {
         AdapterDesc selectedAdapter = {};
         bool explicitAdapter = false;
         const char* shader = nullptr;
+        bool directHeap = false;
         const char* vertex = nullptr;
         const char* fragment = nullptr;
         bool present = false;
@@ -560,7 +598,10 @@ int main(int argc, char** argv) {
                 explicitAdapter = true;
             } else if (arg == "--shader" && i + 1 < argc)
                 shader = argv[++i];
-            else if (arg == "--vs" && i + 1 < argc)
+            else if (arg == "--heap-shader" && i + 1 < argc) {
+                shader = argv[++i];
+                directHeap = true;
+            } else if (arg == "--vs" && i + 1 < argc)
                 vertex = argv[++i];
             else if (arg == "--ps" && i + 1 < argc)
                 fragment = argv[++i];
@@ -678,8 +719,17 @@ int main(int argc, char** argv) {
             }
         }
 
+        const auto& bindlessCaps = f.core.GetDeviceDesc(*f.device);
+
+        if (directHeap) {
+            if (!bindlessCaps.features.descriptorHeap)
+                return 77;
+
+            std::printf("Bindless heap caps: shaderModel=%u tier=%u resourceBinding=%u resources=%u samplers=%u rootBytes=%u\n", unsigned(bindlessCaps.shaderModel), bindlessCaps.tiers.bindless, bindlessCaps.tiers.resourceBinding, bindlessCaps.descriptorHeap.resourceMaxNum, bindlessCaps.descriptorHeap.samplerMaxNum, bindlessCaps.descriptorHeap.rootConstantMaxSize);
+        }
+
         if (shader)
-            f.Compute(shader);
+            f.Compute(shader, directHeap);
 
         if (testNis)
             f.Upscale();
@@ -702,7 +752,7 @@ int main(int argc, char** argv) {
 
         for (size_t i = 0; i < cpu.size(); i++)
             std::printf("%s%.9f", i ? "," : "", cpu[i]);
-        std::printf("],\"gpu_ms\":[");
+        std::printf("],\"bindless_heap_checked\":%s,\"gpu_ms\":[", directHeap ? "true" : "false");
 
         for (size_t i = 0; i < gpu.size(); i++)
             std::printf("%s%.9f", i ? "," : "", gpu[i]);

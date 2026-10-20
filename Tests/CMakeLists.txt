@@ -160,6 +160,13 @@ set_target_properties(OpenRHIQualification PROPERTIES RUNTIME_OUTPUT_DIRECTORY "
 if(OPENRHI_ENABLE_D3D12_SUPPORT OR OPENRHI_ENABLE_VK_SUPPORT OR OPENRHI_ENABLE_METAL_SUPPORT)
     openrhi_compile_shader(NAME DescriptorCompute SOURCE DescriptorCompute.slang ENTRY descriptorMain STAGE compute
         INCLUDES "${PROJECT_SOURCE_DIR}/Include" OUTPUT QUALIFICATION_SHADER)
+    if(OPENRHI_ENABLE_D3D12_SUPPORT)
+        openrhi_compile_shader(NAME BindlessCompute SOURCE BindlessCompute.slang ENTRY descriptorMain STAGE compute TARGET dxil OUTPUT QUALIFICATION_HEAP_SHADER)
+        add_custom_target(OpenRHIBindlessShader DEPENDS "${QUALIFICATION_HEAP_SHADER}")
+        add_dependencies(OpenRHIQualification OpenRHIBindlessShader)
+        add_test(NAME OpenRHI.D3D12.Bindless COMMAND OpenRHIQualification --api D3D12 --iterations 1 --native-validation --heap-shader "${QUALIFICATION_HEAP_SHADER}")
+        set_tests_properties(OpenRHI.D3D12.Bindless PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+    endif()
     openrhi_compile_shader(NAME IndirectDraw.vs SOURCE IndirectDraw.slang ENTRY vsMain STAGE vertex OUTPUT QUALIFICATION_VS)
     openrhi_compile_shader(NAME IndirectDraw.ps SOURCE IndirectDraw.slang ENTRY psMain STAGE fragment OUTPUT QUALIFICATION_PS)
     openrhi_compile_shader(NAME MeshDraw SOURCE MeshDraw.slang ENTRY meshMain STAGE mesh OUTPUT QUALIFICATION_MESH)
