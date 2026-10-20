@@ -46,4 +46,22 @@ All eight 17x9 profiles failed the native view-dimension guard. Public resource/
 
 Both original rejected runs and the full policy-2 success/failure/readback/hash evidence remain under `_Tmp/BindlessMaterial/{Native-Initial,Native-Policy2}/`. `Native-Policy2/publication.json` records the bounded passing subset, original errors, actual loaded DLL identities and complete requested-profile failure. Broader dimensions, other BC7 modes, production anisotropy 16 and strict material quality retain their own gates.
 
+## Separate exact anisotropy-16 profile
+
+`--anisotropy 16` selects a separate profile in `qualify.py`; the executable entry point is `--native-aniso16`. Build it on CPU first, then request a new native window:
+
+```powershell
+python Tests/BindlessMaterial/qualify.py --anisotropy 16 --out _Tmp/BindlessMaterial/CPU-Anisotropy16
+# During an explicitly allocated GPU window:
+python Tests/BindlessMaterial/qualify.py --anisotropy 16 --no-build --native --out _Tmp/BindlessMaterial/Native-Anisotropy16
+```
+
+It creates exact LINEAR min/mag/mip, AVERAGE, regular normalized-coordinate samplers with maximum anisotropy 16, bias/minimum LOD zero and maximum LOD 32. Production REPEAT XYZ is paired with a CLAMP_TO_EDGE diagnostic state in sparse slots 43/31; public creation and the queried anisotropy limit are required. Heap lanes use a stride-97 bijection of each case range, checked as coprime to the full/half batch sizes, so neighboring lanes select different texture/sampler groups. Conventional dispatches visit the same output records in order. This test shader change has its own hash; older native receipts retain their original hashes.
+
+Aligned originals 20x12 and 4x20 retain full/base-one/tail views. Two epochs and two image families yield 32 profiles and 36,864 cases per configuration. Patterned and constant families exercise fixed/explicit LOD, isotropic gradients, and genuine 4x1, 8x1 and 16x1 texel-space gradient footprints. The 8x1 footprint has rotated major/minor axes. Constant fields have different resource colors across all mips, giving an independent result for every anisotropic tap kernel; BC7 UNORM/sRGB controls retain transfer and alpha checks.
+
+Scalar ideal/decode-interval checks and original strict thresholds apply to fixed/explicit LOD, isotropic and constant-field cases. General patterned anisotropic footprints have no unique scalar kernel reference here: check finite output, the independent value interval of all texels in the admitted view/mips, exact dimensions and heap/conventional parity. `SampleCase.reserved=1` labels those bounded cases; its retained reference fields hold lower/upper bounds. Other cases retain ideal value/decode radius. Receipts separate `scalar_reference_cases` and `bounded_anisotropic_cases`. A bounded pass establishes that operation/transport, with no general anisotropic quality promotion. Anisotropy-1 receipts and strict errors stay separate.
+
+Before each new native run, the runner freezes executable, DLL, shader/reflection and source files. The odd-dimension defect and separate fix plan are owned by [BC_TEXTURE_DIMENSIONS.md](../../Docs/BC_TEXTURE_DIMENSIONS.md).
+
 The BC4/BC5 and BC7/BPTC block layouts are specified in the [Khronos Data Format Specification](https://registry.khronos.org/DataFormat/specs/1.4/dataformat.1.4.pdf). This implementation adds no third-party decoder or vendor modifications. Successful sampling evidence admits only the exercised format/view/sampler/operation profile. Channel-to-material mapping, normal reconstruction, illumination, live graph publication, mobile/Metal/Vulkan execution and paired performance use their owning qualification gates.

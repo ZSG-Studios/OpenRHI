@@ -21,6 +21,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <numeric>
 #include <string>
 
 using namespace openrhi;
@@ -84,8 +85,10 @@ struct Fixture {
     PipelineLayout* layouts[2] = {};
     Pipeline* pipelines[2] = {};
     Descriptor* samplers[4] = {};
+    SamplerDesc samplerDescriptions[4] = {};
     uint64_t completion = 0;
     uint32_t destroyedOwners = 0;
+    uint32_t anisotropy = 1;
 
     ~Fixture() {
         if (!device)
@@ -120,7 +123,8 @@ struct Fixture {
         openrhiDestroyDevice(device);
     }
 
-    void Create(const char* directShader, const char* conventionalShader) {
+    void Create(const char* directShader, const char* conventionalShader, uint32_t maximumAnisotropy = 1) {
+        anisotropy = maximumAnisotropy;
         DeviceCreationDesc desc = {};
         desc.graphicsAPI = GraphicsAPI::D3D12;
         desc.enableOpenRHIValidation = desc.enableGraphicsAPIValidation = true;
@@ -132,7 +136,7 @@ struct Fixture {
         Success(openrhiGetInterface(*device, OPENRHI_INTERFACE(DescriptorHeapInterface), &heapApi), "heap interface");
         const auto& caps = core.GetDeviceDesc(*device);
         Check(caps.features.descriptorHeap && caps.features.textureCompressionBC, "heap and BC capabilities");
-        Check(caps.other.samplerAnisotropyMax >= 1, "regular sampler anisotropy limit");
+        Check(caps.other.samplerAnisotropyMax >= anisotropy, "regular sampler anisotropy limit");
         Check(caps.descriptorHeap.resourceMaxNum >= 256 && caps.descriptorHeap.samplerMaxNum >= 64 && caps.descriptorHeap.rootConstantMaxSize >= 16, "heap limits");
         Success(core.GetQueue(*device, QueueType::GRAPHICS, 0, queue), "queue");
         Success(core.CreateCommandAllocator(*queue, allocator), "allocator");
@@ -142,11 +146,12 @@ struct Fixture {
 
         for (uint32_t i = 0; i < 4; i++) {
             SamplerDesc sampler = {};
-            sampler.filters.min = sampler.filters.mag = sampler.filters.mip = (i & 2) ? Filter::LINEAR : Filter::NEAREST;
+            sampler.filters.min = sampler.filters.mag = sampler.filters.mip = (anisotropy == 16 || (i & 2)) ? Filter::LINEAR : Filter::NEAREST;
             sampler.addressModes.u = sampler.addressModes.v = sampler.addressModes.w = (i & 1) ? AddressMode::REPEAT : AddressMode::CLAMP_TO_EDGE;
-            sampler.anisotropy = 1;
+            sampler.anisotropy = uint8_t(anisotropy);
             sampler.mipMax = 32;
             Success(core.CreateSampler(*device, sampler, samplers[i]), "sampler");
+            samplerDescriptions[i] = sampler;
             WriteSamplerDescriptorsDesc write = {samplers[i], 7 + i * 12};
             Success(heapApi.WriteSamplerDescriptors(*heap, &write, 1), "sampler heap write");
         }
@@ -298,13 +303,19 @@ struct Expected {
     uint32_t width, height, levels, sampler;
 };
 
-static void RunProfile(Fixture& f, Encoding encoding, uint32_t width, uint32_t height, uint32_t epoch, const std::filesystem::path& artifacts) {
+static std::string ProfileName(Encoding encoding, uint32_t width, uint32_t height, uint32_t epoch, uint32_t anisotropy, bool constant) {
+    const auto base = std::to_string(uint32_t(encoding)) + "-" + std::to_string(width) + "x" + std::to_string(height) + "-" + std::to_string(epoch);
+
+    return anisotropy == 1 ? base : base + (constant ? "-a16-constant" : "-a16-pattern");
+}
+
+static void RunProfile(Fixture& f, Encoding encoding, uint32_t width, uint32_t height, uint32_t epoch, const std::filesystem::path& artifacts, bool constant = false) {
     const uint32_t firstValidationErrors = errors.load();
     Batch batch(f);
     const auto format = NativeFormat(encoding);
     Check((f.core.GetFormatSupport(*f.device, format) & FormatSupportBits::TEXTURE) != 0, "sampled format support");
-    const auto prefix = std::to_string(uint32_t(encoding)) + "-" + std::to_string(width) + "x" + std::to_string(height) + "-" + std::to_string(epoch);
-    Image images[] = {MakeImage(encoding, width, height, 3 + epoch * 17), MakeImage(encoding, width, height, 9 + epoch * 17)};
+    const auto prefix = ProfileName(encoding, width, height, epoch, f.anisotropy, constant);
+    Image images[] = {constant ? MakeConstantImage(encoding, width, height, 3 + epoch * 17) : MakeImage(encoding, width, height, 3 + epoch * 17), constant ? MakeConstantImage(encoding, width, height, 9 + epoch * 17) : MakeImage(encoding, width, height, 9 + epoch * 17)};
     std::vector<SampleCase> cases;
     std::vector<Expected> expected;
     std::vector<Group> groups;
@@ -350,7 +361,7 @@ static void RunProfile(Fixture& f, Encoding encoding, uint32_t width, uint32_t h
             const WriteResourceDescriptorsDesc write = {descriptor, textureSlot};
             Success(f.heapApi.WriteResourceDescriptors(*f.heap, &write, 1), "texture heap write");
 
-            for (uint32_t sampler = 0; sampler < 4; sampler++) {
+            for (uint32_t sampler = f.anisotropy == 16 ? 2 : 0; sampler < 4; sampler++) {
                 Group group = {uint32_t(cases.size()), 0, descriptor, sampler};
                 const float coordinates[][2] = {{.5f, .5f}, {.137f, .313f}, {-.17f, .23f}, {1.19f, .71f}, {.003f, .997f}, {-.73f, 1.43f}, {.8125f, .1875f}, {1.5f, -.5f}};
 
@@ -358,6 +369,7 @@ static void RunProfile(Fixture& f, Encoding encoding, uint32_t width, uint32_t h
                     for (uint32_t operation = 0; operation < 3; operation++) {
                         const float lods[] = {-.7f, .27f, 1.23f, 3.1f, 9.2f};
                         const uint32_t variants = operation == 0 ? 1 : operation == 1 ? 5
+                            : f.anisotropy == 16                                      ? 6
                                                                                       : 3;
 
                         for (uint32_t variant = 0; variant < variants; variant++) {
@@ -367,12 +379,27 @@ static void RunProfile(Fixture& f, Encoding encoding, uint32_t width, uint32_t h
                             c.operation = operation;
                             c.uv[0] = uv[0];
                             c.uv[1] = uv[1];
-                            c.lod = lods[variant];
-                            const double footprint = std::exp2(double(lods[variant]));
+                            c.lod = lods[variant % 5];
+                            const double footprint = std::exp2(double(lods[variant % 5]));
                             c.dx[0] = float(footprint / images[imageIndex].mips[view.base].width);
                             c.dy[1] = float(footprint / images[imageIndex].mips[view.base].height);
+                            if (operation == 2 && variant >= 3) {
+                                const float major = float(4u << (variant - 3));
+                                const float w = float(images[imageIndex].mips[view.base].width), h = float(images[imageIndex].mips[view.base].height);
+                                c.dx[0] = major / w;
+                                c.dy[1] = 1 / h;
+
+                                if (variant == 4) {
+                                    c.dx[0] = major * .8f / w;
+                                    c.dx[1] = major * .6f / h;
+                                    c.dy[0] = -.6f / w;
+                                    c.dy[1] = .8f / h;
+                                }
+                                c.reserved = constant ? 0 : 1;
+                            }
                             cases.push_back(c);
-                            expected.push_back({Reference(images[imageIndex], view, sampler, c), Reference(images[imageIndex], view, sampler, c, true), images[imageIndex].mips[view.base].width, images[imageIndex].mips[view.base].height, view.count, sampler});
+                            const auto bounds = ValueBounds(images[imageIndex], view);
+                            expected.push_back({c.reserved ? bounds[0] : Reference(images[imageIndex], view, sampler, c), c.reserved ? bounds[1] : Reference(images[imageIndex], view, sampler, c, true), images[imageIndex].mips[view.base].width, images[imageIndex].mips[view.base].height, view.count, sampler});
                         }
                     }
                 }
@@ -383,6 +410,7 @@ static void RunProfile(Fixture& f, Encoding encoding, uint32_t width, uint32_t h
         batch.recordingOwners.push_back(std::move(owner));
     }
     const uint64_t outputBytes = expected.size() * sizeof(SampleResult);
+    Check(std::gcd(uint32_t(cases.size()), 97u) == 1 && std::gcd(uint32_t(cases.size()) / 2, 97u) == 1, "heap lane permutation must cover each output exactly once");
     static_assert(sizeof(Expected) == 80, "retained double-precision ideal reference and decode-bound artifact");
     Write(artifacts / (prefix + ".reference"), expected.data(), expected.size() * sizeof(Expected));
     batch.input = f.MakeBuffer(cases.size() * sizeof(SampleCase), sizeof(SampleCase), MemoryLocation::HOST_UPLOAD, BufferUsageBits::SHADER_RESOURCE);
@@ -467,6 +495,7 @@ static void RunProfile(Fixture& f, Encoding encoding, uint32_t width, uint32_t h
     Check(f.core.GetFenceValue(*f.fence) >= retireAt, "retirement fence");
     double maximumError = 0, parityError = 0;
     uint32_t qualityExceedances = 0;
+    uint32_t scalarCases = 0, boundedCases = 0;
     const SampleResult* results[2] = {};
 
     for (uint32_t i = 0; i < 2; i++) {
@@ -476,16 +505,20 @@ static void RunProfile(Fixture& f, Encoding encoding, uint32_t width, uint32_t h
     }
 
     for (size_t i = 0; i < cases.size(); i++) {
+        (cases[i].reserved ? boundedCases : scalarCases)++;
         for (uint32_t transport = 0; transport < 2; transport++) {
             const auto& value = results[transport][i];
             Check(value.width == expected[i].width && value.height == expected[i].height && value.levels == expected[i].levels && value.reserved == 0, "native partial-mip view dimensions");
             const double filterTolerance = (expected[i].sampler & 2) ? (2.0 / 255 + 1e-5) : (1.0 / 255 + 1e-5);
 
             for (uint32_t c = 0; c < 4; c++) {
-                const double error = std::abs(value.color[c] - expected[i].value[c]);
+                const double error = cases[i].reserved ? 0 : std::abs(value.color[c] - expected[i].value[c]);
                 maximumError = std::max(maximumError, error);
                 qualityExceedances += error > filterTolerance;
                 const double tolerance = filterTolerance + expected[i].decodeBound[c];
+
+                if (cases[i].reserved)
+                    Check(value.color[c] >= (expected[i].value[c] - 1e-5) && value.color[c] <= (expected[i].decodeBound[c] + 1e-5), "anisotropic patterned result outside independent value bounds");
 
                 if (!std::isfinite(value.color[c]) || error > tolerance) {
                     std::fprintf(stderr, "profile %s case %zu transport %u channel %u actual %.9g reference %.9g tolerance %.9g\n", prefix.c_str(), i, transport, c, value.color[c], expected[i].value[c], tolerance);
@@ -504,7 +537,7 @@ static void RunProfile(Fixture& f, Encoding encoding, uint32_t width, uint32_t h
     Check(weak[0].expired() && weak[1].expired() && f.destroyedOwners == (beforeDestroyed + 2), "actual texture/view owners destroyed after completion");
     Check(errors == firstValidationErrors, "native/OpenRHI validation errors");
     std::ofstream receipt(artifacts / (prefix + ".json"));
-    receipt << "{\"reference_policy\":2,\"format\":" << uint32_t(encoding) << ",\"original_width\":" << width << ",\"original_height\":" << height << ",\"epoch\":" << epoch << ",\"cases\":" << cases.size() << ",\"reference_max_error\":" << maximumError << ",\"strict_quality_channel_exceedances\":" << qualityExceedances << ",\"parity_max_error\":" << parityError << ",\"retired_native_owners\":2,\"completion\":" << retireAt << ",\"anisotropy\":1,\"passed\":true}\n";
+    receipt << "{\"reference_policy\":2,\"format\":" << uint32_t(encoding) << ",\"original_width\":" << width << ",\"original_height\":" << height << ",\"epoch\":" << epoch << ",\"constant_field\":" << (constant ? "true" : "false") << ",\"cases\":" << cases.size() << ",\"scalar_reference_cases\":" << scalarCases << ",\"bounded_anisotropic_cases\":" << boundedCases << ",\"reference_max_error\":" << maximumError << ",\"strict_quality_channel_exceedances\":" << qualityExceedances << ",\"parity_max_error\":" << parityError << ",\"retired_native_owners\":2,\"completion\":" << retireAt << ",\"anisotropy\":" << f.anisotropy << ",\"passed\":true}\n";
     Check(receipt.good(), "profile receipt");
     std::printf("BC profile %s: %zu cases, max reference error %.8g, parity %.8g, two actual owners retired PASS\n", prefix.c_str(), cases.size(), maximumError, parityError);
 }
@@ -518,7 +551,9 @@ int main(int argc, char** argv) {
 
             return 0;
         }
-        Check(argc == 5 && std::strcmp(argv[1], "--native") == 0, "usage: --cpu-only OR --native heap.dxil conventional.dxil artifact-directory");
+        Check(argc == 5 && (std::strcmp(argv[1], "--native") == 0 || std::strcmp(argv[1], "--native-aniso16") == 0), "usage: --cpu-only OR --native[-aniso16] heap.dxil conventional.dxil artifact-directory");
+        const uint32_t anisotropy = std::strcmp(argv[1], "--native-aniso16") == 0 ? 16 : 1;
+        const uint32_t profileCount = anisotropy == 16 ? 32 : 24, sampleCount = anisotropy == 16 ? 36864 : 41472;
         std::filesystem::path artifacts(argv[4]);
 
         if (std::filesystem::exists(artifacts))
@@ -528,7 +563,7 @@ int main(int argc, char** argv) {
         uint32_t failedProfiles = 0;
         {
             Fixture fixture;
-            fixture.Create(argv[2], argv[3]);
+            fixture.Create(argv[2], argv[3], anisotropy);
             const auto& desc = fixture.core.GetDeviceDesc(*fixture.device);
             std::ofstream identity(artifacts / "device.json");
             identity << "{\"adapter\":" << Quoted(desc.adapterDesc.name) << ",\"driver\":" << desc.adapterDesc.nativeDriverVersion << ",\"vendor\":" << desc.adapterDesc.vendorId << ",\"device\":" << desc.adapterDesc.deviceId << ",\"uid_low\":" << desc.adapterDesc.uid.low << ",\"uid_high\":" << desc.adapterDesc.uid.high;
@@ -537,29 +572,39 @@ int main(int argc, char** argv) {
             Check(GetModuleFileNameW(GetModuleHandleW(L"OpenRHI.dll"), path, 32768) > 0, "loaded SDK module path");
             identity << ",\"library_path\":" << Quoted(std::filesystem::path(path).u8string());
 #endif
-            identity << ",\"api\":\"D3D12\",\"native_validation\":true,\"anisotropy\":1}\n";
+            identity << ",\"api\":\"D3D12\",\"native_validation\":true,\"anisotropy\":" << anisotropy << ",\"sampler_factories\":[";
+
+            for (uint32_t i = 0; i < 4; i++) {
+                const auto& s = fixture.samplerDescriptions[i];
+                identity << (i ? "," : "") << "{\"slot\":" << (7 + i * 12) << ",\"success\":true,\"filters\":[" << uint32_t(s.filters.min) << "," << uint32_t(s.filters.mag) << "," << uint32_t(s.filters.mip) << "],\"filter_op\":" << uint32_t(s.filters.op) << ",\"address\":[" << uint32_t(s.addressModes.u) << "," << uint32_t(s.addressModes.v) << "," << uint32_t(s.addressModes.w) << "],\"anisotropy\":" << uint32_t(s.anisotropy) << ",\"mip_bias\":" << s.mipBias << ",\"mip_min\":" << s.mipMin << ",\"mip_max\":" << s.mipMax << ",\"compare\":" << uint32_t(s.compareOp) << ",\"integer\":" << (s.isInteger ? "true" : "false") << ",\"unnormalized\":" << (s.unnormalizedCoordinates ? "true" : "false") << ",\"border_u32\":[" << s.borderColor.ui.x << "," << s.borderColor.ui.y << "," << s.borderColor.ui.z << "," << s.borderColor.ui.w << "]}";
+            }
+            identity << "]}\n";
             Check(identity.good(), "device receipt");
 
+            const std::vector<std::array<uint32_t, 2>> dimensionsToTest = anisotropy == 16 ? std::vector<std::array<uint32_t, 2>>{{20, 12}, {4, 20}} : std::vector<std::array<uint32_t, 2>>{{20, 12}, {17, 9}, {4, 20}};
+
             for (Encoding format : {Encoding::BC4, Encoding::BC5, Encoding::BC7, Encoding::BC7Srgb})
-                for (const auto dimensions : {std::array<uint32_t, 2>{20, 12}, {17, 9}, {4, 20}})
+                for (const auto dimensions : dimensionsToTest)
                     for (uint32_t epoch = 0; epoch < 2; epoch++) {
-                        try {
-                            RunProfile(fixture, format, dimensions[0], dimensions[1], epoch, artifacts);
-                        } catch (const std::exception& failure) {
-                            failedProfiles++;
-                            const auto name = std::to_string(uint32_t(format)) + "-" + std::to_string(dimensions[0]) + "x" + std::to_string(dimensions[1]) + "-" + std::to_string(epoch);
-                            std::ofstream report(artifacts / (name + ".failed.json"));
-                            report << "{\"passed\":false,\"error\":" << Quoted(failure.what()) << "}\n";
-                            std::fprintf(stderr, "Profile %s failed: %s\n", name.c_str(), failure.what());
+                        for (uint32_t family = 0; family < (anisotropy == 16 ? 2u : 1u); family++) {
+                            try {
+                                RunProfile(fixture, format, dimensions[0], dimensions[1], epoch, artifacts, family == 1);
+                            } catch (const std::exception& failure) {
+                                failedProfiles++;
+                                const auto name = ProfileName(format, dimensions[0], dimensions[1], epoch, anisotropy, family == 1);
+                                std::ofstream report(artifacts / (name + ".failed.json"));
+                                report << "{\"passed\":false,\"error\":" << Quoted(failure.what()) << "}\n";
+                                std::fprintf(stderr, "Profile %s failed: %s\n", name.c_str(), failure.what());
+                            }
                         }
                     }
         }
         std::ofstream summary(artifacts / "summary.json");
-        summary << "{\"reference_policy\":2,\"passed_profiles\":" << (24 - failedProfiles) << ",\"failed_profiles\":" << failedProfiles << ",\"validation_errors\":" << errors.load() << "}\n";
+        summary << "{\"reference_policy\":2,\"passed_profiles\":" << (profileCount - failedProfiles) << ",\"failed_profiles\":" << failedProfiles << ",\"validation_errors\":" << errors.load() << ",\"anisotropy\":" << anisotropy << "}\n";
         Check(summary.good(), "terminal summary");
         Check(failedProfiles == 0, "one or more native profiles failed; retained per-profile evidence");
         Check(errors == 0, "final validation errors");
-        std::printf("{\"status\":\"native_passed\",\"profiles\":24,\"cases\":41472,\"actual_native_owners_retired\":48,\"validation_errors\":%u,\"anisotropy\":1}\n", errors.load());
+        std::printf("{\"status\":\"native_passed\",\"profiles\":%u,\"cases\":%u,\"actual_native_owners_retired\":%u,\"validation_errors\":%u,\"anisotropy\":%u}\n", profileCount, sampleCount, profileCount * 2, errors.load(), anisotropy);
 
         return 0;
     } catch (const std::exception& error) {

@@ -22,6 +22,11 @@ void materialMain(uint lane : SV_DispatchThreadID) {
     RWStructuredBuffer<SampleResult> results = ResourceDescriptorHeap[root.outputIndex];
 #endif
     uint index = root.firstCase + lane;
+#if !OPENRHI_MATERIAL_CONVENTIONAL
+    // 97 is coprime to each fixture batch size; adjacent lanes select different
+    // texture/sampler groups while visiting every output record exactly once
+    index = root.firstCase + ((lane * 97) % root.caseCount);
+#endif
     SampleCase c = cases[index];
 #if !OPENRHI_MATERIAL_CONVENTIONAL
     Texture2D<float4> source = ResourceDescriptorHeap[NonUniformResourceIndex(c.textureIndex)];

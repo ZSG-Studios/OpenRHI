@@ -47,3 +47,6 @@ add_test(NAME OpenRHI.BindlessMaterial.Reference COMMAND OpenRHIBindlessMaterial
 add_test(NAME OpenRHI.D3D12.BindlessMaterial COMMAND OpenRHIBindlessMaterial --native "${material_heap}" "${material_conventional}"
     "${CMAKE_BINARY_DIR}/Testing/BindlessMaterial/$<CONFIG>/native")
 set_tests_properties(OpenRHI.D3D12.BindlessMaterial PROPERTIES TIMEOUT 120)
+add_test(NAME OpenRHI.D3D12.BindlessMaterialAnisotropy16 COMMAND OpenRHIBindlessMaterial --native-aniso16 "${material_heap}" "${material_conventional}"
+    "${CMAKE_BINARY_DIR}/Testing/BindlessMaterial/$<CONFIG>/anisotropy16")
+set_tests_properties(OpenRHI.D3D12.BindlessMaterialAnisotropy16 PROPERTIES TIMEOUT 120)

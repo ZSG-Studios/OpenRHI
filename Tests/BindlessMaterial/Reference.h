@@ -252,6 +252,66 @@ inline Color Add(Color a, Color b, double weight) {
     return a;
 }
 
+// A constant field across all mips has a defined result for every normalized
+// filter footprint, independent of the implementation's anisotropic tap kernel
+inline Image MakeConstantImage(Encoding encoding, uint32_t width, uint32_t height, uint32_t seed) {
+    auto image = MakeImage(encoding, width, height, seed);
+    const uint8_t values[] = {uint8_t(32 + (seed * 10) % 160), uint8_t(48 + (seed * 14) % 144), uint8_t(64 + (seed * 8) % 128), uint8_t(128 + (seed * 6) % 96)};
+    Color expected = {values[0] / 255.0, 0, 0, 1};
+
+    if (encoding == Encoding::BC5)
+        expected[1] = values[1] / 255.0;
+
+    if (encoding == Encoding::BC7 || encoding == Encoding::BC7Srgb)
+        for (uint32_t c = 0; c < 4; c++)
+            expected[c] = (encoding == Encoding::BC7Srgb && c < 3) ? Linear(values[c] / 255.0) : values[c] / 255.0;
+    const uint32_t blockBytes = encoding == Encoding::BC4 ? 8 : 16;
+
+    for (auto& mip : image.mips) {
+        std::fill(mip.bytes.begin(), mip.bytes.end(), uint8_t(0));
+
+        for (size_t offset = 0; offset < mip.bytes.size(); offset += blockBytes) {
+            auto* block = mip.bytes.data() + offset;
+
+            if (encoding == Encoding::BC4 || encoding == Encoding::BC5) {
+                block[0] = block[1] = values[0];
+
+                if (encoding == Encoding::BC5)
+                    block[8] = block[9] = values[1];
+            } else {
+                uint32_t position = 0;
+                PutBits(block, position, 64, 7);
+
+                for (uint8_t value : values) {
+                    PutBits(block, position, value / 2, 7);
+                    PutBits(block, position, value / 2, 7);
+                }
+            }
+        }
+        std::fill(mip.texels.begin(), mip.texels.end(), expected);
+        std::fill(mip.decodeBounds.begin(), mip.decodeBounds.end(), Color{});
+    }
+
+    return image;
+}
+
+inline std::array<Color, 2> ValueBounds(const Image& image, View view) {
+    std::array<Color, 2> bounds = {Color{1, 1, 1, 1}, Color{0, 0, 0, 0}};
+
+    for (uint32_t mip = view.base; mip < (view.base + view.count); mip++) {
+        const auto& level = image.mips[mip];
+
+        for (size_t i = 0; i < level.texels.size(); i++) {
+            for (uint32_t c = 0; c < 4; c++) {
+                bounds[0][c] = std::min(bounds[0][c], std::max(0.0, level.texels[i][c] - level.decodeBounds[i][c]));
+                bounds[1][c] = std::max(bounds[1][c], std::min(1.0, level.texels[i][c] + level.decodeBounds[i][c]));
+            }
+        }
+    }
+
+    return bounds;
+}
+
 inline Color Texel(const Mip& mip, int x, int y, bool repeat, bool decodeBound = false) {
     auto address = [repeat](int i, int n) { return repeat ? ((i % n) + n) % n : std::clamp(i, 0, n - 1); };
 
@@ -370,6 +430,31 @@ inline uint32_t SelfTest() {
         test(unorm.mips[0].texels[i][0] >= srgb.mips[0].texels[i][0]);
     }
     test(unorm.mips[0].texels[0][0] > srgb.mips[0].texels[0][0]);
+
+    for (Encoding encoding : {Encoding::BC4, Encoding::BC5, Encoding::BC7, Encoding::BC7Srgb}) {
+        const auto control = MakeConstantImage(encoding, 20, 12, 3);
+        const auto view = Normalize(20, 12, uint32_t(control.mips.size()), 1, 2);
+        SampleCase sample = {};
+        sample.operation = 2;
+        sample.uv[0] = -.17f;
+        sample.uv[1] = 1.31f;
+        sample.dx[0] = 16.0f / control.mips[1].width;
+        sample.dy[1] = 1.0f / control.mips[1].height;
+        const auto value = Reference(control, view, 3, sample);
+        const auto bounds = ValueBounds(control, view);
+
+        for (uint32_t c = 0; c < 4; c++) {
+            test(std::abs(value[c] - control.mips[0].texels[0][c]) < 1e-12);
+            test(bounds[0][c] == bounds[1][c]);
+        }
+
+        if (encoding == Encoding::BC7 || encoding == Encoding::BC7Srgb) {
+            const auto decoded = DecodeBc7(control.mips[0].bytes.data(), 15);
+
+            for (uint32_t c = 0; c < 4; c++)
+                test(std::abs(((encoding == Encoding::BC7Srgb && c < 3) ? Linear(decoded[c]) : decoded[c]) - value[c]) < 1e-12);
+        }
+    }
 
     return checks;
 }

@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -71,6 +72,7 @@ def main():
     parser.add_argument("--out", type=Path, default=ROOT / ("_Tmp/BindlessMaterial/" + datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")))
     parser.add_argument("--native", action="store_true", help="execute native fixture during an allocated GPU window")
     parser.add_argument("--no-build", action="store_true", help="reuse already verified build during the GPU window")
+    parser.add_argument("--anisotropy", type=int, choices=[1, 16], default=1, help="separately labeled native sampler profile")
     args = parser.parse_args()
     build, out = args.build.resolve(), args.out.resolve()
     out.mkdir(parents=True, exist_ok=False)
@@ -85,6 +87,11 @@ def main():
                            "bc4_bc5_decode_interval": "per-texel 1/65535 + 0.03*abs(endpoint0-endpoint1); exact endpoints/special values; propagated through the actual reference filter",
                            "bc7_blocks": "mode 6 only; all-mode compression decode remains separately gated",
                            "odd_originals": "successful exact public factory creation required; SDK94 has no public unaligned-BC capability query"}}
+    if args.anisotropy == 16:
+        receipt["profile"].update(anisotropy=16, dimensions=[[20, 12], [4, 20]],
+                                  samplers=["linear-clamp-anisotropy16", "linear-repeat-anisotropy16"],
+                                  operations=["fixed-view-mip-zero", "explicit-view-relative-LOD", "isotropic-gradients", "anisotropic-gradients-4x1-8x1-16x1"],
+                                  reference_scope="scalar ideal/interval checks for fixed/LOD/isotropic and constant-field gradients; patterned anisotropic gradients use independent admitted-view value bounds, finite checks and native parity only")
     sources = [HERE / x for x in ["Main.cpp", "Reference.h", "Material.slang", "CMakeLists.txt", "qualify.py", "README.md"]]
     sources.append(ROOT / "Tests/CMakeLists.txt")
     sources.append(ROOT / "Tests/SourceBoundary.cmake")
@@ -126,10 +133,21 @@ def main():
                 # Set before invocation so failures preserve the true execution boundary
                 receipt["gpu_executed"] = True
                 native = out / (config + "-native")
+                frozen = out / (config + "-frozen")
+                frozen.mkdir()
+                for artifact in [exe, local_dll, build / "BindlessMaterialHeap.dxil", build / "BindlessMaterialConventional.dxil",
+                                 build / "BindlessMaterialHeap.reflection.json", build / "BindlessMaterialConventional.reflection.json"]:
+                    shutil.copy2(artifact, frozen / artifact.name)
+                for source in sources:
+                    destination = frozen / "Source" / source.relative_to(ROOT)
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(source, destination)
+                entry["frozen_sha256"] = {str(p.relative_to(out)): sha(p) for p in sorted(frozen.rglob("*")) if p.is_file()}
                 try:
-                    stdout = run([exe, "--native", build / "BindlessMaterialHeap.dxil", build / "BindlessMaterialConventional.dxil", native], out / f"{config}-native.log")
+                    stdout = run([exe, "--native-aniso16" if args.anisotropy == 16 else "--native", build / "BindlessMaterialHeap.dxil", build / "BindlessMaterialConventional.dxil", native], out / f"{config}-native.log")
                     summary = json.loads(next(line for line in stdout.splitlines() if line.startswith('{"status":"native_passed"')))
-                    assert summary["validation_errors"] == 0 and summary["profiles"] == 24 and summary["cases"] == 41472
+                    assert summary["validation_errors"] == 0 and summary["profiles"] == (32 if args.anisotropy == 16 else 24) and summary["cases"] == (36864 if args.anisotropy == 16 else 41472)
+                    assert summary["anisotropy"] == args.anisotropy
                     entry["native_summary"] = summary
                 except Exception as error:
                     native_failures.append(config)
@@ -139,6 +157,15 @@ def main():
                         identity = json.loads((native / "device.json").read_text())
                         assert Path(identity["library_path"]).resolve() == local_dll.resolve()
                         assert sha(Path(identity["library_path"])) == expected
+                        if args.anisotropy == 16:
+                            factories = {x["slot"]: x for x in identity["sampler_factories"]}
+                            for slot, address in [(31, 2), (43, 0)]:
+                                sampler = factories[slot]
+                                assert sampler["success"] and sampler["filters"] == [1, 1, 1] and sampler["filter_op"] == 0
+                                assert sampler["address"] == [address] * 3 and sampler["anisotropy"] == 16
+                                assert sampler["mip_bias"] == 0 and sampler["mip_min"] == 0 and sampler["mip_max"] == 32
+                                assert sampler["compare"] == 0 and not sampler["integer"] and not sampler["unnormalized"]
+                                assert sampler["border_u32"] == [0, 0, 0, 0]
                         entry["device"] = identity
                     entry["artifact_sha256"] = {str(p.relative_to(out)): sha(p) for p in sorted(native.rglob("*")) if p.is_file()}
         for config, expected in SDK_HASHES.items():
