@@ -1,5 +1,6 @@
 # OpenRHI
 
+- License OpenRHI first-party code and documentation under the MIT terms in `LICENSE.txt`; preserve upstream/source-derived copyrights, third-party licenses and original notices.
 - Preserve third-party copyrights, license terms, and the provenance recorded in THIRD_PARTY_NOTICES.md. Keep the GitHub upstream fork relationship and configured upstream remote. Published API, integration documentation, tags, and branches use OpenRHI identity.
 - Preserve shared upstream ancestry on main so ahead/behind counts track actual pending updates. Record upstream commits as incorporated after reviewing and integrating their changes, including intentional platform exclusions; keep the recorded upstream base current in THIRD_PARTY_NOTICES.md. Refresh with `git fetch upstream`; `git rev-list --left-right --count upstream/main...main` reports upstream-only commits followed by OpenRHI-only commits.
 - Maintain the per-commit integration checklist in `Docs/UPSTREAM.md`, pairing each incorporated upstream commit with its OpenRHI adaptation and verification evidence.

@@ -1,3 +1,6 @@
+MIT License
+
+Copyright (c) 2026 ZSG-Studios contributors
 Copyright (c) 2021, NVIDIA CORPORATION. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a

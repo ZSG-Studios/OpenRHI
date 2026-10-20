@@ -2,7 +2,7 @@
 
 OpenRHI is a high-performance rendering hardware interface for D3D12, Vulkan, and native Metal 4. It provides an explicit C/C++ API, native resource access, user-controlled allocation and synchronization, device capability reports, and creation-time architecture profiles.
 
-Third-party attribution and license terms are preserved in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [LICENSE.txt](LICENSE.txt).
+OpenRHI's first-party code and documentation use the [MIT license](LICENSE.txt). Upstream and source-derived attribution and third-party license terms are preserved in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and their original notices.
 
 | Platform | Backend | Baseline |
 |---|---|---|

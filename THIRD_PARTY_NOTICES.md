@@ -1,5 +1,9 @@
 # Third-party notices
 
+## OpenRHI first-party work
+
+OpenRHI's first-party code and documentation are licensed under the MIT terms in [LICENSE.txt](LICENSE.txt), with the ZSG-Studios contributors' notice. Source-derived code preserves its original copyrights and applicable license notices. Dependencies, compiler distributions and optional provider runtimes retain their own licenses and packaged attribution as recorded below.
+
 ## NVIDIA NRI
 
 OpenRHI includes code derived from NVIDIA NRI, distributed under the MIT license.
