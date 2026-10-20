@@ -2,6 +2,22 @@
 
 Qualification records belong to an exact device, OS, driver, backend, toolchain, commit, workload, and power configuration. Windows and Linux records remain separate for the same GPU.
 
+## Lighting delivery priority and gates
+
+Working UVRT lighting has priority above other work. OpenRHI's immediate work supports lighting correctness, setup speed and live resource/lifetime qualification through its existing public SDK. Defer unrelated feature expansion. MIRA owns the integrated plan and native GPU window; UVRT owns lighting algorithms and phase exits. Use multiple agents for independent source/API investigation and review, with one implementation owner per change.
+
+| Goal | Owning work and exit evidence |
+| --- | --- |
+| Identify a concrete blocker | Trace the actual MIRA/UVRT call through public API, capability admission, Validation, backend commands and retirement; record exact source/SDK/shader identities and distinguish defects from unmeasured behavior |
+| Reduce lighting setup cost | MIRA separates factory/binding, shader loading, layout/PSO creation and first-completion timings; reuse compatible same-device pipeline/layout bundles and qualify persistent cache restore through public SDK capabilities |
+| Preserve live lighting correctness | Match raster/material/pose/AS/lighting revisions at use; retain native validation, actual scene-color/reference results and source-to-presented generation evidence through wind, update and resize |
+| Prove resource lifetime | Retain pipelines/layouts and all recorded/published resource versions through completion; qualify rebinding, replacement, reset, pressure and teardown with final descriptor/storage restoration |
+| Change SDK only when required | Keep the current qualified SDK while its public path satisfies the workload; for a demonstrated blocker, qualify the smallest owning backend/Validation/public-contract change and its consuming integration before promotion |
+
+Native measurements require MIRA's explicit serialized GPU window. Source inspection and CPU-only compiler/contract work may proceed independently. Preserve failed receipts and predeclared limits. Setup speed and warmed frame throughput have separate measurements; retain transition frames and measure actual setup/activation deadlines. Passing a bounded helper fixture contributes its scope to the production ledger; completion continues to require the owning UVRT/MIRA phase gates below.
+
+CPU review on 20 October 2026 at source `0353e1787f03f559f9d440ebc1e605fc06e63a6a` found no demonstrated backend/compiler blocker in MIRA's current single-BLAS D3D12 lighting call path. Native setup timing, cache restore/reuse, current-generation color/reference results and live lifetime regressions remain consuming-owner gates. A separate batch-BLAS correction is deferred from this current-path work: `Source/D3D12/CommandBufferD3D12.hpp:2739` indexes `desc.geometries[i]` inside the inner `j` loop. Two descriptors containing one geometry each can read outside the second geometry array. The correction is `desc.geometries[j]`, paired with a two-descriptor regression before enabling that batch path. MIRA's reviewed `TriangleScene.cpp` calls pass one descriptor; this finding establishes neither the cause nor the cost of its current lighting setup. Review evidence here is source-only.
+
 ## Gates
 
 1. Platform: C/C++ builds, source audit, platform-specific native exports, dependency audit, and SDK packaging

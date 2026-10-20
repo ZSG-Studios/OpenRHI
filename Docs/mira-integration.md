@@ -2,6 +2,20 @@
 
 MIRA (Modular Integrated Rendering Architecture) at `C:/MIRA` composes OpenRHI, UVRT, FACET, and future modules through their public interfaces. OpenRHI remains owned and implemented in `C:/OpenRHI`. This guide records the OpenRHI side of that boundary.
 
+## Lighting delivery priority
+
+Working UVRT lighting has priority above other work. OpenRHI advances concrete backend, public SDK and pinned shader/compiler blockers to lighting correctness, setup speed and live resource/lifetime qualification. Unrelated feature expansion is deferred. MIRA's `C:/MIRA/Docs/plan.md` owns integrated sequencing; UVRT's `C:/UVRT/plan.md` owns lighting algorithms and phase dependencies. The [lighting delivery gates](QUALIFICATION.md#lighting-delivery-priority-and-gates) define the OpenRHI contribution and required evidence.
+
+Use independent agents for source/API blocker review and assign one owner to each implementation. MIRA owns the host pipeline/cache implementation and serializes native GPU windows across modules. OpenRHI reviews and fixes demonstrated native or public API defects in its own repository. Keep the current qualified SDK while the existing public contract satisfies the lighting path; propose an SDK change with its exact blocker, consumer impact and qualification gates when needed.
+
+### Setup and pipeline lifetime
+
+Measure source-factory publication, typed binding creation, shader loading, layout creation, `CreateComputePipeline`, first submission/completion and target creation separately. A combined setup span establishes total latency; attributing it to pipeline creation requires the isolated call measurement.
+
+The public core interface supports `CreatePipelineCache`, `DestroyPipelineCache` and the two-call `GetPipelineCacheData` operation. Query `DeviceDesc::features.pipelineCache` and `pipelineCacheControl`, supply `ComputePipelineDesc::cache`, and use `FAIL_ON_CACHE_MISS` for a restored-hit control only when supported. Retry incompatible `OUT_OF_DATE` cache data with an empty cache once and report continued failure. Serialize cache-using creation and serialize cache data only after those creations complete. Native D3D12 pipeline libraries require external synchronization for concurrent loads of the same PSO; the backend's store lock does not cover the full load/create/store transaction. See Microsoft's [pipeline library contract](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device1-createpipelinelibrary).
+
+MIRA can retain a same-device pipeline/layout bundle across compatible tiles, rebinding and resize. Identify it by shader binary, reflected entry/threadgroup metadata, complete layout and pipeline configuration. Bind current heaps, root constants and resource indices for every recording. Retain the layout and pipeline through the last referencing recording/submission; retire generation-owned views, publications and buffers independently. Recreate the bundle for device or shader/layout changes. Qualify cold creation, live bundle reuse and restored-cache creation separately, preserving current-generation output, native validation and final lifetime restoration evidence.
+
 ## Scene-lighting ownership
 
 UVRT owns scene illumination, BRDF evaluation, shadows, environment lighting, and lighting tone mapping. FACET and MIRA retain UVRT compatibility and composition code through public interfaces. MIRA owns frame scheduling and requested presentation settings. OpenRHI owns device creation, native backends, acceleration structures, public ray-query hardware interfaces, and vendor-provider adapters. Scene-lighting signal production and consumption belong to UVRT. This ownership contract governs the FACET-to-UVRT lighting migration and its integrated qualification.
