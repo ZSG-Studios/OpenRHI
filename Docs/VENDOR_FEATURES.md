@@ -4,6 +4,8 @@ The neural lighting target is GeForce RTX 50-series and newer and Radeon RX 9000
 
 Include `Extensions/OpenRHIVendorFeatures.h` after `OpenRHI.h`. The interfaces preserve the pinned SDK's native description ABI and use OpenRHI devices, command buffers and queues. Obtain native resources through `CoreInterface::Get*NativeObject`; native resource descriptions, layouts and usage follow the selected SDK. OpenRHI Validation checks its pointers and command-recording contract, while the SDK and graphics validation validate native description contents.
 
+UVRT owns scene illumination, BRDF evaluation, shadows, environment lighting, lighting tone mapping, and scene-lighting signal producers/consumers. OpenRHI owns the public provider adapters, native context/dispatch boundary, and hardware interfaces described here. MIRA and FACET compose those capabilities through UVRT compatibility interfaces; see [module ownership](mira-integration.md#scene-lighting-ownership).
+
 ## Build and deployment
 
 | Feature | Build option | SDK | Native integration |

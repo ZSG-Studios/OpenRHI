@@ -2,6 +2,10 @@
 
 MIRA (Modular Integrated Rendering Architecture) at `C:/MIRA` composes OpenRHI, UVRT, FACET, and future modules through their public interfaces. OpenRHI remains owned and implemented in `C:/OpenRHI`. This guide records the OpenRHI side of that boundary.
 
+## Scene-lighting ownership
+
+UVRT owns scene illumination, BRDF evaluation, shadows, environment lighting, and lighting tone mapping. FACET and MIRA retain UVRT compatibility and composition code through public interfaces. MIRA owns frame scheduling and requested presentation settings. OpenRHI owns device creation, native backends, acceleration structures, public ray-query hardware interfaces, and vendor-provider adapters. Scene-lighting signal production and consumption belong to UVRT. This ownership contract governs the FACET-to-UVRT lighting migration and its integrated qualification.
+
 ## Source and build entry points
 
 | Entry | Responsibility |
