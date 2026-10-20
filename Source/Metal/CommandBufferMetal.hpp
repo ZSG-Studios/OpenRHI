@@ -54,8 +54,8 @@ static inline bool HasWriteAccess(AccessBits access) {
         | (uint32_t)AccessBits::COPY_DESTINATION | (uint32_t)AccessBits::RESOLVE_DESTINATION | (uint32_t)AccessBits::CLEAR_STORAGE | (uint32_t)AccessBits::HOST_WRITE
         | (uint32_t)AccessBits::VIDEO_DECODE_WRITE | (uint32_t)AccessBits::VIDEO_ENCODE_WRITE;
 
-    // "NONE" is "COMMON" (any access)
-    return access == AccessBits::NONE || ((uint32_t)access & writeAccess) != 0;
+    // Conservative native hazard scope for common handoff and unspecified access
+    return access == AccessBits::NONE || access == AccessBits::COMMON || ((uint32_t)access & writeAccess) != 0;
 }
 
 static inline MTL::ScissorRect GetScissorRect(const openrhi::Rect& rect) {

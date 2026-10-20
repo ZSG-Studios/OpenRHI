@@ -31,6 +31,7 @@ typedef uint32_t DXGI_FORMAT;
 #include "Extensions/OpenRHIDeviceCreation.h"
 #include "Extensions/OpenRHIHelper.h"
 #include "Extensions/OpenRHIImgui.h"
+#include "Extensions/OpenRHIFrameGeneration.h"
 #include "Extensions/OpenRHIRmlUi.h"
 #include "Extensions/OpenRHILowLatency.h"
 #include "Extensions/OpenRHIMeshShader.h"

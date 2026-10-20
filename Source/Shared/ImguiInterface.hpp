@@ -518,7 +518,7 @@ void ImguiImpl::CmdDrawInternal(CommandBuffer& commandBuffer, const ImguiRenderD
     Pipeline* pipeline = nullptr;
     for (size_t i = 0; i < m_Pipelines.size(); i++) {
         const ImguiPipeline& imguiPipeline = m_Pipelines[i];
-        if (imguiPipeline.format == drawImguiDesc.attachmentFormat) {
+        if (imguiPipeline.format == drawImguiDesc.attachmentFormat && imguiPipeline.writeAlpha == drawImguiDesc.writeAlpha) {
             pipeline = m_Pipelines[i].pipeline;
             break;
         }
@@ -551,10 +551,10 @@ void ImguiImpl::CmdDrawInternal(CommandBuffer& commandBuffer, const ImguiRenderD
         colorAttachment.colorBlend.srcFactor = BlendFactor::SRC_ALPHA,
         colorAttachment.colorBlend.dstFactor = BlendFactor::ONE_MINUS_SRC_ALPHA,
         colorAttachment.colorBlend.op = BlendOp::ADD,
-        colorAttachment.alphaBlend.srcFactor = BlendFactor::ONE_MINUS_SRC_ALPHA,
-        colorAttachment.alphaBlend.dstFactor = BlendFactor::ZERO,
+        colorAttachment.alphaBlend.srcFactor = BlendFactor::ONE,
+        colorAttachment.alphaBlend.dstFactor = BlendFactor::ONE_MINUS_SRC_ALPHA,
         colorAttachment.alphaBlend.op = BlendOp::ADD,
-        colorAttachment.colorWriteMask = ColorWriteBits::RGB;
+        colorAttachment.colorWriteMask = drawImguiDesc.writeAlpha ? ColorWriteBits::RGBA : ColorWriteBits::RGB;
         colorAttachment.blendEnabled = true;
 
         GraphicsPipelineDesc graphicsPipelineDesc = {};
@@ -572,7 +572,7 @@ void ImguiImpl::CmdDrawInternal(CommandBuffer& commandBuffer, const ImguiRenderD
         OPENRHI_CHECK(result == Result::SUCCESS, "Unexpected");
         MaybeUnused(result);
 
-        m_Pipelines.push_back({pipeline, drawImguiDesc.attachmentFormat});
+        m_Pipelines.push_back({pipeline, drawImguiDesc.attachmentFormat, drawImguiDesc.writeAlpha});
     }
 
     // Setup

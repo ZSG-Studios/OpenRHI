@@ -25,6 +25,9 @@ OpenRhiEnum(UpscalerType, uint8_t,  // Name                                     
 // MetalFX: created on the first dispatch (a hitch), resource sizes and formats must not change after it. "output" needs "COLOR_ATTACHMENT" usage.
 // No "DEPTH_LINEAR" and "MV_JITTERED" ("MV_UPSCALED" requires macOS 27). "METALFX_DENOISED": no "MV_UPSCALED", "sss" and "preTransparency", "specularMvOrHitT" is "hit distance"
 
+// FSR D3D12: caller hands all input/guide/output textures to CmdDispatchUpscale in AccessBits::COMMON, Layout::GENERAL, StageBits::ALL (native COMMON)
+// FSR returns them in that same state; this explicit handoff permits the SDK's legacy barriers to interoperate with Enhanced Barriers
+
 // ANF: PERFORMANCE (2x), even output dimensions, flags NONE, fixed single-mip/layer/sample 2D images
 // Query OpenRHIUpscalerVK.h requirements before creating the Vulkan device and external-memory images; wrap native images with WrapperVKInterface
 // Guides use SDK depth and unjittered UV motion conventions, mvScale={1,1}, preExposure=0 or 1; input/depth/mv use SHADER_RESOURCE layout, output uses SHADER_RESOURCE_STORAGE

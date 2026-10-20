@@ -51,7 +51,7 @@ Copyright (c) 2026, Qualcomm Technologies, Inc. and/or its subsidiaries. All rig
 
 ## Neural lighting and latency providers
 
-- AMD FSR SDK 2.3.0, commit `60f4ea81909200d8542eca14dccb2628b763a9a3`: Ray Regeneration 1.2.0 and radiance caching 0.9.0 preview use the original public `ffx_denoiser.h`, `ffx_radiancecache.h` and signed provider DLLs. Original AMD SDK licenses accompany enabled builds in `ThirdPartyLicenses/fsr`.
+- AMD FSR SDK 2.3.0, commit `60f4ea81909200d8542eca14dccb2628b763a9a3`: Frame Generation API 4.0.1 / D3D12 proxy API 3.1.7, Ray Regeneration 1.2.0 and radiance caching 0.9.0 preview use the original public `ffx_framegeneration.h`, `ffx_api_framegeneration_dx12.h`, `ffx_denoiser.h`, `ffx_radiancecache.h` and signed provider DLLs. Original AMD SDK licenses accompany enabled builds in `ThirdPartyLicenses/fsr`.
 - NVIDIA NRC 0.16, commit `7de30e4eb2a1a27118eb9a6acf5f715d757240c0`: optional native D3D12 adapter uses the unchanged public headers, import library, NRC runtime and CUDA runtime dependencies. The NVIDIA RTX SDK license remains applicable and accompanies enabled builds in `ThirdPartyLicenses/nrc/License.md`; it is independent of OpenRHI's MIT license.
 - AMD Anti-Lag 2 SDK, commit `390aa4a8c8655d0ae6e90079db2c85e103a96da3`: optional D3D12 adapter calls the unchanged public header API. Copyright 2024 Advanced Micro Devices, Inc.; MIT license accompanies enabled builds in `ThirdPartyLicenses/antilag2`.
 - NVIDIA Reflex uses the existing pinned NVAPI dependency on D3D12 and the native Vulkan `VK_NV_low_latency2` public API on Linux. Vendor sources remain unchanged.

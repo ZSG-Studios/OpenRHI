@@ -4,6 +4,7 @@
 
 #include "HelperInterface.h"
 #include "ImguiInterface.h"
+#include "FrameGenerationInterface.h"
 #include "RmlUiInterface.h"
 #include "StreamerInterface.h"
 #include "UpscalerInterface.h"
@@ -24,6 +25,7 @@ using namespace openrhi;
 #include "StreamerInterface.hpp"
 #include "UpscalerInterface.hpp"
 #include "VendorFeatures.hpp"
+#include "FrameGenerationInterface.hpp"
 
 #include "SharedExternal.hpp"
 #include "SharedLibrary.hpp"

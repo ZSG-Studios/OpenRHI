@@ -120,3 +120,7 @@ The MIRA coordinating chat (`01a156fa-a7a5-7503-be4a-ef753f263388`) reported the
 - MIRA imports the module libraries and the maintained OpenRHI SDK. FACET's public-facade shared-lifetime test passed. The original and migrated 256-frame demo screenshots were reported byte-identical.
 
 Keep application and composition changes in MIRA, FACET algorithm changes in FACET, and RHI changes in OpenRHI. Further integrated coverage records the exact MIRA/module revisions, runtime configuration, and retained test artifacts alongside those results.
+
+## AMD presentation handoff
+
+Maintained Windows x64 builds enable FSR, Anti-Lag 2 and `FrameGenerationInterface`. MIRA supplies FACET temporal guides, physical camera planes, separate HUDless scene/transparent UI, monotonically increasing frame ids, caller barriers/submissions and dynamic Present sync interval. Follow [the frame-generation contract](FRAME_GENERATION.md) for COMMON/GENERAL/ALL SDK interop, proxy ownership, disable/recreate, counters and deployment. Rebuild against the SDK public headers when adopting this interface and `DrawImguiDesc::writeAlpha`.

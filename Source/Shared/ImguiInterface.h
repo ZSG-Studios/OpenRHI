@@ -9,6 +9,7 @@ namespace openrhi {
 struct ImguiPipeline {
     Pipeline* pipeline = nullptr;
     Format format = Format::UNKNOWN;
+    bool writeAlpha = false;
 };
 
 struct ImguiTexture {

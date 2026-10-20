@@ -348,6 +348,9 @@ static inline StdVideoH265PictureType GetVideoEncodeH265PictureType(VideoFrameTy
 }
 
 static inline VkAccessFlags2 GetAccessFlags(AccessBits accessBits) {
+    if (accessBits == AccessBits::COMMON)
+        return VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+
     VkAccessFlags2 flags = VK_ACCESS_2_NONE; // = 0
 
     if (accessBits & AccessBits::INDEX_BUFFER)

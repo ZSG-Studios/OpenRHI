@@ -14,6 +14,7 @@ RUNTIMES = (
     "amd_fidelityfx_upscaler_dx12.dll",
     "amd_fidelityfx_denoiser_dx12.dll",
     "amd_fidelityfx_radiancecache_dx12.dll",
+    "amd_fidelityfx_framegeneration_dx12.dll",
     "NRC_D3D12.dll",
     "NRC_Vulkan.dll",
     "cudart64_13.dll",
@@ -55,7 +56,7 @@ def check_file(source, packaged):
 
 
 def check_ui_headers(fixture):
-    for name in ("OpenRHIImgui.h", "OpenRHIRmlUi.h", "OpenRHIRmlUiAdapter.hpp", "OpenRHIOptions.hpp"):
+    for name in ("OpenRHIImgui.h", "OpenRHIRmlUi.h", "OpenRHIRmlUiAdapter.hpp", "OpenRHIOptions.hpp", "OpenRHIFrameGeneration.h"):
         relative = Path("Include/Extensions") / name
         check_file(fixture / relative, fixture / "_OpenRHI_SDK" / relative)
 
@@ -70,6 +71,7 @@ def run_windows(root, output, optional):
             names.append("OpenRHI.pdb")
         if optional:
             names.extend(RUNTIMES)
+            names.extend(("ThirdPartyLicenses/fsr/LICENSE.md", "ThirdPartyLicenses/fsr/3rdpartynotice.md"))
         names.extend(("AgilitySDK/D3D12Core.dll", "ThirdPartyLicenses/vendor/LICENSE.txt"))
         for name in names:
             path = source / name

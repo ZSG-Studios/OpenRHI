@@ -151,6 +151,9 @@ static inline D3D12_BARRIER_ACCESS GetBarrierAccessFlags(AccessBits accessBits) 
     if (accessBits == AccessBits::NONE)
         return D3D12_BARRIER_ACCESS_NO_ACCESS;
 
+    if (accessBits == AccessBits::COMMON)
+        return D3D12_BARRIER_ACCESS_COMMON;
+
     // Gather bits
     D3D12_BARRIER_ACCESS flags = D3D12_BARRIER_ACCESS_COMMON; // = 0
 

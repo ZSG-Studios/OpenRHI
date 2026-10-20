@@ -128,10 +128,11 @@ cmake_dependent_option(OPENRHI_ENABLE_AGILITY_SDK_SUPPORT "Enable Agility SDK su
 cmake_dependent_option(OPENRHI_ENABLE_XLIB_SUPPORT "Enable X11 support" ON "XLIB_HEADERS" OFF)
 cmake_dependent_option(OPENRHI_ENABLE_WAYLAND_SUPPORT "Enable Wayland support" ON "WAYLAND_HEADERS" OFF)
 cmake_dependent_option(OPENRHI_ENABLE_NGX_SDK "Enable NVIDIA NGX (DLSS) SDK" OFF "(OPENRHI_ENABLE_D3D12_SUPPORT OR OPENRHI_ENABLE_VK_SUPPORT); WIN32 OR NOT IS_ARM64" OFF)
-cmake_dependent_option(OPENRHI_ENABLE_FFX_SDK "Enable AMD FidelityFX SDK" OFF "(OPENRHI_ENABLE_VK_SUPPORT OR OPENRHI_ENABLE_D3D12_SUPPORT); WIN32; NOT IS_ARM64" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_FFX_SDK "Enable AMD FidelityFX SDK" ON "(OPENRHI_ENABLE_VK_SUPPORT OR OPENRHI_ENABLE_D3D12_SUPPORT); WIN32; NOT IS_ARM64" OFF)
 cmake_dependent_option(OPENRHI_ENABLE_XESS_SDK "Enable INTEL XeSS SDK" OFF "OPENRHI_ENABLE_D3D12_SUPPORT; WIN32; NOT IS_ARM64" OFF)
 cmake_dependent_option(OPENRHI_ENABLE_NRC_SDK "Enable NVIDIA NRC 0.16" OFF "WIN32; OPENRHI_ENABLE_D3D12_SUPPORT" OFF)
-cmake_dependent_option(OPENRHI_ENABLE_ANTILAG2_SDK "Enable AMD Anti-Lag 2" OFF "WIN32; OPENRHI_ENABLE_D3D12_SUPPORT; NOT IS_ARM64" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_ANTILAG2_SDK "Enable AMD Anti-Lag 2" ON "WIN32; OPENRHI_ENABLE_D3D12_SUPPORT; NOT IS_ARM64" OFF)
+cmake_dependent_option(OPENRHI_ENABLE_FFX_FRAME_GENERATION "Enable AMD frame generation and paced presentation" ON "OPENRHI_ENABLE_FFX_SDK; OPENRHI_ENABLE_D3D12_SUPPORT; WIN32; NOT IS_ARM64" OFF)
 cmake_dependent_option(OPENRHI_ENABLE_ANF_SDK "Enable Qualcomm ANF temporal SR" OFF "ANDROID; IS_ARM64; OPENRHI_ENABLE_VK_SUPPORT" OFF)
 if(OPENRHI_ENABLE_ANF_SDK)
     set(OPENRHI_ANF_SDK_ROOT "" CACHE PATH "Unmodified ANF SDK 0.43.0 (a144fbab47ad586adf64c5a1574be73064550f1e)")
@@ -187,6 +188,7 @@ foreach(opt IN ITEMS
     OPENRHI_ENABLE_ANF_SDK
     OPENRHI_ENABLE_NRC_SDK
     OPENRHI_ENABLE_ANTILAG2_SDK
+    OPENRHI_ENABLE_FFX_FRAME_GENERATION
     OPENRHI_STREAMER_THREAD_SAFE
 )
     if(${opt})
@@ -300,7 +302,7 @@ if(OPENRHI_ENABLE_FFX_SDK)
             DOWNLOAD_EXTRACT_TIMESTAMP 1
             DOWNLOAD_NO_PROGRESS 1
             SOURCE_SUBDIR "ignore CMakeLists.txt"
-            URL "https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK/archive/refs/tags/v2.3.0.zip"
+            URL "https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK/archive/60f4ea81909200d8542eca14dccb2628b763a9a3.zip"
         )
         list(APPEND DEPS fsr)
     endif()
@@ -451,6 +453,8 @@ set(SHARED_SOURCE
     "Source/Shared/HelperInterface.hpp"
     "Source/Shared/ImguiInterface.h"
     "Source/Shared/ImguiInterface.hpp"
+    "Source/Shared/FrameGenerationInterface.h"
+    "Source/Shared/FrameGenerationInterface.hpp"
     "Source/Shared/RmlUiInterface.h"
     "Source/Shared/RmlUiInterface.hpp"
     "Source/Shared/Lock.h"
@@ -499,6 +503,7 @@ target_include_directories(OpenRHI_Shared
             ${fsr_SOURCE_DIR}/Kits/FidelityFX/upscalers/include
             ${fsr_SOURCE_DIR}/Kits/FidelityFX/denoisers/include
             ${fsr_SOURCE_DIR}/Kits/FidelityFX/radiancecache/include
+            ${fsr_SOURCE_DIR}/Kits/FidelityFX/framegeneration/include
         >
         $<$<AND:$<BOOL:${OPENRHI_ENABLE_FFX_SDK}>,$<NOT:$<BOOL:${OPENRHI_ENABLE_D3D12_SUPPORT}>>>:
             ${ffx_SOURCE_DIR}/ffx-api/include/ffx_api
@@ -991,6 +996,7 @@ if(OPENRHI_ENABLE_VALIDATION_SUPPORT)
         "Source/Validation/SwapChainVal.hpp"
         "Source/Validation/VendorFeaturesVal.h"
         "Source/Validation/VendorFeaturesVal.hpp"
+        "Source/Validation/FrameGenerationVal.hpp"
         "Source/Validation/TextureVal.h"
         "Source/Validation/TextureVal.hpp"
         "Source/Validation/VideoPictureVal.h"
@@ -1045,6 +1051,7 @@ set(OPENRHI_EXTENSIONS
     "Include/Extensions/OpenRHIRmlUi.h"
     "Include/Extensions/OpenRHIRmlUiAdapter.hpp"
     "Include/Extensions/OpenRHIOptions.hpp"
+    "Include/Extensions/OpenRHIFrameGeneration.h"
     "Include/Extensions/OpenRHILowLatency.h"
     "Include/Extensions/OpenRHIMeshShader.h"
     "Include/Extensions/OpenRHIRayTracing.h"
@@ -1271,7 +1278,20 @@ if(OPENRHI_ENABLE_XESS_SDK)
 endif()
 
 if(OPENRHI_ENABLE_FFX_SDK AND OPENRHI_ENABLE_D3D12_SUPPORT)
-    foreach(effect IN ITEMS denoiser radiancecache)
+    foreach(license IN ITEMS Kits/FidelityFX/docs/license.md 3rdpartynotice.md)
+        if(NOT EXISTS "${fsr_SOURCE_DIR}/${license}")
+            message(FATAL_ERROR "Pinned FSR license input missing: ${fsr_SOURCE_DIR}/${license}")
+        endif()
+    endforeach()
+    add_custom_command(TARGET OpenRHI POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:OpenRHI>/ThirdPartyLicenses/fsr"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${fsr_SOURCE_DIR}/Kits/FidelityFX/docs/license.md" "$<TARGET_FILE_DIR:OpenRHI>/ThirdPartyLicenses/fsr/LICENSE.md"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${fsr_SOURCE_DIR}/3rdpartynotice.md" "$<TARGET_FILE_DIR:OpenRHI>/ThirdPartyLicenses/fsr/3rdpartynotice.md" VERBATIM)
+    set(OPENRHI_FFX_EFFECT_RUNTIMES denoiser radiancecache)
+    if(OPENRHI_ENABLE_FFX_FRAME_GENERATION)
+        list(APPEND OPENRHI_FFX_EFFECT_RUNTIMES framegeneration)
+    endif()
+    foreach(effect IN LISTS OPENRHI_FFX_EFFECT_RUNTIMES)
         set(runtime "${fsr_SOURCE_DIR}/Kits/FidelityFX/signedbin/amd_fidelityfx_${effect}_dx12.dll")
         if(NOT EXISTS "${runtime}")
             message(FATAL_ERROR "Missing FidelityFX ${effect} runtime: ${runtime}")

@@ -172,6 +172,11 @@ static bool ValidateBufferBarrierDesc(const DeviceVal& device, uint32_t i, const
     OPENRHI_RETURN_ON_FAILURE(&device, IsAccessMaskSupported(bufferVal.GetDesc(), bufferBarrier.after.access), false,
         "'barrierDesc.buffers[%u].after.access' is not supported by the usage mask of the buffer ('%s')", i, bufferVal.GetDebugName());
 
+    for (const AccessStage* state : {&bufferBarrier.before, &bufferBarrier.after}) {
+        OPENRHI_RETURN_ON_FAILURE(&device, !(state->access & AccessBits::COMMON) || (state->access == AccessBits::COMMON && state->stages == StageBits::ALL), false,
+            "'barrierDesc.buffers[%u]' COMMON access requires exclusive COMMON and ALL stages", i);
+    }
+
     return true;
 }
 
@@ -220,6 +225,11 @@ static bool ValidateTextureBarrierDesc(const DeviceVal& device, uint32_t i, cons
         "'barrierDesc.textures[%u].after.layout' is not supported by the usage mask of the texture ('%s')", i, textureVal.GetDebugName());
     if (!ValidateHostTextureState(device, i, textureBarrier.before, "before") || !ValidateHostTextureState(device, i, textureBarrier.after, "after"))
         return false;
+
+    for (const AccessLayoutStage* state : {&textureBarrier.before, &textureBarrier.after}) {
+        OPENRHI_RETURN_ON_FAILURE(&device, !(state->access & AccessBits::COMMON) || (state->access == AccessBits::COMMON && state->stages == StageBits::ALL && state->layout == Layout::GENERAL), false,
+            "'barrierDesc.textures[%u]' COMMON access requires exclusive COMMON, GENERAL layout and ALL stages", i);
+    }
 
     constexpr AccessBits hostAccess = AccessBits::HOST_READ | AccessBits::HOST_WRITE;
     bool hasHostState = (textureBarrier.before.access & hostAccess) || (textureBarrier.after.access & hostAccess);
@@ -1106,6 +1116,13 @@ OPENRHI_INLINE void CommandBufferVal::Barrier(const BarrierDesc& barrierDesc) {
             const TextureBarrierDesc& textureBarrier = barrierDesc.textures[i];
             OPENRHI_RETURN_ON_FAILURE(&m_Device, textureBarrier.before.layout == Layout::INPUT_ATTACHMENT && textureBarrier.after.layout == Layout::INPUT_ATTACHMENT, ReturnVoid(),
                 "'textures[%u]': only 'Layout::INPUT_ATTACHMENT' access transitions are allowed inside 'CmdBeginRendering/CmdEndRendering'", i);
+        }
+    }
+
+    for (uint32_t i = 0; i < barrierDesc.globalNum; i++) {
+        for (const AccessStage* state : {&barrierDesc.globals[i].before, &barrierDesc.globals[i].after}) {
+            OPENRHI_RETURN_ON_FAILURE(&m_Device, !(state->access & AccessBits::COMMON) || (state->access == AccessBits::COMMON && state->stages == StageBits::ALL), ReturnVoid(),
+                "'barrierDesc.globals[%u]' COMMON access requires exclusive COMMON and ALL stages", i);
         }
     }
 

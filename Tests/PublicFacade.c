@@ -11,6 +11,9 @@
 #include "Extensions/OpenRHILowLatency.h"
 #include "Extensions/OpenRHIVendorFeatures.h"
 #include "Extensions/OpenRHIRmlUi.h"
+#include "Extensions/OpenRHIFrameGeneration.h"
+
+_Static_assert(OpenRhiMember(AccessBits, COMMON) == (1u << 29), "COMMON interop bit changed");
 
 _Static_assert(sizeof(OpenRhiRmlUiVertex) == 20, "RmlUi vertex ABI changed");
 

@@ -98,6 +98,13 @@ struct DeviceBase : public DebugNameBaseVal {
 
     virtual Result FillFunctionTable(RmlUiInterface&) const;
 
+    virtual Result FillFunctionTable(FrameGenerationInterface& table) const {
+        if (GetDesc().graphicsAPI != GraphicsAPI::D3D12)
+            return Result::UNSUPPORTED;
+
+        return FillFrameGenerationInterface(table);
+    }
+
     virtual Result FillFunctionTable(LowLatencyInterface&) const {
         return Result::UNSUPPORTED;
     }

@@ -4,6 +4,7 @@
 #include "OpenRHIUpscaler.h"
 #include "OpenRHILowLatency.h"
 #include "OpenRHIVendorFeatures.h"
+#include "OpenRHIFrameGeneration.h"
 #include <array>
 
 namespace openrhi {
@@ -51,7 +52,7 @@ inline const std::array<RenderOptionDesc, size_t(RenderOption::MAX_NUM)>& GetOpe
         {"AMD Ray Regeneration", "FidelityFXInterface", "OPENRHI_ENABLE_FFX_SDK", temporal | OPTION_DENOISER_SIGNALS, true},
         {"AMD radiance cache", "FidelityFXInterface", "OPENRHI_ENABLE_FFX_SDK", OPTION_PATH_TRACER_PRODUCERS, true},
         {"NVIDIA neural radiance cache", "NeuralRadianceCacheInterface", "OPENRHI_ENABLE_NRC_SDK", OPTION_PATH_TRACER_PRODUCERS | OPTION_SUBMISSION_HOOK, true},
-        {"Frame generation", "", "Application frame-interpolation/presentation provider", temporal | OPTION_PRESENT_HOOK, false},
+        {"AMD frame generation", "FrameGenerationInterface", "OPENRHI_ENABLE_FFX_FRAME_GENERATION", temporal | OPTION_PRESENT_HOOK, true},
     }};
 
     return descs;
@@ -97,6 +98,8 @@ inline Result QueryOpenRHIRenderOptions(const Device& device, RenderOptionsSnaps
     snapshot.options[size_t(RenderOption::AMD_RAY_REGENERATION)].interfaceResult = fidelityResult;
     snapshot.options[size_t(RenderOption::AMD_RADIANCE_CACHE)].interfaceResult = fidelityResult;
     snapshot.options[size_t(RenderOption::NVIDIA_NRC)].interfaceResult = openrhiGetInterface(device, OPENRHI_INTERFACE(NeuralRadianceCacheInterface), &nrc);
+    FrameGenerationInterface generation = {};
+    snapshot.options[size_t(RenderOption::FRAME_GENERATION)].interfaceResult = openrhiGetInterface(device, OPENRHI_INTERFACE(FrameGenerationInterface), &generation);
 
     return Result::SUCCESS;
 }

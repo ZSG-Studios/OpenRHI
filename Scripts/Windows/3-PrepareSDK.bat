@@ -34,7 +34,7 @@ copy "%ROOT%\_Bin\Release\OpenRHI.lib" "%SDK%\Lib\Release"
 for %%C in (Debug Release) do (
     if exist "%ROOT%\_Bin\%%C\ThirdPartyLicenses" xcopy /E /I /Y "%ROOT%\_Bin\%%C\ThirdPartyLicenses" "%SDK%\Lib\%%C\ThirdPartyLicenses" >nul
     if exist "%ROOT%\_Bin\%%C\AgilitySDK" xcopy /E /I /Y "%ROOT%\_Bin\%%C\AgilitySDK" "%SDK%\Lib\%%C\AgilitySDK" >nul
-    for %%D in (amd_ags_x64.dll amd_fidelityfx_loader_dx12.dll amd_fidelityfx_upscaler_dx12.dll amd_fidelityfx_denoiser_dx12.dll amd_fidelityfx_radiancecache_dx12.dll amd_fidelityfx_vk.dll NRC_D3D12.dll NRC_Vulkan.dll cudart64_13.dll nvrtc64_130_0.dll nvrtc-builtins64_134.dll nvngx_dlss.dll nvngx_dlssd.dll libxess.dll) do (
+    for %%D in (amd_ags_x64.dll amd_fidelityfx_loader_dx12.dll amd_fidelityfx_upscaler_dx12.dll amd_fidelityfx_denoiser_dx12.dll amd_fidelityfx_radiancecache_dx12.dll amd_fidelityfx_framegeneration_dx12.dll amd_fidelityfx_vk.dll NRC_D3D12.dll NRC_Vulkan.dll cudart64_13.dll nvrtc64_130_0.dll nvrtc-builtins64_134.dll nvngx_dlss.dll nvngx_dlssd.dll libxess.dll) do (
         if exist "%ROOT%\_Bin\%%C\%%D" (
             copy /Y "%ROOT%\_Bin\%%C\%%D" "%SDK%\Lib\%%C" >nul
             if errorlevel 1 exit /B 1

@@ -563,6 +563,7 @@ OpenRhiBits(AccessBits, uint32_t,
     VIDEO_DECODE_WRITE              = OpenRhiBit(26),   //  W       VIDEO_DECODE
     VIDEO_ENCODE_READ               = OpenRhiBit(27),   // R        VIDEO_ENCODE
     VIDEO_ENCODE_WRITE              = OpenRhiBit(28),   //  W       VIDEO_ENCODE
+    COMMON                          = OpenRhiBit(29),   // RW       ALL; use alone, with GENERAL for textures; native interop handoff
 
     // Umbrella access
     COLOR_ATTACHMENT                = OpenRhiMember(AccessBits, COLOR_ATTACHMENT_READ)

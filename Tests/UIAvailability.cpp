@@ -24,7 +24,7 @@ int main() {
         bool ok = result == (OPENRHI_TEST_RMLUI ? Result::SUCCESS : Result::UNSUPPORTED);
         RenderOptionsSnapshot options = {};
         ok = ok && QueryOpenRHIRenderOptions(*device, options) == Result::SUCCESS && !options.nativeDevice;
-        ok = ok && !GetOpenRHIRenderOptionDescs()[size_t(RenderOption::FRAME_GENERATION)].publicExecutionPath;
+        ok = ok && GetOpenRHIRenderOptionDescs()[size_t(RenderOption::FRAME_GENERATION)].publicExecutionPath;
         ok = ok && options.options[size_t(RenderOption::FRAME_GENERATION)].interfaceResult == Result::UNSUPPORTED;
 
         for (const auto& option : options.options)

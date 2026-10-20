@@ -2722,3 +2722,4 @@ Result DeviceVal::FillFunctionTable(RmlUiInterface& table) const {
 }
 
 #include "VendorFeaturesVal.hpp"
+#include "FrameGenerationVal.hpp"

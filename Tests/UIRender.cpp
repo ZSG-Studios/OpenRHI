@@ -170,13 +170,13 @@ struct Fixture {
         return View(texture, TextureView::TEXTURE, Format::RGBA8_UNORM);
     }
 
-    void Rendering(AccessLayoutStage before) {
+    void Rendering(AccessLayoutStage before, bool transparent = false) {
         Transition(target, before, {AccessBits::COLOR_ATTACHMENT, Layout::COLOR_ATTACHMENT, StageBits::COLOR_ATTACHMENT});
         AttachmentDesc color = {};
         color.descriptor = attachment;
         color.loadOp = LoadOp::CLEAR;
         color.storeOp = StoreOp::STORE;
-        color.clearValue.color.f = {0, 0, 1, 1};
+        color.clearValue.color.f = transparent ? Color32f{0, 0, 0, 0} : Color32f{0, 0, 1, 1};
         RenderingDesc rendering = {};
         rendering.colors = &color;
         rendering.colorNum = 1;
@@ -335,7 +335,6 @@ int main(int argc, char** argv) {
         DrawImguiDesc draw = {{64, 64}, 1, Format::RGBA8_SRGB, true};
         f.imgui.CmdDrawImgui(*f.command, render, draw);
         f.Readback();
-        f.streaming.EndStreamerFrame(*f.streamer);
         auto* result = (const uint8_t*)f.core.MapBuffer(*f.pixels, 0, uint64_t(f.rowPitch) * 64);
         REQUIRE(result);
         const auto* inside = result + f.rowPitch * 10 + 10 * 4;
@@ -343,6 +342,29 @@ int main(int argc, char** argv) {
         const auto* outside = result + f.rowPitch * 30 + 30 * 4;
         REQUIRE(outside[0] == 0 && outside[1] == 0 && outside[2] == 255);
         f.core.UnmapBuffer(*f.pixels);
+        ImGui::NewFrame();
+        ImGui::GetBackgroundDrawList()->AddRectFilled({4, 4}, {20, 20}, IM_COL32(255, 0, 255, 128));
+        ImGui::Render();
+        data = ImGui::GetDrawData();
+        copy = {data->CmdLists.Data, uint32_t(data->CmdLists.Size), data->Textures->Data, uint32_t(data->Textures->Size)};
+        f.target = f.MakeTexture(64, 64, TextureUsageBits::COLOR_ATTACHMENT, Format::RGBA8_UNORM);
+        f.attachment = f.View(f.target, TextureView::COLOR_ATTACHMENT, Format::RGBA8_UNORM);
+        f.Begin();
+        f.imgui.CmdCopyImguiData(*f.command, *f.streamer, *f.im, copy, render);
+        f.Rendering({}, true);
+        draw.attachmentFormat = Format::RGBA8_UNORM;
+        draw.linearColor = false;
+        draw.writeAlpha = true;
+        f.imgui.CmdDrawImgui(*f.command, render, draw);
+        f.Readback();
+        result = (const uint8_t*)f.core.MapBuffer(*f.pixels, 0, uint64_t(f.rowPitch) * 64);
+        REQUIRE(result);
+        inside = result + f.rowPitch * 10 + 10 * 4;
+        outside = result + f.rowPitch * 30 + 30 * 4;
+        REQUIRE(inside[0] == 128 && inside[1] == 0 && inside[2] == 128 && inside[3] == 128);
+        REQUIRE(outside[0] == 0 && outside[1] == 0 && outside[2] == 0 && outside[3] == 0);
+        f.core.UnmapBuffer(*f.pixels);
+        f.streaming.EndStreamerFrame(*f.streamer);
         ImGui::DestroyContext();
         REQUIRE(errors == 0);
         std::printf("UI native readback PASS: %s; RmlUi textured geometry/premultiplied blend/scissor/transform/descriptor budget+reset/sRGB/invalid inputs; ImGui 1.92.9 atlas/stream/draw; validation_errors=%u\n", f.core.GetDeviceDesc(*f.device).adapterDesc.name, errors);

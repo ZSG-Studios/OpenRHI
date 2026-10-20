@@ -238,6 +238,7 @@ if(OPENRHI_ENABLE_FFX_SDK AND OPENRHI_ENABLE_ANTILAG2_SDK AND OPENRHI_ENABLE_D3D
 endif()
 
 if(OPENRHI_ENABLE_NRC_SDK)
+    # Native provider tests remain separate from host-only contracts
     add_executable(OpenRHINeuralRadianceCacheContract NeuralRadianceCacheContract.cpp)
     target_include_directories(OpenRHINeuralRadianceCacheContract PRIVATE ../Include ../Source/Shared
         "${nrc_SOURCE_DIR}/Include" "${agilitysdk_SOURCE_DIR}/build/native/include")
@@ -245,6 +246,15 @@ if(OPENRHI_ENABLE_NRC_SDK)
         OPENRHI_STATIC_LIBRARY=1 OPENRHI_ENABLE_D3D12_SUPPORT=1 OPENRHI_ENABLE_NRC_SDK=1)
     target_compile_features(OpenRHINeuralRadianceCacheContract PRIVATE cxx_std_17)
     add_test(NAME OpenRHI.NeuralRadianceCacheContract COMMAND OpenRHINeuralRadianceCacheContract)
+endif()
+
+if(OPENRHI_ENABLE_FFX_FRAME_GENERATION AND OPENRHI_ENABLE_ANTILAG2_SDK)
+    add_executable(OpenRHIAMDFrameGeneration AMDFrameGeneration.cpp)
+    target_link_libraries(OpenRHIAMDFrameGeneration PRIVATE OpenRHI user32)
+    target_compile_features(OpenRHIAMDFrameGeneration PRIVATE cxx_std_17)
+    set_target_properties(OpenRHIAMDFrameGeneration PROPERTIES RUNTIME_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:OpenRHI>")
+    add_test(NAME OpenRHI.AMD.FrameGeneration COMMAND OpenRHIAMDFrameGeneration)
+    set_tests_properties(OpenRHI.AMD.FrameGeneration PROPERTIES TIMEOUT 180)
 endif()
 
 if(OPENRHI_ENABLE_NVAPI AND OPENRHI_ENABLE_D3D12_SUPPORT)

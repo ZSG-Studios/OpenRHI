@@ -60,6 +60,7 @@ OpenRhiStruct(DrawImguiDesc) {
     float hdrScale;                             // SDR intensity in HDR mode (1 by default)
     OpenRhi(Format) attachmentFormat;               // destination attachment (render target) format
     bool linearColor;                           // apply de-gamma to vertex colors (needed for sRGB attachments and HDR)
+    bool writeAlpha;                            // accumulate coverage alpha; transparent targets store premultiplied UI for frame-generation composition
 };
 
 // Read-only input for "CmdDrawImgui"

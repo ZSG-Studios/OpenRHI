@@ -129,6 +129,7 @@ struct DeviceVal final : public DeviceBase {
     Result FillFunctionTable(ImguiInterface& table) const override;
 #endif
     Result FillFunctionTable(RmlUiInterface& table) const override;
+    Result FillFunctionTable(FrameGenerationInterface& table) const override;
 
     //================================================================================================================
     // OpenRHI

@@ -294,10 +294,10 @@ static inline FfxApiSurfaceFormat FfxConvertFormat(Format format) {
     }
 }
 
-static inline FfxApiResource FfxGetResource(const CoreInterface& OpenRHI, const UpscalerResource& resource, bool isStorage = false) {
+static inline FfxApiResource FfxGetResource(const CoreInterface& OpenRHI, const UpscalerResource& resource, bool isStorage = false, bool commonState = false) {
     FfxApiResource res{};
     res.resource = (void*)OpenRHI.GetTextureNativeObject(resource.texture);
-    res.state = isStorage ? FFX_API_RESOURCE_STATE_UNORDERED_ACCESS : FFX_API_RESOURCE_STATE_COMPUTE_READ;
+    res.state = commonState ? FFX_API_RESOURCE_STATE_COMMON : (isStorage ? FFX_API_RESOURCE_STATE_UNORDERED_ACCESS : FFX_API_RESOURCE_STATE_COMPUTE_READ);
     res.description.flags = FFX_API_RESOURCE_FLAGS_NONE;
 
     if (res.resource) {
@@ -1668,12 +1668,14 @@ void UpscalerImpl::CmdDispatchUpscale(CommandBuffer& commandBuffer, const Dispat
         ffxDispatchDescUpscale dispatchDesc = {};
         dispatchDesc.header.type = FFX_API_DISPATCH_DESC_TYPE_UPSCALE;
         dispatchDesc.commandList = m_iCore.GetCommandBufferNativeObject(&commandBuffer);
-        dispatchDesc.output = FfxGetResource(m_iCore, output, true);
-        dispatchDesc.color = FfxGetResource(m_iCore, input);
-        dispatchDesc.depth = FfxGetResource(m_iCore, guides.depth);
-        dispatchDesc.motionVectors = FfxGetResource(m_iCore, guides.mv);
-        dispatchDesc.exposure = FfxGetResource(m_iCore, guides.exposure);
-        dispatchDesc.reactive = FfxGetResource(m_iCore, guides.reactive);
+        // D3D12 legacy/enhanced barrier interop requires an explicit caller-owned COMMON handoff
+        const bool commonState = m_iCore.GetDeviceDesc(m_Device).graphicsAPI == GraphicsAPI::D3D12;
+        dispatchDesc.output = FfxGetResource(m_iCore, output, true, commonState);
+        dispatchDesc.color = FfxGetResource(m_iCore, input, false, commonState);
+        dispatchDesc.depth = FfxGetResource(m_iCore, guides.depth, false, commonState);
+        dispatchDesc.motionVectors = FfxGetResource(m_iCore, guides.mv, false, commonState);
+        dispatchDesc.exposure = FfxGetResource(m_iCore, guides.exposure, false, commonState);
+        dispatchDesc.reactive = FfxGetResource(m_iCore, guides.reactive, false, commonState);
         dispatchDesc.jitterOffset = {dispatchUpscaleDesc.cameraJitter.x, dispatchUpscaleDesc.cameraJitter.y};
         dispatchDesc.motionVectorScale = {dispatchUpscaleDesc.mvScale.x, dispatchUpscaleDesc.mvScale.y};
         dispatchDesc.renderSize = {dispatchUpscaleDesc.currentResolution.w, dispatchUpscaleDesc.currentResolution.h};
