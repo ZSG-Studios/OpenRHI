@@ -43,6 +43,7 @@ Explicit adapter selection stays on the requested device. Automatic selection ev
 The first measurement target is the AMD RX 9070 XT. The hardware matrix also includes NVIDIA Blackwell, Intel Xe2/Xe3, Apple M/A-series, Qualcomm Adreno, Arm Mali, and Samsung Xclipse. Exact per-device and driver receipts establish qualification.
 
 - [API migration](Docs/MIGRATION.md)
+- [MIRA module integration and ownership](Docs/mira-integration.md)
 - [Upstream integration checklist](Docs/UPSTREAM.md)
 - [Qualification gates and measurement tools](Docs/QUALIFICATION.md)
 - [Hardware targets and identity provenance](Profiles/targets.json)
@@ -66,3 +67,5 @@ Neural lighting and latency adapters target RTX 50-series and Radeon RX 9000-ser
 | `Resources/` | Project resources |
 
 Builds generate `_Build/` and `_Bin/`; local logs, caches and qualification runs belong under `_Tmp/`. SDK packaging produces `_OpenRHI_SDK/`.
+
+[MIRA — Modular Integrated Rendering Architecture](https://github.com/ZSG-Studios/MIRA) composes this repository as its `Modules/OpenRHI` Git submodule with [FACET](https://github.com/ZSG-Studios/FACET) and [UVRT](https://github.com/ZSG-Studios/UVRT). See [MIRA integration](Docs/mira-integration.md) for the public SDK and ownership boundary.
