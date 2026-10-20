@@ -38,6 +38,29 @@ Metal shader access uses OpenRHI's public `OpenRHI.slang` 24-byte entry ABI and 
 
 For Vulkan, use the actual compiled target's reflected heap/set/binding metadata and appropriate native EXT capability compilation. The current generic SPIR-V compiler profile alone does not establish EXT-heap lowering. Indexed typed arrays use their matching reflected ranges; keep logical resource kinds and backend table indices explicit. [Slang's descriptor-handle guidance](https://github.com/shader-slang/slang/blob/master/docs/user-guide/03-convenience-features.md), [Vulkan descriptor heaps](https://docs.vulkan.org/spec/latest/chapters/descriptorheaps.html) and the public OpenRHI shader header define the respective boundaries; qualify the pinned compiler outputs, not moving documentation alone.
 
+## Descriptor-class provenance and admission
+
+Resource/sampler namespace separation is the first check. The host registry also stores an exact view class and creation traits. Module-owned public callbacks carry those traits without importing MIRA headers or reading native backend objects. Derive the traits in the same adapter that successfully calls the public descriptor factory, from the actual factory inputs; avoid separately retyping a tag at each call site.
+
+| Registry class | Public creation provenance | Public DescriptorType category |
+|---|---|---|
+| Constant-buffer view | CoreInterface::CreateBufferView, BufferView::CONSTANT_BUFFER | CONSTANT_BUFFER |
+| Typed buffer SRV / UAV | BufferView::BUFFER / STORAGE_BUFFER | BUFFER / STORAGE_BUFFER |
+| Structured buffer SRV / UAV | BufferView::STRUCTURED_BUFFER / STORAGE_STRUCTURED_BUFFER | STRUCTURED_BUFFER / STORAGE_STRUCTURED_BUFFER |
+| Raw buffer SRV / UAV | BufferView::BYTE_ADDRESS_BUFFER / STORAGE_BYTE_ADDRESS_BUFFER | STRUCTURED_BUFFER / STORAGE_STRUCTURED_BUFFER |
+| Sampled texture | CoreInterface::CreateTextureView, TEXTURE / TEXTURE_ARRAY / TEXTURE_CUBE / TEXTURE_CUBE_ARRAY | TEXTURE |
+| Storage texture | TextureView::STORAGE_TEXTURE / STORAGE_TEXTURE_ARRAY | STORAGE_TEXTURE |
+| Acceleration structure | RayTracingInterface::CreateAccelerationStructureDescriptor | ACCELERATION_STRUCTURE |
+| Sampler / comparison sampler | CoreInterface::CreateSampler plus SamplerDesc::compareOp | SAMPLER |
+
+The public DescriptorType category deliberately groups raw and structured buffer views; it is insufficient to distinguish their shader accessors. Keep the exact BufferView and its format, byte offset/size and the effective structured stride (BufferViewDesc::structureStride when provided, otherwise BufferDesc::structureStride). For textures, keep TextureView, source TextureType, view format, mip/layer slice and source sample count. Use that view format to distinguish typed float/uint/sint shader access and sRGB interpretation; source allocation format alone is insufficient. Keep the sampler comparison/filter/address traits, including whether compareOp is NONE or a comparison operation, separately from ordinary sampler namespace membership. Preserve the AS descriptor's creation provenance and owning scene/build lifetime. Color/depth/shading-rate attachment views and SUBPASS_INPUT remain their declared attachment interfaces and are not resource-heap registrations.
+
+Index(handle, expectedClass) first validates registry/epoch, generation, live publication state and namespace, then the exact class. Validate the expected texture shape, typed format interpretation, structured stride and access intent against retained traits before publishing the GPU record. Re-registering a different class creates a new handle/record version through the usual fresh-slot and retirement protocol. Class admission is backend-specific: a typed view class that lacks the selected transport's capability evidence remains rejected even when its CPU handle is otherwise valid.
+
+The current SDK exposes GetBufferDesc and GetTextureDesc for underlying allocations, descriptor factories, and GetDescriptorNativeObject. It exposes no public GetDescriptorType/GetDescriptorViewDesc query. Native-object inspection and casts to Source/Validation classes are outside this consumer contract. Creation traits therefore establish trusted factory provenance, not independent inspection of an arbitrary opaque Descriptor pointer. External/unknown descriptors need an ownership adapter that supplies verified creation provenance before registration; unknown classes are rejected. A future optional inspection interface would need the full exact view traits to independently validate raw-versus-structured, shape and format, rather than only a coarse DescriptorType. Such an interface is a separate public-API/SDK qualification change.
+
+Native migration tests pair factory creation with the recorded class/traits and exercise wrong-class, raw-versus-structured, SRV-versus-UAV, texture-shape, typed-format and comparison-sampler rejection. Retain the module callback schema/version with the shader-record schema. Heap writes continue to use the existing public descriptors and indices; this class vocabulary adds no OpenRHI ABI or native backend dependency to module callbacks.
+
 ## Registry publication, release and reuse
 
 MIRA's CPU handle contains `{registryId,index,generation,kind}`. Resource and sampler handles use separate types/namespaces; registry identity includes the device/heap epoch. Zero or another reserved sentinel is never dereferenced. Reserve and populate appropriate typed defaults (such as white/normal material textures) and default samplers before publishing records. Missing materials choose a valid declared default handle; invalid handles fail host validation. Do not assume a null/unwritten descriptor returns a defined value.
