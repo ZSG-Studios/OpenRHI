@@ -12,6 +12,12 @@ expected = {
     'IndirectDraw.vs': ('vsMain', 'vertex', None),
     'IndirectDraw.ps': ('psMain', 'fragment', None),
 }
+for name, entry, threads in (
+    ('BindlessCompute', 'descriptorMain', [64, 1, 1]),
+    ('BindlessTextureSampler', 'textureSamplerMain', [8, 8, 1]),
+):
+    if (root / 'Tests' / f'{name}.reflection.json').exists():
+        expected[name] = (entry, 'compute', threads)
 if (root / 'Imgui_vs.h').exists():
     expected.update(Imgui_vs=('ImguiVS', 'vertex', None), Imgui_fs=('ImguiFS', 'fragment', None))
 if (root / 'RmlUi_vs.h').exists():
@@ -44,6 +50,15 @@ for name, (entry, stage, threads) in expected.items():
             assert offsets == {'constants': 0, 'samplers': 96, 'textures': 104}, offsets
         else:
             assert offsets == {'constants': 0, 'coefficients': 80, 'samplers': 88, 'images': 96}, offsets
+    if name in ('BindlessCompute', 'BindlessTextureSampler'):
+        parameter = next(p for p in reflection['parameters'] if p['name'] == 'indices')
+        assert parameter['binding'] == {'kind': 'constantBuffer', 'space': 1, 'index': 0}, name
+        fields = parameter['type']['elementType']['fields']
+        field_names = (['first', 'second'] if name == 'BindlessCompute' else
+                       ['firstTexture', 'secondTexture', 'firstSampler', 'secondSampler', 'outputTexture'])
+        assert [field['name'] for field in fields] == field_names, name
+        assert [field['binding']['offset'] for field in fields] == list(range(0, 4 * len(field_names), 4)), name
+        assert all(field['binding']['size'] == 4 and field['type']['scalarType'] == 'uint32' for field in fields), name
     depfile = (directory / f'{name}.d').read_text()
     assert '.slang' in depfile, name
 print(f'{len(expected)} native shader binaries, entry points, layouts and workgroup contracts verified')
