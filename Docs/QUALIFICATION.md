@@ -13,24 +13,30 @@ Qualification records belong to an exact device, OS, driver, backend, toolchain,
 
 ## Production live-update contract
 
-Authority is UVRT `C:/UVRT/plan.md` version 1.5, sections 1 and 21, with case IDs and production status in `C:/UVRT/docs/dynamic-coverage.md`. MIRA's `Docs/plan.md` coordinates application phase exits. OpenRHI supplies native component evidence and public handoff requirements; the application/modules own the live simulation, lighting state and presented-generation ledger.
+Authority is UVRT `C:/UVRT/plan.md` version 1.6, sections 1 and 21, with case IDs and production status in `C:/UVRT/docs/dynamic-coverage.md`. MIRA's `Docs/plan.md` coordinates application phase exits. OpenRHI supplies native component evidence and public handoff requirements; the application/modules own the live simulation, lighting state and presented-generation ledger.
 
 Before adopting a production feature or public integration boundary, record this contract for its supported profile:
 
 | Contract field | Required declaration and evidence |
 | --- | --- |
-| Live authority | Owning input/simulation/content source, authoritative change frame/time, and source/pose/topology/placement/material/light/environment/resource revisions as applicable |
+| Live authority | Owning input/simulation/content source, authoritative change frame/time, shared simulation tick/time and render interpolation sample, matching previous-sample/reset identity, and source/pose/topology/placement/material/light/environment/resource revisions |
 | Affected work | Receivers/casters, regions and direct/shadow/diffuse/specular transport dependencies affected by those events, including supported offscreen contributors |
 | Validity | Compatible consumed generation, invalidation triggers, publication/withdrawal rules, and rejection or current-scene recovery for deliberately stale revisions |
-| Bounded scheduling | Owner of discovery, queued work, supersession, refresh and recovery; numeric work/queue budgets and maximum service age measured from the authoritative event |
+| Bounded scheduling | Owner of automatic discovery, dependency invalidation, queued work, coalescing/supersession, refresh and recovery; numeric work/queue budgets plus oldest-pending dependency age and latest-visible freshness measured from authoritative events |
 | Current-scene fallback | Current inputs used while work is pending, first changed-frame validity, numeric reference-error limit, maximum fallback duration and the first presented frame meeting the final limit |
 | Continuous changes | Numeric refresh/service-age bounds while inputs keep changing or newer events supersede pending work; stationary-camera world motion and stop/restart/reversal controls |
 | Supported motion | Declared motion-rate/displacement ranges, boundary cases, discontinuities and bounded recovery; moving player/world and independently moving receivers/casters |
 | Interactive deadlines | Separate first-usable-frame, activation/empty-cache, reset/resize/resource replacement, recovery and steady-state deadlines; allowed total/consecutive misses and recovery limits |
 | Cost and memory | CPU frame/submission/host time, GPU component/pass/AS time, end-to-end presented-frame distributions, working-set/peak/resident memory and live measurement duration |
-| Exact evidence | Application/module/provider/SDK/compiler/shader/source identities, settings, native validation and lifetime results, predeclared limits/hash preceding the run, references, transition frames and receipt paths/hashes |
+| Exact evidence | Application/module/provider/SDK/compiler/shader/source identities, settings, declared CPU decode/transfer/filter reference policy, native validation and lifetime results, predeclared limits/hash preceding the run, references, transition frames and receipt paths/hashes |
 
 Limits are numeric and declared before measurement. An every-frame deadline profile permits zero misses across its declared interactive interval. Retain every transition frame separately from warmed distributions; report median/p95/p99/maximum times, deadline misses, queue/service age, image error and memory together. Production telemetry advances with input/simulation/animation and reports asynchronously; diagnostic readback/reference captures retain their own cost scope.
+
+MIRA defines one authoritative render interpolation sample and simulation tick/time. Raster geometry, ray geometry/AS, attachments, receivers and motion consume that sample. Previous-state motion refers to the corresponding previous rendered/presented sample, with an explicit reset at discontinuities. Retain those identities with source revisions and the presented frame so mixed-sample errors can be detected independently.
+
+Consuming owners automatically discover authoritative changes and propagate affected primary visibility, motion, AS/receiver state, direct/shadow/diffuse/specular transport and reconstruction/history dependencies. Cover physics/hierarchy/attachments; skeletal/wind/procedural deformation; material/texture/emission edits; light changes/removal; spawn/despawn/topology/LOD/streaming/residency; environment/time-of-day; and lifecycle/quality transitions. Validate an unchanged-content classification at use and recover when its authoritative input changes.
+
+During continuous changes, coalescing, supersession and pressure, measure both the oldest unresolved dependency and freshness of the latest visible state. Carry unresolved event provenance through queued-work replacement and record which generation satisfies it. Declare separate numeric age, starvation, fallback-duration and recovery bounds; include discovery, invalidation, uploads, AS maintenance, refresh and reconstruction in the CPU/GPU/memory budget. Admit the supported working set before exceeding its bounds.
 
 ### Native and host responsibilities
 
@@ -47,7 +53,7 @@ Record the consuming owner's declared contract and receipts alongside existing p
 
 Every phase exit and subsystem integration regresses prior passing dynamic cases with the combined pipeline enabled. Exercise overlapping player/object/deformation/light/material/streaming changes, stationary-camera world motion, offscreen contributors, supported motion-rate boundaries, pressure/recovery and stale-state controls. First changed frames must consume compatible current data or the declared valid current-scene fallback while bounded refresh converges; sustained changes must continue to receive service.
 
-Accept each applicable system/case cell only when correctness, update latency/service age, deadlines and memory pass together for that declared profile. Retain passing/applicable counts and owner-reviewed applicability reasons; required unfinished systems remain open in the denominator. At this v1.5 alignment checkpoint the owning 11-system by 14-case ledger has **154 open production cells**. Keep bounded native fixtures and application checkpoints at their measured scope while the owning ledger accumulates complete production receipts.
+Accept each applicable system/case cell only when correctness, update latency/service age, deadlines and memory pass together for that declared profile. Retain passing/applicable counts and owner-reviewed applicability reasons; required unfinished systems remain open in the denominator. At this v1.6 alignment checkpoint the owning 11-system by 14-case ledger has **154 open production cells**. Keep bounded native fixtures and application checkpoints at their measured scope while the owning ledger accumulates complete production receipts.
 
 ## Running checks
 
