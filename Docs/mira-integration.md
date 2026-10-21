@@ -1,10 +1,10 @@
 # MIRA integration: OpenRHI
 
-MIRA (Modular Integrated Rendering Architecture) at `C:/MIRA` composes OpenRHI, UVRT, FACET, and future modules through their public interfaces. OpenRHI remains owned and implemented in `C:/OpenRHI`. This guide records the OpenRHI side of that boundary.
+MIRA (Modular Integrated Rendering Architecture) at `C:/MIRA` composes OpenRHI, UVRT, FACET, and future modules through their public interfaces. OpenRHI remains owned and implemented in `C:/MIRA/Modules/LocalSources/OpenRHI`. This guide records the OpenRHI side of that boundary.
 
 ## Lighting delivery priority
 
-Working UVRT lighting has priority above other work. OpenRHI advances concrete backend, public SDK and pinned shader/compiler blockers to lighting correctness, setup speed and live resource/lifetime qualification. Unrelated feature expansion is deferred. MIRA's `C:/MIRA/Docs/plan.md` owns integrated sequencing; UVRT's `C:/UVRT/plan.md` owns lighting algorithms and phase dependencies. The [lighting delivery gates](QUALIFICATION.md#lighting-delivery-priority-and-gates) define the OpenRHI contribution and required evidence.
+Working UVRT lighting has priority above other work. OpenRHI advances concrete backend, public SDK and pinned shader/compiler blockers to lighting correctness, setup speed and live resource/lifetime qualification. Unrelated feature expansion is deferred. MIRA's `C:/MIRA/Docs/plan.md` owns integrated sequencing; UVRT's `C:/MIRA/Modules/LocalSources/UVRT/plan.md` owns lighting algorithms and phase dependencies. The [lighting delivery gates](QUALIFICATION.md#lighting-delivery-priority-and-gates) define the OpenRHI contribution and required evidence.
 
 Use independent agents for source/API blocker review and assign one owner to each implementation. MIRA owns the host pipeline/cache implementation and serializes native GPU windows across modules. OpenRHI reviews and fixes demonstrated native or public API defects in its own repository. Keep the current qualified SDK while the existing public contract satisfies the lighting path; propose an SDK change with its exact blocker, consumer impact and qualification gates when needed.
 
@@ -40,7 +40,7 @@ The 20 October 2026 SDK-only control created MIRA's exact 87496-byte V5 shader, 
 
 The minimal runtime reported AMD AGS disabled because its optional DLL was absent. This receipt covers public PSO creation in that recorded configuration; null application cache leaves driver-managed cache state independent. The control issued no submission and retained the shader/layout/device through creation and ordered destruction. It did not reproduce MIRA's separate unexplained V5 early termination, whose failed application receipt remains open. Per-call creation time, application setup, runtime lighting correctness and paired performance promotion retain their separate gates.
 
-Raw predeclared inputs, executable/source/runtime hashes, stdout/stderr, terminal receipt and offline postcheck are retained at `C:/OpenRHI/_Tmp/ExactPsoControlV5/Runs/Native-20261020-Initial/`. PID 24212 was terminal and reaped; the native window was explicitly released before the offline postcheck. The earlier d077 control remains a separate frozen package.
+Raw predeclared inputs, executable/source/runtime hashes, stdout/stderr, terminal receipt and offline postcheck are retained at `C:/MIRA/Modules/LocalSources/OpenRHI/_Tmp/ExactPsoControlV5/Runs/Native-20261020-Initial/`. PID 24212 was terminal and reaped; the native window was explicitly released before the offline postcheck. The earlier d077 control remains a separate frozen package.
 
 ## Scene-lighting ownership
 
@@ -114,7 +114,7 @@ A CMake consumer can compose the original checkout directly:
 
 ```cmake
 set(OPENRHI_BUILD_TESTS OFF CACHE BOOL "OpenRHI module tests")
-add_subdirectory("C:/OpenRHI" "${CMAKE_BINARY_DIR}/OpenRHI")
+add_subdirectory("C:/MIRA/Modules/LocalSources/OpenRHI" "${CMAKE_BINARY_DIR}/OpenRHI")
 target_link_libraries(MiraRenderer PRIVATE OpenRHI)
 ```
 
@@ -127,7 +127,7 @@ MIRA shader builds call `openrhi_compile_shader` from the maintained helper. Shi
 Run in PowerShell; prerequisites are CMake 3.30+, the Windows C++17 toolchain/SDK, and access to pinned build dependencies:
 
 ```powershell
-Set-Location C:/OpenRHI
+Set-Location C:/MIRA/Modules/LocalSources/OpenRHI
 cmake -S . -B _Build -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
 cmake --build _Build --config Release --parallel 8
 cmake --build _Build --config Debug --parallel 8
@@ -138,7 +138,7 @@ ctest --test-dir _Build -C Debug --output-on-failure
 Package both configurations after successful builds:
 
 ```powershell
-& C:/OpenRHI/Scripts/Windows/3-PrepareSDK.bat
+& C:/MIRA/Modules/LocalSources/OpenRHI/Scripts/Windows/3-PrepareSDK.bat
 ```
 
 The packaging script moves an existing SDK to the Recycle Bin before generating its replacement. `OpenRHI.SDKPackaging` tests packaging in isolated retained fixtures; actual application deployment remains a MIRA integration gate.
@@ -148,9 +148,9 @@ On Linux and macOS, run the corresponding `Scripts/Linux/1-Deploy.sh` or `Script
 For an explicit host-only test configuration, configure a separate directory with native/provider gates disabled:
 
 ```powershell
-cmake -S C:/OpenRHI -B C:/OpenRHI/_Build/mira-none -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON -DOPENRHI_ENABLE_D3D12_SUPPORT=OFF -DOPENRHI_ENABLE_VK_SUPPORT=OFF -DOPENRHI_ENABLE_METAL_SUPPORT=OFF -DOPENRHI_ENABLE_NVTX_SUPPORT=OFF -DOPENRHI_ENABLE_IMGUI_EXTENSION=OFF -DOPENRHI_ENABLE_RMLUI_EXTENSION=OFF
-cmake --build C:/OpenRHI/_Build/mira-none --config Release --parallel 8
-ctest --test-dir C:/OpenRHI/_Build/mira-none -C Release --output-on-failure
+cmake -S C:/MIRA/Modules/LocalSources/OpenRHI -B C:/MIRA/Modules/LocalSources/OpenRHI/_Build/mira-none -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON -DOPENRHI_ENABLE_D3D12_SUPPORT=OFF -DOPENRHI_ENABLE_VK_SUPPORT=OFF -DOPENRHI_ENABLE_METAL_SUPPORT=OFF -DOPENRHI_ENABLE_NVTX_SUPPORT=OFF -DOPENRHI_ENABLE_IMGUI_EXTENSION=OFF -DOPENRHI_ENABLE_RMLUI_EXTENSION=OFF
+cmake --build C:/MIRA/Modules/LocalSources/OpenRHI/_Build/mira-none --config Release --parallel 8
+ctest --test-dir C:/MIRA/Modules/LocalSources/OpenRHI/_Build/mira-none -C Release --output-on-failure
 ```
 
 ## Qualification snapshot: 19 October 2026
@@ -176,7 +176,7 @@ CTest diagnostics are generated under `_Build/Testing/Temporary/`; the Debug run
 The MIRA coordinating chat (`01a156fa-a7a5-7503-be4a-ef753f263388`) reported the following after the module-side qualification pass. These results were reported by the integration owner and were not rerun in this OpenRHI chat; exact workload receipts remain owned by MIRA.
 
 - MIRA's native application owns the OpenRHI device through `mira::Device` and passes the device and graphics queue to FACET's reusable module. Device creation and teardown with validation passed on the RX 9070 XT.
-- MIRA owns application window/input, presentation, statistics, scene data, and application tooling migrated from FACET. FACET implementation remains in `C:/FACET`; OpenRHI implementation remains in `C:/OpenRHI`.
+- MIRA owns application window/input, presentation, statistics, scene data, and application tooling migrated from FACET. FACET implementation remains in `C:/MIRA/Modules/LocalSources/FACET`; OpenRHI implementation remains in `C:/MIRA/Modules/LocalSources/OpenRHI`.
 - MIRA imports the module libraries and the maintained OpenRHI SDK. FACET's public-facade shared-lifetime test passed. The original and migrated 256-frame demo screenshots were reported byte-identical.
 
 Keep application and composition changes in MIRA, FACET algorithm changes in FACET, and RHI changes in OpenRHI. Further integrated coverage records the exact MIRA/module revisions, runtime configuration, and retained test artifacts alongside those results.

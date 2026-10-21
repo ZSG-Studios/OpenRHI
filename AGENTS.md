@@ -46,3 +46,8 @@
 - Maintain module-owned rendering-option descriptions and read-only public-interface queries in `Include/Extensions/OpenRHIOptions.hpp` and their execution prerequisites in `Docs/OPTIONS.md`. Keep SDK/provider inclusion, interface availability, native eligibility/context creation, host input/hook readiness, and active submitted execution distinct; MIRA owns requested settings and menu rendering.
 
 - Maintained Windows x64 D3D12 builds enable AMD FSR, Anti-Lag 2 and frame generation through their SDK gates and FrameGenerationInterface. Use explicit COMMON/GENERAL/ALL native handoffs, typed public texture formats, caller-owned submissions and separate HUDless/UI resources; preserve provider/context/dispatch/DXGI/latency qualification gates in Docs/FRAME_GENERATION.md.
+
+## Local source organization
+
+- This checkout lives at `C:/MIRA/Modules/LocalSources/OpenRHI`. Keep MIRA module source physically under `C:/MIRA/Modules`; use real directories and explicit configured paths. Do not create symlinks or junctions for module locations.
+- MIRA pins integrated module revisions under `Modules/<name>`. Separate development checkouts for OpenRHI, FACET and UVRT live under `Modules/LocalSources/<name>`; preserve their independent histories and qualification boundaries. See `C:/MIRA/Docs/LOCAL_SOURCES.md`.
