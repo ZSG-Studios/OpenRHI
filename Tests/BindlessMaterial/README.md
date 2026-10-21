@@ -4,7 +4,7 @@ This OpenRHI-owned C++17/Slang fixture links the public qualified SDK94 and chan
 
 ## CPU build and frozen inputs
 
-From `C:/OpenRHI`:
+From `C:/MIRA/Modules/LocalSources/OpenRHI`:
 
 ```powershell
 python Tests/BindlessMaterial/qualify.py --out _Tmp/BindlessMaterial/CPU-Checkpoint
@@ -84,7 +84,7 @@ Per configuration, 32,256 scalar-reference cases passed their declared independe
 
 Record the CPU decode policy before comparing native results. OpenRHI's fixture retains floating endpoint interpolation in its scalar oracle, followed by ideal filtering and a separately calculated native decode interval. FACET owns an additive immutable reference choice: `LegacyUnorm8` retains rounded byte-palette behavior, while opt-in `FloatBc45` uses pinned public endpoint/selector accessors and floating interpolation before ideal filtering. Its `Info().decode` identifies the captured policy. Keep prior defaults, native textures/shaders/samplers, strict failures and quality limits with their original profiles; qualify a changed reference as a separately identified source/oracle profile.
 
-FACET's owning `C:/FACET/Docs/HIT_MATERIALS.md` reports four retained BC5 Load footprints: 40 observed channel values satisfy the original-endpoint-span tolerance, including nine exact endpoint controls. This bounded observation separates byte-palette rounding from permitted native decode precision. Capture original block bytes/selectors, native `Texture2D.Load` values and explicit sampling footprints separately. Reconstructing ideal filtering from native Load texels isolates a filter residual for that declared footprint. General anisotropic distributions and final mapped-normal/material-image errors retain their own references and acceptance gates; sensitive normal reconstruction can amplify channel differences near the unit-disk boundary.
+FACET's owning `C:/MIRA/Modules/LocalSources/FACET/Docs/HIT_MATERIALS.md` reports four retained BC5 Load footprints: 40 observed channel values satisfy the original-endpoint-span tolerance, including nine exact endpoint controls. This bounded observation separates byte-palette rounding from permitted native decode precision. Capture original block bytes/selectors, native `Texture2D.Load` values and explicit sampling footprints separately. Reconstructing ideal filtering from native Load texels isolates a filter residual for that declared footprint. General anisotropic distributions and final mapped-normal/material-image errors retain their own references and acceptance gates; sensitive normal reconstruction can amplify channel differences near the unit-disk boundary.
 
 ### Hardware sRGB precision
 
