@@ -9,7 +9,7 @@ OpenRHI's first-party code and documentation are licensed under the MIT terms in
 OpenRHI includes code derived from NVIDIA NRI, distributed under the MIT license.
 
 - Upstream: https://github.com/NVIDIA-RTX/NRI
-- Recorded source commit: `8ee40ca5c2efc3c8c9c980dc6d66c881fbc5ec77`
+- Recorded source commit: `6998e3fbbaed1b132f386a9d49743a2481003487`
 - Per-commit integration and verification: [Docs/UPSTREAM.md](Docs/UPSTREAM.md)
 - Original copyright notices remain in the derived source files
 

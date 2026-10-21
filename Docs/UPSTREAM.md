@@ -14,6 +14,31 @@ Checkmarks record incorporated source changes or an explicit platform dispositio
 - [x] [`81245bd2`](https://github.com/NVIDIA-RTX/NRI/commit/81245bd2332161dda14464573363c64b95695781) — Detect supported presentation scaling before validating swap-chain dimensions. Scaled presentation validates against `minScaledImageExtent` / `maxScaledImageExtent`; ordinary presentation uses the surface's image extents. OpenRHI checks the requested scaling and both gravity bits against the selected present mode's capabilities before attaching the scaling structure, following the [native scaling contract](https://docs.vulkan.org/refpages/latest/refpages/source/VkSwapchainPresentScalingCreateInfoKHR.html).
 - [x] [`8ee40ca5`](https://github.com/NVIDIA-RTX/NRI/commit/8ee40ca5c2efc3c8c9c980dc6d66c881fbc5ec77) — Review WebGPU-specific surface acquisition, capability filtering and `NOT_READY` behavior. This is an intentional platform exclusion: OpenRHI retains its D3D12/Vulkan/Metal acquisition and result contract.
 
+## 2026-10-20 upstream refresh
+
+Reviewed NVIDIA NRI `8ee40ca5c2efc3c8c9c980dc6d66c881fbc5ec77` through `6998e3fbbaed1b132f386a9d49743a2481003487` against OpenRHI `f727d463`. The merge retains both OpenRHI histories and upstream ancestry. Seven backend fixes are adapted; two README commits have an explicit documentation disposition.
+
+- [x] [`48a14c3f`](https://github.com/NVIDIA-RTX/NRI/commit/48a14c3fcd68193934b534e036195c812da3f851) - Preserve D3D12 enhanced texture-barrier execution dependencies. Defined layouts with NONE access and non-NONE stages use COMMON access; public barrier guidance matches the adapted backend.
+- [x] [`11636586`](https://github.com/NVIDIA-RTX/NRI/commit/11636586135b5b83d53ad8a6853ed446eaa8d994) - Include Vulkan CLEAR alongside COPY for the COPY stage, covering CmdZeroBuffer; update the public stage description.
+- [x] [`732f7377`](https://github.com/NVIDIA-RTX/NRI/commit/732f7377fa2c0676019ea7a2399bf32fdd5f4a2b) - Map COPY_SOURCE/COPY_DESTINATION to COMMON on D3D12 copy command lists and the matching source/destination queue side of cross-queue texture handoffs; document both queue pointers.
+- [x] [`2603edcb`](https://github.com/NVIDIA-RTX/NRI/commit/2603edcb0ad8b551315a5869c73a8db1875406fb) - Retain the actual Vulkan image creation sharing mode and omit queue-family ownership transfers for concurrent images. Wrapped images retain the existing unknown-sharing-mode limitation; concurrent wrapped-image qualification remains open.
+- [x] [`3a2956cb`](https://github.com/NVIDIA-RTX/NRI/commit/3a2956cbc29603abd3a3f2f39ab4311189cc887f) - Review README edits. Retain the maintained OpenRHI identity, platform/build guidance and project documentation.
+- [x] [`250900e3`](https://github.com/NVIDIA-RTX/NRI/commit/250900e36c1fb80915f9747d7b43d5bfd001790c) - Review further README edits. Retain the maintained OpenRHI documentation.
+- [x] [`97408d96`](https://github.com/NVIDIA-RTX/NRI/commit/97408d96520ce3fb6877fb27e5f30be48e9dd189) - Treat expected D3D12 graphics/compute pipeline library misses as FAILURE without error reporting under FAIL_ON_CACHE_MISS. Preserve OpenRHI pipeline-cache store locking and normal creation behavior.
+- [x] [`8298ede4`](https://github.com/NVIDIA-RTX/NRI/commit/8298ede46e6826c7bc08eebc1556322a0b09f74f) - Map D3D12 PATCH_LIST relative to 1_CONTROL_POINT_PATCHLIST for the requested control-point count.
+- [x] [`6998e3fb`](https://github.com/NVIDIA-RTX/NRI/commit/6998e3fbbaed1b132f386a9d49743a2481003487) - Use plane-compatible D3D12 depth/stencil buffer-copy footprint formats and shared upload/readback format/divisor helpers; retain planar-video handling.
+
+Verification for this refresh is recorded separately below; the earlier verification matrix applies to its original source revisions.
+
+## 2026-10-20 refresh verification
+
+- Windows x64 Debug and Release: native Xmake3.1.2 builds pass with D3D12 + NONE, Validation, Agility, AMD FSR/frame generation/Anti-Lag2, NVAPI/AGS/NVTX and both UI renderers enabled.
+- Seven CPU contracts pass in each configuration. The initial Release suite failed during Vulkan-Headers staging publication (WinError5); a serialized dependency retry succeeded and the complete suite passed. The initial Debug RmlUi adapter link exposed its missing user32 dependency; the native Xmake static toolkit target now exports that dependency. Debug's complete suite and the affected Release RmlUi contract pass after correction. Original failed logs remain retained.
+- RX9070XT, vendor0x1002/device0x7550, native driver9007201352883061: D3D12 smoke passes with OpenRHI Validation off/on in both configurations. The existing upstream regression passes explicit depth/stencil view layouts, geometry sentinel admission and BC1/BC3 streamer copies in both configurations, with zero unexpected OpenRHI errors. MAIN serialized and reaped the native child processes.
+- Source boundary, diff whitespace, clang-format22.1.3 checks on changed backend sources and CRLF checks pass. The public header retains its maintained formatting. Independent final source review reports zero adaptation blockers.
+- WSL Ubuntu24.04 fails before execution with Wsl/Service/CreateInstance/CreateVm/HCS/ERROR_MOD_NOT_FOUND. Linux Vulkan compilation/runtime, Android and native Apple verification remain open. Existing tests do not directly qualify depth/stencil plane buffer copies, patch-list drawing, copy-queue handoffs or silent cache-miss diagnostics; the adapted source and successful existing regressions retain that bounded scope.
+- Local commands, source identities, build/test logs, original failures and GPU handoffs are retained in Logs/Upstream20261020. The preserved application SDK and MIRA lighting/performance receipts retain their original source identities; this refresh updates source and module pins.
+
 ## Verification
 
 | Configuration | Build coverage | Execution coverage |

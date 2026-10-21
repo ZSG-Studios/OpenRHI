@@ -62,7 +62,8 @@ if has_config("rmlui") then
         set_default(false)
         add_includedirs(path.join(dependency_root,"rmlui/Include"), {public = true})
         add_defines("RMLUI_STATIC_LIB", {public = true})
-        if is_plat("windows") then set_runtimes("MD") end
+        -- FIXED BY AI: RmlUi debug logging calls the native MessageBoxA entry point
+        if is_plat("windows") then set_runtimes("MD"); add_syslinks("user32", {public = true}) end
         on_load(function(target)
             os.vrunv(os.getenv("PYTHON") or "python", {path.join(test_root,"Scripts/Build/dependencies.py"),"rmlui"})
             for _, pattern in ipairs({"Source/Core/*.cpp","Source/Core/Elements/*.cpp","Source/Core/Layout/*.cpp"}) do

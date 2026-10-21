@@ -2560,6 +2560,7 @@ OPENRHI_INLINE void CommandBufferVK::Barrier(const BarrierDesc& barrierDesc) {
         const TextureVK& textureVK = *(TextureVK*)in.texture;
         const QueueVK* srcQueue = (QueueVK*)in.srcQueue;
         const QueueVK* dstQueue = (QueueVK*)in.dstQueue;
+        const bool isConcurrent = textureVK.IsConcurrent();
 
         VkImageAspectFlags aspectFlags = GetImageAspectFlags(in.planes, textureVK.GetDesc().format);
 
@@ -2571,8 +2572,8 @@ OPENRHI_INLINE void CommandBufferVK::Barrier(const BarrierDesc& barrierDesc) {
         out.dstAccessMask = GetAccessFlags(in.after.access);
         out.oldLayout = GetImageLayout(in.before.layout);
         out.newLayout = GetImageLayout(in.after.layout);
-        out.srcQueueFamilyIndex = in.srcQueue ? srcQueue->GetFamilyIndex() : VK_QUEUE_FAMILY_IGNORED;
-        out.dstQueueFamilyIndex = in.dstQueue ? dstQueue->GetFamilyIndex() : VK_QUEUE_FAMILY_IGNORED;
+        out.srcQueueFamilyIndex = (in.srcQueue && !isConcurrent) ? srcQueue->GetFamilyIndex() : VK_QUEUE_FAMILY_IGNORED;
+        out.dstQueueFamilyIndex = (in.dstQueue && !isConcurrent) ? dstQueue->GetFamilyIndex() : VK_QUEUE_FAMILY_IGNORED;
         out.image = textureVK.GetHandle();
         out.subresourceRange = {
             aspectFlags,
