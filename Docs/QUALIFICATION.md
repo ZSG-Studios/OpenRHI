@@ -35,6 +35,8 @@ Treat every supported entity as eligible to change on the next simulation tick, 
 
 Profile admission covers the simultaneous working set of player/physics/animation, moving receivers/casters, changing lights/materials, streaming, AS/metadata maintenance, transport, reconstruction and presentation. Predeclare CPU/GPU deadlines, memory/queue limits and maximum change-to-presented-response ages for that combined workload. Require each affected direct, shadow, diffuse and specular signal's appearance and removal to satisfy its correctness and temporal limits, with current-scene fallback and bounded recovery under pressure. OpenRHI's contribution is native capability/resource/AS ordering and completion evidence; MIRA and UVRT qualify live propagation and presented lighting.
 
+Each production profile publishes one numeric operating envelope shared across every enabled system. Declare resolution/quality, simultaneous player/object/light/deformation counts, supported motion rates and streaming/content-churn rates alongside response age, image error, CPU/GPU frame deadlines and queue/memory capacities. Qualify the combined supported boundary, pressure and recovery; retain current-generation AS/geometry/material/resource identities through coherent publication, bounded preparation and last-use fence retirement. Per-component timings and capacities contribute to this common envelope. The 100% dynamic requirement covers every applicable required cell within that declared envelope; the initial 154 cells remain open with zero passing cells at this checkpoint.
+
 Before adopting a production feature or public integration boundary, record this contract for its supported profile:
 
 | Contract field | Required declaration and evidence |
