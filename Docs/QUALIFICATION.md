@@ -89,9 +89,9 @@ Accept each applicable system/case cell only when correctness, update latency/se
 ## Running checks
 
 ```sh
-cmake -S . -B _Build -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-cmake --build _Build --config Release --parallel
-ctest --test-dir _Build -C Release --output-on-failure
+xmake f -P . -m release --build_tests=y --none=y -y
+xmake build -P . -y OpenRHI
+xmake test -P . "*/cpu"
 ```
 
 Native GPU tests require suitable hardware and drivers. SDK/compiler availability controls shader-backed tests. Cross-compilation establishes build coverage; device receipts establish runtime coverage.

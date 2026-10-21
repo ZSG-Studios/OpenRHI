@@ -28,12 +28,17 @@ function Run([string]$Program, [string[]]$Arguments) {
     & $Program @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Program failed with exit $LASTEXITCODE" }
 }
-Run 'cmake' @('-S', $PSScriptRoot, '-B', $native, '-G', 'Ninja', "-DCMAKE_BUILD_TYPE=$Configuration",
-    "-DCMAKE_TOOLCHAIN_FILE=$ndk/build/cmake/android.toolchain.cmake", '-DANDROID_ABI=arm64-v8a', '-DANDROID_PLATFORM=android-33',
-    '-DANDROID_STL=c++_static', "-DANF_SDK_ROOT=$AnfSdkRoot", "-DFETCHCONTENT_SOURCE_DIR_VULKAN_HEADERS=$VulkanHeaders",
-    "-DFETCHCONTENT_SOURCE_DIR_VMA=$VmaRoot", "-DOPENRHI_SLANG_ROOT=$repo/_Build/_deps/openrhi_slang-src")
-Run 'cmake' @('--build', $native, '--parallel', '8')
-Get-ChildItem $native -Filter '*.spirv' | Copy-Item -Destination "$assets/shaders/"
+$xmake = (& python "$repo/Scripts/Build/bootstrap.py").Trim()
+$env:OPENRHI_VULKAN_HEADERS_ROOT = $VulkanHeaders
+$env:OPENRHI_VMA_ROOT = $VmaRoot
+Push-Location -LiteralPath $repo
+try {
+    Run $xmake @('f', '-P', $repo, '-p', 'android', '-a', 'arm64-v8a', '-m', $Configuration.ToLowerInvariant(), '-y',
+        "--ndk=$ndk", '--ndk_sdkver=33', '--static_library=y', '--none=y', '--nis=y', '--anf=y', "--anf_root=$AnfSdkRoot", '--nvtx=n')
+    Run $xmake @('build', '-P', $repo, '-y', 'OpenRHINativeLab')
+} finally { Pop-Location }
+$native = Join-Path $repo "Bin/android/arm64-v8a/$($Configuration.ToLowerInvariant())"
+Get-ChildItem (Join-Path $repo 'Build/AndroidLab/Shaders') -Filter '*.spirv' | Copy-Item -Destination "$assets/shaders/"
 Copy-Item "$repo/LICENSE.txt" "$assets/licenses/OpenRHI.txt"
 Copy-Item "$repo/THIRD_PARTY_NOTICES.md" "$assets/licenses/THIRD_PARTY_NOTICES.md"
 Copy-Item "$AnfSdkRoot/LICENSE.txt" "$assets/licenses/ANF-binary.txt"

@@ -7,13 +7,9 @@ OpenRHI exposes Qualcomm ANF temporal Super Resolution through `UpscalerInterfac
 Obtain the [pinned public SDK](https://github.com/SnapdragonGameStudios/adreno-neural-fusion/tree/a144fbab47ad586adf64c5a1574be73064550f1e), then supply its root when configuring OpenRHI:
 
 ```sh
-cmake -S . -B _Build -G Ninja \
-  -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
-  -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-33 \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DOPENRHI_ENABLE_ANF_SDK=ON -DOPENRHI_ANF_SDK_ROOT=/path/to/adreno-neural-fusion
-cmake --build _Build --parallel
-bash Scripts/Linux/3-PrepareSDK.sh
+xmake f -P . -p android -a arm64-v8a --ndk="$ANDROID_NDK_HOME" --ndk_sdkver=33 -m release --anf=y --anf_root=/path/to/adreno-neural-fusion -y
+xmake build -P . -y OpenRHI
+xmake sdk -P .
 ```
 
 Builds check the pinned runtime's SHA-256. The output and prepared SDK include `libanf.so` and both original licenses under `ThirdPartyLicenses/anf`. Package the runtime at `lib/arm64-v8a/libanf.so` in the application's APK/AAB and retain the license files. Build every application native library with compatible 16-KiB ELF segment alignment. For Android system images exposing OpenCL as a public native library, add this inside the manifest's application element:

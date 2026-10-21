@@ -78,3 +78,5 @@ One reachable blocker controls the verdict.
 Report findings first by severity. Give exact file/line, reachable path, violated OpenRHI or native rule, affected backend/mode, why Validation or capabilities do not prevent it, and a concrete fix.
 
 End with blocker and useful non-blocker counts, verification performed and omitted, and an explicit `PASS` or `FAIL` verdict.
+
+- First-party native libraries, providers, shaders, fixtures, tests and SDK packaging use Xmake3.1.2. Preserve vendor inputs and build their exposed sources through native Xmake targets. Execute Xmake with explicit `-P` and the owning project as its process working directory.

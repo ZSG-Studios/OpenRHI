@@ -25,3 +25,9 @@ OpenRHIAgilitySDK.h
 # Python qualification tooling
 __pycache__/
 *.pyc
+
+/Build/
+/Bin/
+.xmake/
+
+/Tests/**/build/

@@ -1,8 +1,4 @@
-#!/bin/bash
-set -e
-
-cd "$(dirname "${BASH_SOURCE[0]}")/../.."
-
-cmake -S . -B _Build
-cmake --build _Build --config Release --parallel
-cmake --build _Build --config Debug --parallel
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+python3 "$ROOT/Scripts/Build/driver.py" build --all-configurations "$@"

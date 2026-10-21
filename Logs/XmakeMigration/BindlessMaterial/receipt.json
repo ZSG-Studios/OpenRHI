@@ -1,0 +1,113 @@
+{
+  "status": "cpu_build_passed_native_pending",
+  "gpu_requested": false,
+  "gpu_executed": false,
+  "sdk_dll_sha256": {
+    "Release": "94c0326816c019792ed67df9dcf09db0b328498da62c215f43a03e16d75cd751",
+    "Debug": "de945cb0317d63006947d477d6b110dda0a1eee0dfe79aff8ecae24f4d2ca34d"
+  },
+  "configurations": {
+    "Release": {
+      "cpu": {
+        "status": "cpu_reference_passed",
+        "checks": 1364,
+        "gpu_executed": false
+      },
+      "executable_sha256": "e290a948d3d32ff2f09d7e726f291ce6eb6f34f9344f7f80b52e0d85fd464496",
+      "loaded_library_candidate": "C:\\MIRA\\Modules\\LocalSources\\OpenRHI\\Build\\BindlessMaterial\\Release\\OpenRHI.dll",
+      "library_sha256": "94c0326816c019792ed67df9dcf09db0b328498da62c215f43a03e16d75cd751"
+    },
+    "Debug": {
+      "cpu": {
+        "status": "cpu_reference_passed",
+        "checks": 1364,
+        "gpu_executed": false
+      },
+      "executable_sha256": "60fa987dcbb70e4ee6ab803d2104f719c1423dd28b3d0fff3d7cd6884e28ba6d",
+      "loaded_library_candidate": "C:\\MIRA\\Modules\\LocalSources\\OpenRHI\\Build\\BindlessMaterial\\Debug\\OpenRHI.dll",
+      "library_sha256": "de945cb0317d63006947d477d6b110dda0a1eee0dfe79aff8ecae24f4d2ca34d"
+    }
+  },
+  "profile": {
+    "reference_policy": 2,
+    "formats": [
+      "BC4_R_UNORM",
+      "BC5_RG_UNORM",
+      "BC7_RGBA_UNORM",
+      "BC7_RGBA_SRGB"
+    ],
+    "dimensions": [
+      [
+        20,
+        12
+      ],
+      [
+        17,
+        9
+      ],
+      [
+        4,
+        20
+      ]
+    ],
+    "samplers": [
+      "point-clamp",
+      "point-repeat",
+      "linear-clamp",
+      "linear-repeat"
+    ],
+    "anisotropy": 1,
+    "mip_min": 0,
+    "mip_max": 32,
+    "mip_bias": 0,
+    "operations": [
+      "fixed-view-mip-zero",
+      "explicit-view-relative-LOD",
+      "isotropic-explicit-gradients"
+    ],
+    "point_absolute_tolerance": 0.00393156862745098,
+    "linear_absolute_tolerance": 0.00785313725490196,
+    "heap_conventional_absolute_tolerance": 1e-06,
+    "bounded_value_arithmetic_allowance": "same predeclared point/linear filter allowance; never a patterned anisotropic quality reference",
+    "bc4_bc5_decode_interval": "per-texel 1/65535 + 0.03*abs(endpoint0-endpoint1); exact endpoints/special values; propagated through the actual reference filter",
+    "bc7_blocks": "mode 6 only; all-mode compression decode remains separately gated",
+    "odd_originals": "successful exact public factory creation required; SDK94 has no public unaligned-BC capability query"
+  },
+  "source_sha256": {
+    "Tests\\BindlessMaterial\\Main.cpp": "d6ca556bc71fc70fe8cc7cb961e1f9c8090fb770c19793780cd36b7456cf28c5",
+    "Tests\\BindlessMaterial\\Reference.h": "eddce6cc401dfa3613337ace7d61fc737d3cbbc93a67ba16f0363d8ed6456481",
+    "Tests\\BindlessMaterial\\Material.slang": "bce0fd2846078e7ab715e94cc985df5af771a348ec2450244dab4bdb2e41686d",
+    "Tests\\BindlessMaterial\\xmake.lua": "74f76c627f9a8b1d178acf6a5883e4576612d6c7ddabd6c62d813c14078476ea",
+    "Tests\\BindlessMaterial\\qualify.py": "b70407e36eb44a3b9761b33fb6d0447258c904753e87b7a22878a7a6587e4cd9",
+    "Tests\\BindlessMaterial\\README.md": "86afa40b80ebc2c5add712bffab5129db4f3b5f131ce280a8f2ac5f4c85b2d77",
+    "Xmake\\tests.lua": "c5df40387955f48fcc1b500a2b5947534dc036ecfd5e29cd1cb914d596a2aee9",
+    "Scripts\\Build\\boundary.py": "c6a58f89ae66613d9c42d9c620d76f3e01372f77f42d12cd807c69164de7552f"
+  },
+  "driver_sha256": "fbb79940e9d502993cec195d3c0b8c91abe825b97e21fc75b63751e0f4e9b99d",
+  "compiler_sha256": {
+    "C:\\MIRA\\Modules\\LocalSources\\OpenRHI\\_OpenRHI_SDK\\Build\\Dependencies\\slang-windows-x86_64\\bin\\slangc.exe": "59ceb8b73aae261fd52715d82f7e54d8e21232a0795a45444d90d8384bd1a3d3",
+    "C:\\MIRA\\Modules\\LocalSources\\OpenRHI\\_OpenRHI_SDK\\Build\\Dependencies\\slang_dxil\\bin\\x64\\dxc.exe": "aa7965b3763d9c710baaa5a28cedcc633449962a75d1391d161a85304a41b3e2",
+    "C:\\MIRA\\Modules\\LocalSources\\OpenRHI\\_OpenRHI_SDK\\Build\\Dependencies\\slang_dxil\\bin\\x64\\dxcompiler.dll": "0689e2fee0a1c9df8662a59680469f24e2a3ad7ce6bbbcc9284f7a83172bfc59"
+  },
+  "slang_runtime_sha256": {
+    "slang-compiler.dll": "3fe9fca8bef7fab9cb6748b6e6e7d8f4abbfe2d7f7a8c863ba9253b9ba8ef0b1",
+    "slang-glsl-module.dll": "849982a9d7549634d7b43a60a6db11d9d4ea4d4bc92b7df92f7fda7034901510",
+    "slang-glslang.dll": "b5a8bb1d4ebb408a553d315f804ff323f8f2c9e5f91993ffcf945e771dcb9dd5",
+    "slang-llvm.dll": "a481148b2e89d463ee654c20c2aee02349397179770f1845c5b03a0862e81381",
+    "slang-rt.dll": "255b5c7871dbb6bd0296b727bd6685af2b2223779da1021d074e4015a484733c",
+    "slang.dll": "59190f074d96d8f2d002d7e9200cde7196be728c8705741ed95733c53e223b43"
+  },
+  "slang_version": "2026.20",
+  "shader_contract": {
+    "BindlessMaterialHeap": {
+      "binary_sha256": "c0ae471639fc8e0ace1d7e4ea19c9da473201361ae1b99cdfee9b711c1bcf22a",
+      "reflection_sha256": "5b735c1cd032dd55780094b1c1f2b909aaa3f475c481e5eed206daa86057dd69",
+      "disassembly_sha256": "5c7160e56ce0e67cd2d0b3c01a2034cc22e53e040020ff0565f2b0795105943c"
+    },
+    "BindlessMaterialConventional": {
+      "binary_sha256": "c8976e91ef8f51f9c7ba6dd1a0fe23f49c27c4917ae1db1154f92265117142dd",
+      "reflection_sha256": "1f286f654559b486d27dfe89f26561609acd7eff44b529e62f4bdee509ad7bae",
+      "disassembly_sha256": "9edbe60bde395f5d1d2d2422187ae0ce7d52cb0e2d805df5683005e6d89f5f73"
+    }
+  }
+}

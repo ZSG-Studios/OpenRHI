@@ -1,7 +1,4 @@
-#!/bin/bash
-set -e
-
-cd "$(dirname "${BASH_SOURCE[0]}")/../.."
-
-# Deploy with the native Metal backend.
-cmake -S . -B _Build -G "Ninja Multi-Config" "$@"
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+python3 "$ROOT/Scripts/Build/driver.py" configure "$@"

@@ -55,12 +55,12 @@ UVRT owns scene illumination, BRDF evaluation, shadows, environment lighting, an
 | `Include/Extensions/` | Public swapchain, streaming, descriptor heap, ray tracing, mesh, video, upscaler, latency, vendor, and native wrapper interfaces |
 | `Source/Creation/`, `Source/Shared/`, `Source/Validation/` | Creation, shared implementation, public-input validation |
 | `Source/D3D12/`, `Source/VK/`, `Source/Metal/`, `Source/NONE/` | Native backends and explicit automated-test backend |
-| `CMakeLists.txt` | Maintained CMake 3.30+ build, C++17, target `OpenRHI` |
-| `CMake/OpenRHISlang.cmake`, `Include/OpenRHI.slang`, `Shaders/` | Pinned Slang 2026.20 build pipeline and shader ABI |
+| `xmake.lua` | Maintained Xmake3.1.2 build, C++17, target `OpenRHI` |
+| `Xmake/openrhi_slang.lua`, `Include/OpenRHI.slang`, `Shaders/` | Pinned Slang 2026.20 build pipeline and shader ABI |
 | `Scripts/Windows/`, `Scripts/Linux/`, `Scripts/MacOS/` | Deploy, Debug/Release build, SDK packaging |
 | `Tests/`, `Scripts/Qualification/`, `Profiles/` | Contracts, native correctness, explicit measurement tools, policy data |
 
-Windows uses D3D12; Linux and Android use Vulkan; Apple platforms use native Metal 4. Platform baselines are maintained in the [repository overview](../README.md). Generated products belong in `_Build/`, `_Bin/`, `_Tmp/`, and the packaged `_OpenRHI_SDK/`.
+Windows uses D3D12; Linux and Android use Vulkan; Apple platforms use native Metal 4. Platform baselines are maintained in the [repository overview](../README.md). Generated products belong in `Build/`, `Bin/`, `_Tmp/`, and the packaged `_OpenRHI_SDK/`.
 
 ## Bindless handoff
 
@@ -95,7 +95,7 @@ For native-object interoperation, use the public `WrapperD3D12Interface`, `Wrapp
 | Owner | Code and contracts |
 |---|---|
 | OpenRHI | C/C++ facade; backend objects and commands; Validation; native wrappers; device requirements and profiles; low-level extensions; shader ABI/compiler helper; dependency pins; SDK packaging and module tests |
-| MIRA | Top-level Xmake orchestration invoking the maintained OpenRHI CMake build; provider configuration; module discovery; aggregate requirements; renderer/frame scheduling; shared resource contracts; cross-module barriers and lifetime; application runtime deployment; integrated tests and receipts |
+| MIRA | Top-level Xmake orchestration invoking the maintained OpenRHI Xmake build; provider configuration; module discovery; aggregate requirements; renderer/frame scheduling; shared resource contracts; cross-module barriers and lifetime; application runtime deployment; integrated tests and receipts |
 | UVRT / FACET / future module | Their algorithms, kernels, module APIs, module tests, and implementation-specific state in their original checkouts |
 
 The reviewed OpenRHI tree contains reusable RHI implementation and RHI-owned build/test tooling. MIRA integration work consists of a provider adapter, module handoff descriptors, frame scheduling, deployment composition, and integrated fixtures. Place those integration pieces in MIRA as they are implemented. Consume OpenRHI's shared implementation and shader helper through this module's maintained interfaces. Preserve module history, licenses, upstream remote, and vendor inputs here.
@@ -104,54 +104,32 @@ This module-side pass adds documentation and a durable ownership rule. The exist
 
 ## Dependencies and deployment
 
-OpenRHI CMake owns the dependency revisions and feature gates. Windows uses Windows SDK, Agility SDK 1.619.6, D3D12MemoryAllocator, and configured NVAPI/AGS/NVTX support. Vulkan builds fetch Vulkan-Headers and VulkanMemoryAllocator; Metal builds use pinned metal-cpp and Xcode 26+ with the Metal toolchain. Optional provider switches include `OPENRHI_ENABLE_NGX_SDK`, `OPENRHI_ENABLE_FFX_SDK`, `OPENRHI_ENABLE_XESS_SDK`, `OPENRHI_ENABLE_NRC_SDK`, `OPENRHI_ENABLE_ANTILAG2_SDK`, and Android `OPENRHI_ENABLE_ANF_SDK`.
+OpenRHI Xmake owns the dependency revisions and feature gates. Windows uses Windows SDK, Agility SDK 1.619.6, D3D12MemoryAllocator, and configured NVAPI/AGS/NVTX support. Vulkan builds fetch Vulkan-Headers and VulkanMemoryAllocator; Metal builds use pinned metal-cpp and Xcode 26+ with the Metal toolchain. Optional provider switches include `--ngx=y`, `--ffx=y`, `--xess=y`, `--nrc=y`, `--antilag2=y`, and Android `--anf=y`.
 
 MIRA records the OpenRHI commit, configuration, architecture, compiler, backend, enabled provider switches, shader hashes, and deployed runtime set. Consume dependencies through public interfaces and retain [third-party notices](../THIRD_PARTY_NOTICES.md) and licensed runtime payloads.
 
-For Windows SDK consumption, expose `_OpenRHI_SDK/Include`, link the configuration-matching `_OpenRHI_SDK/Lib/<Debug|Release>/OpenRHI.lib`, and deploy `OpenRHI.dll`, `AgilitySDK/`, enabled vendor runtimes, and accompanying licenses from that configuration directory beside the executable. Include `OpenRHIAgilitySDK.h` in exactly one executable translation unit, as demonstrated by `Tests/BackendSmoke.cpp`, to export the Agility version/path. MIRA's Xmake provider can invoke the commands below and import these artifacts. The SDK currently supplies headers, libraries, runtime payloads, documentation, and CMake shader helpers; define the imported consumer target in MIRA.
+For Windows SDK consumption, expose `_OpenRHI_SDK/Include`, link the configuration-matching `_OpenRHI_SDK/Lib/<Debug|Release>/OpenRHI.lib`, and deploy `OpenRHI.dll`, `AgilitySDK/`, enabled vendor runtimes, and accompanying licenses from that configuration directory beside the executable. Include `OpenRHIAgilitySDK.h` in exactly one executable translation unit, as demonstrated by `Tests/BackendSmoke.cpp`, to export the Agility version/path. MIRA's Xmake provider can invoke the commands below and import these artifacts. The SDK currently supplies headers, libraries, runtime payloads, documentation, and Xmake shader helpers; define the imported consumer target in MIRA.
 
-A CMake consumer can compose the original checkout directly:
+MIRA imports the configuration-matching SDK through its native Xmake target. Consumers composing source can include the OpenRHI `xmake.lua` and declare `add_deps("OpenRHI")`. Configure public feature options before building, and preserve native system/provider dependencies for static linkage.
 
-```cmake
-set(OPENRHI_BUILD_TESTS OFF CACHE BOOL "OpenRHI module tests")
-add_subdirectory("C:/MIRA/Modules/LocalSources/OpenRHI" "${CMAKE_BINARY_DIR}/OpenRHI")
-target_link_libraries(MiraRenderer PRIVATE OpenRHI)
-```
-
-`MiraRenderer` denotes the target defined by the consumer. Configure OpenRHI feature switches before `add_subdirectory`; build shared/static consistently with the consumer's deployment and link policy. For production static linkage, preserve the native dependencies carried by the CMake target.
-
-MIRA shader builds call `openrhi_compile_shader` from the maintained helper. Ship the selected DXIL, SPIR-V, or metallib together with reflected entry names, threadgroup dimensions, and task payload bytes. See [shader integration](SHADERS.md) for the native Metal 24-byte descriptor entry ABI and complete build examples.
+MIRA shader rules import `openrhi_slang` and call `compile` from native Xmake hooks. Ship native bytes together with reflected entry names, threadgroup dimensions and task payload size; see [shader integration](SHADERS.md).
 
 ## Concrete build and test commands
 
-Run in PowerShell; prerequisites are CMake 3.30+, the Windows C++17 toolchain/SDK, and access to pinned build dependencies:
+Use Xmake3.1.2, the platform C++17 toolchain/SDK and Python. Run with the owning checkout as the process working directory:
 
 ```powershell
 Set-Location C:/MIRA/Modules/LocalSources/OpenRHI
-cmake -S . -B _Build -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-cmake --build _Build --config Release --parallel 8
-cmake --build _Build --config Debug --parallel 8
-ctest --test-dir _Build -C Release --output-on-failure
-ctest --test-dir _Build -C Debug --output-on-failure
+xmake f -P . -m release --build_tests=y --none=y -y
+xmake build -P . -y OpenRHI
+xmake test -P . "*/cpu"
+xmake openrhi-build-tests -P .
+xmake sdk -P . --output=Build/XmakeSDK
 ```
 
-Package both configurations after successful builds:
+Repeat configuration/build with `-m debug` to prepare matching Debug libraries. Platform wrappers in `Scripts/Windows`, `Scripts/Linux` and `Scripts/MacOS` call the same Xmake graph. SDK packaging fixtures use retained isolated roots. Android and Apple flags are documented in [Xmake integration](XMAKE.md).
 
-```powershell
-& C:/MIRA/Modules/LocalSources/OpenRHI/Scripts/Windows/3-PrepareSDK.bat
-```
-
-The packaging script moves an existing SDK to the Recycle Bin before generating its replacement. `OpenRHI.SDKPackaging` tests packaging in isolated retained fixtures; actual application deployment remains a MIRA integration gate.
-
-On Linux and macOS, run the corresponding `Scripts/Linux/1-Deploy.sh` or `Scripts/MacOS/1-Deploy.sh` with `-DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON`, then that platform's `2-Build.sh` and `3-PrepareSDK.sh`. Run CTest with the configured build directory/configuration. Android toolchain and device procedures are maintained in [qualification](QUALIFICATION.md) and [ANF integration](ANF.md).
-
-For an explicit host-only test configuration, configure a separate directory with native/provider gates disabled:
-
-```powershell
-cmake -S C:/MIRA/Modules/LocalSources/OpenRHI -B C:/MIRA/Modules/LocalSources/OpenRHI/_Build/mira-none -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON -DOPENRHI_ENABLE_D3D12_SUPPORT=OFF -DOPENRHI_ENABLE_VK_SUPPORT=OFF -DOPENRHI_ENABLE_METAL_SUPPORT=OFF -DOPENRHI_ENABLE_NVTX_SUPPORT=OFF -DOPENRHI_ENABLE_IMGUI_EXTENSION=OFF -DOPENRHI_ENABLE_RMLUI_EXTENSION=OFF
-cmake --build C:/MIRA/Modules/LocalSources/OpenRHI/_Build/mira-none --config Release --parallel 8
-ctest --test-dir C:/MIRA/Modules/LocalSources/OpenRHI/_Build/mira-none -C Release --output-on-failure
-```
+For an explicit NONE-only host profile, configure `--none=y --d3d12=n --vk=n --metal=n --nvtx=n --imgui=n --rmlui=n --amdags=n --nvapi=n --agility=n --ffx=n --frame_generation=n --antilag2=n --nis=n` and run the CPU tests. Native GPU fixtures require a coordinated device window.
 
 ## Qualification snapshot: 19 October 2026
 
@@ -169,7 +147,7 @@ Reviewed source baseline: `702dec56341d808a101bfb398c20f5c17e186f4d` plus this d
 | Remaining platform gates | Linux/Android Vulkan, Apple Metal, Windows ARM64, optional providers, and the separate NONE-only command above were not executed in this pass |
 | Performance gate | Paired/sustained performance qualification remains governed by [qualification gates](QUALIFICATION.md); passing promotion-gate logic verifies the gate implementation |
 
-CTest diagnostics are generated under `_Build/Testing/Temporary/`; the Debug run log from this pass is retained under `_Tmp/MIRA/20261019-debug-ctest.log`. Record fresh per-device receipts when MIRA executes its integrated workload. OpenRHI module correctness here establishes the tested module boundary; integrated rendering quality and performance require that workload's measurements.
+The archived qualification diagnostics remain under `_Build/Testing/Temporary/`; the Debug run log from this pass is retained under `_Tmp/MIRA/20261019-debug-ctest.log`. Record fresh per-device receipts when MIRA executes its integrated workload. OpenRHI module correctness here establishes the tested module boundary; integrated rendering quality and performance require that workload's measurements.
 
 ## MIRA-reported integration progress
 
