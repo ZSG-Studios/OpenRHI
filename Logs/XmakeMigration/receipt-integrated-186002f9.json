@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "date_utc": "2026-10-21T02:23:20.712264+00:00",
+  "build_system": "Xmake 3.1.2",
+  "checkout": "C:\\MIRA\\Modules\\OpenRHI",
+  "source_implementation_changed": false,
+  "vendor_sources_changed": false,
+  "symlinks_created": false,
+  "qualified_sdk_native_preserved": true,
+  "checks": {
+    "full_windows_x64_d3d12_release_native_build": "passed",
+    "development_none_debug_host_suite": "passed",
+    "development_full_release_cpu_suite": "7/7 passed",
+    "development_d3d12_smoke_corrected": "passed",
+    "development_d3d12_adapter_selection": "passed",
+    "cold_cache_acquisition_parallel_processes": 8,
+    "isolated_sdk_packaging_optional_runtime_cases": "2/2 passed",
+    "qualification_logic_tests": "9/9 passed",
+    "development_sdk_bindless_material_debug_release_cpu": "passed",
+    "source_boundary": "passed"
+  },
+  "qualification_limits": [
+    "Windows x64 host measured; cross-platform workflows/entrypoints migrated but device builds not executed here",
+    "Additional native rendering, optional NGX/NRC/XeSS, Android and Apple qualification retain their own device gates",
+    "Current qualified SDK native Lib/Include retained; new Xmake native outputs remain separate"
+  ],
+  "helpers": {
+    "Scripts/Build/shader.py": "04c2d0c105f8a95442542d826985857f823dd54ad2129bce2bfb912053d9ebe7",
+    "Xmake/openrhi_slang.lua": "fbb79940e9d502993cec195d3c0b8c91abe825b97e21fc75b63751e0f4e9b99d",
+    "xmake.lua": "52bec3e68bc2fd643c2182d2a8ae88a0fe49bd8ad0f7913428376c5dc15e4fe5"
+  },
+  "source_hashes": {
+    "xmake.lua": "e4062ff4e399f6533175bc3e3894f20f0b5cf8cadc19407b7f6d95ed4fb90ea0",
+    "Xmake/tests.lua": "c5df40387955f48fcc1b500a2b5947534dc036ecfd5e29cd1cb914d596a2aee9",
+    "Xmake/android.lua": "37141dccdd171da118ccfff0f20724b0a965d649b9a2ec3a1c10ae396b75c656",
+    "Xmake/dependencies.json": "e45ebed5c3ea2b847e0f96fa2e8a9b7c67bdb7948f29eed746aab4fa9ad4093b",
+    "Scripts/Build/package.py": "97520edcf3677149d58613a418fbce5c0e991d44cffd759b96d8f3f9fa32e651",
+    "Scripts/Build/dependencies.py": "5526f5f6c39194ed1bb64f8b08e05f30242bd1b2cb2219ec633f357309af331b"
+  }
+}
