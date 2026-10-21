@@ -1,355 +1,109 @@
-name: OpenRHI SDK
+name: OpenRHI Xmake SDK
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - main
+    branches: [main]
   push:
-    branches:
-      - main
+    branches: [main]
 jobs:
   Source-boundary:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify backend source boundary
-        run: cmake -DROOT="$GITHUB_WORKSPACE" -P Tests/SourceBoundary.cmake
-
-  Build-Windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: xmake-io/github-action-setup-xmake@v1
         with:
-          submodules: true
-
-      - name: Deploy
-        run: .\Scripts\Windows\1-Deploy.bat -DOPENRHI_ENABLE_NIS_SDK=ON -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-
-      - name: Build
-        run: .\Scripts\Windows\2-Build.bat
-
-      - name: Test dummy backend and source boundary
-        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract|RmlUi)" --output-on-failure
-
-      - name: Prepare SDK
-        run: .\Scripts\Windows\3-PrepareSDK.bat
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OpenRHI SDK (Windows x64)
-          path: _OpenRHI_SDK
-
-  Build-Windows-ARM64:
-    runs-on: windows-2022
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Deploy
-        run: .\Scripts\Windows\1-Deploy.bat -G "Visual Studio 17 2022" -A ARM64 -DOPENRHI_ENABLE_NIS_SDK=ON -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-
-      - name: Build
-        run: .\Scripts\Windows\2-Build.bat
-
-      - name: Prepare SDK
-        run: .\Scripts\Windows\3-PrepareSDK.bat
-
-      - name: Audit native binary exports
-        run: ctest --test-dir _Build -C Release -R OpenRHI.WindowsBinaryBoundary --output-on-failure
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OpenRHI SDK (Windows ARM64)
-          path: _OpenRHI_SDK
-
-  Build-Windows-ARM64EC:
-    runs-on: windows-2022
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Deploy
-        run: .\Scripts\Windows\1-Deploy.bat -G "Visual Studio 17 2022" -A ARM64EC -DOPENRHI_ENABLE_NIS_SDK=ON -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-
-      - name: Build
-        run: .\Scripts\Windows\2-Build.bat
-
-      - name: Prepare SDK
-        run: .\Scripts\Windows\3-PrepareSDK.bat
-
-      - name: Audit native binary exports
-        run: ctest --test-dir _Build -C Release -R OpenRHI.WindowsBinaryBoundary --output-on-failure
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OpenRHI SDK (Windows ARM64EC)
-          path: _OpenRHI_SDK
-
-  Build-Ubuntu:
+          xmake-version: '3.1.2'
+      - run: xmake openrhi-check -P .
+      - run: python3 Tests/test_xmake_build.py
+  Native-SDK:
     strategy:
+      fail-fast: false
       matrix:
-        include:
+        mode: [debug, release]
+        target:
+          - os: windows-latest
+            plat: windows
+            arch: x64
+          - os: windows-latest
+            plat: windows
+            arch: arm64
+          - os: windows-latest
+            plat: windows
+            arch: arm64ec
           - os: ubuntu-latest
-            nis: 'ON'
+            plat: linux
+            arch: x86_64
           - os: ubuntu-24.04-arm
-            nis: 'ON'
-    runs-on: ${{ matrix.os }}
+            plat: linux
+            arch: arm64
+          - os: macos-latest
+            plat: macosx
+            arch: arm64
+    runs-on: ${{ matrix.target.os }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: xmake-io/github-action-setup-xmake@v1
         with:
-          submodules: true
-
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v2
+          xmake-version: '3.1.2'
+      - name: Linux native headers
+        if: matrix.target.plat == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev libwayland-dev
+      - name: Configure native graph
+        run: xmake f -P . -p ${{ matrix.target.plat }} -a ${{ matrix.target.arch }} -m ${{ matrix.mode }} --none=y --nis=y --build_tests=y -y
+      - run: xmake build -P . -y OpenRHI
+      - name: Native CPU contracts
+        if: matrix.target.arch != 'arm64ec' && !(matrix.target.plat == 'windows' && matrix.target.arch == 'arm64')
+        run: xmake test -P . "*/cpu"
+      - name: Explicit NONE backend
+        if: matrix.target.arch != 'arm64ec' && !(matrix.target.plat == 'windows' && matrix.target.arch == 'arm64')
+        run: xmake test -P . OpenRHISmoke/NONE
+      - run: xmake sdk -P .
+      - uses: actions/upload-artifact@v4
         with:
-          cmake-version: 'latest'
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libx11-dev libwayland-dev ninja-build
-
-      - name: Deploy
-        run: bash Scripts/Linux/1-Deploy.sh -DOPENRHI_ENABLE_NIS_SDK=${{ matrix.nis }} -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-
-      - name: Build
-        run: bash Scripts/Linux/2-Build.sh
-
-      - name: Test dummy backend and source boundary
-        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract|RmlUi)" --output-on-failure
-
-      - name: Prepare SDK
-        run: bash Scripts/Linux/3-PrepareSDK.sh
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OpenRHI SDK (Linux ${{ runner.arch }})
+          name: OpenRHI-${{ matrix.target.plat }}-${{ matrix.target.arch }}-${{ matrix.mode }}
           path: _OpenRHI_SDK
-
-  Build-Android-ARM64:
+  Android-SDK:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        configuration: [Debug, Release]
-        anf: ['OFF', 'ON']
+        mode: [debug, release]
+        anf: ['n', 'y']
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: xmake-io/github-action-setup-xmake@v1
         with:
-          submodules: true
-
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: 'latest'
-
-      - name: Checkout pinned ANF SDK
-        if: matrix.anf == 'ON'
-        uses: actions/checkout@v4
+          xmake-version: '3.1.2'
+      - uses: actions/checkout@v4
+        if: matrix.anf == 'y'
         with:
           repository: SnapdragonGameStudios/adreno-neural-fusion
           ref: a144fbab47ad586adf64c5a1574be73064550f1e
           path: _ANF_SDK
-
-      - name: Deploy
-        run: >-
-          bash Scripts/Linux/1-Deploy.sh
-          -G Ninja
-          -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
-          -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake"
-          -DANDROID_ABI=arm64-v8a
-          -DANDROID_PLATFORM=android-33
-          -DOPENRHI_ENABLE_ANF_SDK=${{ matrix.anf }}
-          -DOPENRHI_ANF_SDK_ROOT="${{ github.workspace }}/_ANF_SDK"
-          -DOPENRHI_ENABLE_NIS_SDK=ON -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-
-      - name: Build
-        run: cmake --build _Build --parallel
-
-      - name: Prepare SDK
-        run: bash Scripts/Linux/3-PrepareSDK.sh
-
-      - name: Check ANF runtime and licenses
-        if: matrix.anf == 'ON'
-        run: |
-          test -s _OpenRHI_SDK/Lib/libanf.so
-          test -s _OpenRHI_SDK/Lib/ThirdPartyLicenses/anf/LICENSE.txt
-          test -s _OpenRHI_SDK/Lib/ThirdPartyLicenses/anf/LICENSE-BSD-3-Clause.txt
-          cmp _ANF_SDK/lib/arm64-v8a/libanf.so _OpenRHI_SDK/Lib/libanf.so
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Configure Android ARM64 API33
+        run: xmake f -P . -p android -a arm64-v8a -m ${{ matrix.mode }} --ndk="$ANDROID_NDK_HOME" --ndk_sdkver=33 --static_library=y --none=y --nis=y --nvtx=n --anf=${{ matrix.anf }} --anf_root="$GITHUB_WORKSPACE/_ANF_SDK" -y
+      - run: xmake build -P . -y OpenRHI
+      - run: xmake sdk -P .
+      - uses: actions/upload-artifact@v4
         with:
-          name: OpenRHI SDK (Android ARM64 ${{ matrix.configuration }} ANF ${{ matrix.anf }})
+          name: OpenRHI-android-arm64-${{ matrix.mode }}-anf-${{ matrix.anf }}
           path: _OpenRHI_SDK
-
-  Test-ANF-Contract:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        configuration: [Debug, Release]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: 'latest'
-      - uses: actions/checkout@v4
-        with:
-          repository: SnapdragonGameStudios/adreno-neural-fusion
-          ref: a144fbab47ad586adf64c5a1574be73064550f1e
-          path: _ANF_SDK
-      - uses: actions/checkout@v4
-        with:
-          repository: KhronosGroup/Vulkan-Headers
-          ref: v1.4.365
-          path: _Vulkan-Headers
-      - name: Configure contract tests
-        run: >-
-          cmake -S . -B _Build -G Ninja
-          -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
-          -DOPENRHI_ENABLE_VK_SUPPORT=OFF -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-          -DOPENRHI_ENABLE_NIS_SDK=OFF -DOPENRHI_ENABLE_IMGUI_EXTENSION=OFF
-          -DOPENRHI_ENABLE_NVTX_SUPPORT=OFF -DOPENRHI_BUILD_TESTS=ON
-          -DOPENRHI_ANF_SDK_ROOT="${{ github.workspace }}/_ANF_SDK"
-          -DOPENRHI_ANF_TEST_VULKAN_HEADERS="${{ github.workspace }}/_Vulkan-Headers/include"
-      - name: Build and test adapter contract
-        run: |
-          cmake --build _Build --parallel
-          ctest --test-dir _Build --output-on-failure
-
-  Build-macOS:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: 'latest'
-
-      - name: Install dependencies
-        run: |
-          brew install ninja
-          xcodebuild -downloadComponent MetalToolchain
-
-      - name: Deploy
-        run: >-
-          bash Scripts/MacOS/1-Deploy.sh
-          -DOPENRHI_ENABLE_NIS_SDK=ON -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-          -DOPENRHI_ENABLE_METAL_SUPPORT=ON
-
-      - name: Build
-        run: bash Scripts/MacOS/2-Build.sh
-
-      - name: Test dummy backend and source boundary
-        run: ctest --test-dir _Build -C Release -R "OpenRHI.(NONE|PublicAPI|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|PromotionGate|SlangContract|RmlUi)" --output-on-failure
-
-      - name: Prepare SDK
-        run: bash Scripts/MacOS/3-PrepareSDK.sh
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: OpenRHI SDK (macOS ${{ runner.arch }})
-          path: _OpenRHI_SDK
-
-  Build-iOS:
+  Apple-Mobile-SDK:
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       matrix:
+        mode: [debug, release]
         sdk: [iphoneos, iphonesimulator]
     steps:
       - uses: actions/checkout@v4
-      - uses: jwlawson/actions-setup-cmake@v2
+      - uses: xmake-io/github-action-setup-xmake@v1
         with:
-          cmake-version: 'latest'
-      - name: Install Metal toolchain
-        run: xcodebuild -downloadComponent MetalToolchain
-      - name: Configure native Metal static library
-        run: >-
-          cmake -S . -B _Build -G Xcode
-          -DCMAKE_SYSTEM_NAME=iOS
-          -DCMAKE_OSX_SYSROOT=${{ matrix.sdk }}
-          -DCMAKE_OSX_ARCHITECTURES=arm64
-          -DCMAKE_OSX_DEPLOYMENT_TARGET=26.0
-          -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO
-          -DOPENRHI_ENABLE_METAL_SUPPORT=ON
-          -DOPENRHI_ENABLE_NIS_SDK=ON
-          -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON
-          -DOPENRHI_STATIC_LIBRARY=ON
-      - name: Build
-        run: |
-          cmake --build _Build --config Debug --parallel
-          cmake --build _Build --config Release --parallel
-      - name: Package
-        run: |
-          mkdir -p _OpenRHI_SDK
-          cp -R Include CMake Docs _OpenRHI_SDK/
-          cp LICENSE.txt THIRD_PARTY_NOTICES.md README.md openrhi.natvis _OpenRHI_SDK/
-          for configuration in Debug Release; do
-            library=$(find _Bin -type f -name libOpenRHI.a \( -path "_Bin/${configuration}/libOpenRHI.a" -o -path "_Bin/${configuration}-*/libOpenRHI.a" \) -print -quit)
-            test -n "${library}"
-            mkdir -p "_OpenRHI_SDK/Lib/${configuration}"
-            cp "${library}" "_OpenRHI_SDK/Lib/${configuration}/"
-            licenses="$(dirname "${library}")/ThirdPartyLicenses"
-            if [ -d "${licenses}" ]; then
-              cp -R "${licenses}" "_OpenRHI_SDK/Lib/${configuration}/"
-            fi
-          done
+          xmake-version: '3.1.2'
+      - run: xmake f -P . -p iphoneos -a arm64 -m ${{ matrix.mode }} --static_library=y --metal=y --nis=y --apple_sdk=${{ matrix.sdk }} --appledev=${{ matrix.sdk == 'iphonesimulator' && 'simulator' || 'iphone' }} -y
+      - run: xmake build -P . -y OpenRHI
+      - run: xmake sdk -P .
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenRHI SDK (iOS ${{ matrix.sdk }} ARM64)
+          name: OpenRHI-${{ matrix.sdk }}-arm64-${{ matrix.mode }}
           path: _OpenRHI_SDK
-
-  Build-Windows-NeuralFeatures:
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        configuration: [Debug, Release]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: NVIDIA-RTX/NRC
-          ref: 7de30e4eb2a1a27118eb9a6acf5f715d757240c0
-          lfs: true
-          path: _NRC_SDK
-      - uses: actions/checkout@v4
-        with:
-          repository: GPUOpen-LibrariesAndSDKs/AntiLag2-SDK
-          ref: 390aa4a8c8655d0ae6e90079db2c85e103a96da3
-          path: _ANTILAG2_SDK
-      - uses: actions/checkout@v4
-        with:
-          repository: KhronosGroup/Vulkan-Headers
-          ref: v1.4.365
-          path: _Vulkan-Headers
-      - name: Configure native adapters
-        run: >-
-          cmake -S . -B _Build -A x64
-          -DOPENRHI_ENABLE_NONE_SUPPORT=ON -DOPENRHI_BUILD_TESTS=ON
-          -DOPENRHI_ENABLE_IMGUI_EXTENSION=OFF -DOPENRHI_ENABLE_NIS_SDK=OFF
-          -DOPENRHI_ENABLE_FFX_SDK=ON -DOPENRHI_ENABLE_NRC_SDK=ON -DOPENRHI_ENABLE_ANTILAG2_SDK=ON
-          -DFETCHCONTENT_SOURCE_DIR_NRC="${{ github.workspace }}/_NRC_SDK"
-          -DFETCHCONTENT_SOURCE_DIR_ANTILAG2="${{ github.workspace }}/_ANTILAG2_SDK"
-          -DOPENRHI_REFLEX_TEST_VULKAN_HEADERS="${{ github.workspace }}/_Vulkan-Headers/include"
-      - name: Build all provider adapters and tests
-        run: cmake --build _Build --config ${{ matrix.configuration }} --parallel
-      - name: Run host contracts and packaging checks
-        run: >-
-          ctest --test-dir _Build -C ${{ matrix.configuration }} --output-on-failure
-          -R "OpenRHI.(PublicAPI|NONE|SourceBoundary|DevicePolicy|WindowsBinaryBoundary|NeuralRadianceCacheContract|ReflexContract|SDKPackaging)"

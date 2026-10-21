@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "dependencies": {
+    "agilitysdk": {
+      "url": "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.619.6",
+      "sha256": "08f0489281401aa430fc37322d6c3fc98a8025175aacd714c10d562f4963f1e9"
+    },
+    "nvtx": {
+      "url": "https://github.com/NVIDIA/NVTX/archive/refs/tags/v3.6.0.zip",
+      "sha256": "f1616d53ee9db96f2f38e664916a3444478b3b761ff3fb161be84cd6ac7989f9"
+    },
+    "metal_cpp": {
+      "url": "https://github.com/apple/metal-cpp/archive/27c4382b7151d55a51692cdcb27aaa98752240de.zip"
+    },
+    "vulkan_headers": {
+      "url": "https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/v1.4.365.zip",
+      "sha256": "767d80b0c6506f90b85e1515eb5998299aecd0d16e3c5a373246efede770ac6f"
+    },
+    "vma": {
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/bfb2ca99e1e7e9684dc06546b552ee3eff4b10aa.zip"
+    },
+    "ngx": {
+      "url": "https://github.com/NVIDIA/DLSS/archive/refs/tags/v310.9.16.zip"
+    },
+    "ffx": {
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK/releases/download/v1.1.4/FidelityFX-SDK-v1.1.4.zip"
+    },
+    "fsr": {
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK/archive/60f4ea81909200d8542eca14dccb2628b763a9a3.zip",
+      "sha256": "7f0bc1a49f538a645c5b1f957b65f56fd1213c9b24ed3dd6798be523f09b6695"
+    },
+    "nrc": {
+      "repository": "https://github.com/NVIDIA-RTX/NRC.git",
+      "revision": "7de30e4eb2a1a27118eb9a6acf5f715d757240c0"
+    },
+    "antilag2": {
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/AntiLag2-SDK/archive/390aa4a8c8655d0ae6e90079db2c85e103a96da3.zip",
+      "sha256": "6bee70fc0374185f491edafce217568fd8bbb148b986e5018dc3964515efda53"
+    },
+    "xess": {
+      "url": "https://github.com/intel/xess/archive/refs/tags/v3.0.2.zip"
+    },
+    "d3d12ma": {
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator/archive/b73737b0b4cde0b5ab80d685209cdc0d81cf878e.zip",
+      "sha256": "6ad466491c64984df9a5c517ffe132b6bcdb7d361d79f96d723306c474aa7c54"
+    },
+    "amdags": {
+      "url": "https://github.com/GPUOpen-LibrariesAndSDKs/AGS_SDK/archive/refs/tags/v6.3.1.zip",
+      "sha256": "46d5390997144516a919f63925c4584e2160305e81ee6fb3007149b7926daa75"
+    },
+    "nvapi": {
+      "url": "https://github.com/NVIDIA/nvapi/archive/70d337db9186e968eab622f7e786de7e437faf3d.zip",
+      "sha256": "fa979b5d8d5115a106a24d331806c9b0a573035043fec441a6579ccfc2b5669b"
+    },
+    "imgui": {
+      "url": "https://codeload.github.com/ocornut/imgui/zip/v1.92.9",
+      "sha256": "bbdcee6a1d56e38ccddaa58383182b348cfb4f2fc59f47a9ed9ef31f8f966351"
+    },
+    "rmlui": {
+      "url": "https://github.com/mikke89/RmlUi/archive/ba95ffe8bfb6370efb2cdcca927eaad4710c5413.zip",
+      "sha256": "ed3162ef67d24b7d91557d710b3734433cfc2a8659c55b4d68a11de38b178487"
+    },
+    "slang_dxil": {
+      "url": "https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.9.2609/dxc_2026_09_29.zip",
+      "sha256": "ad31b1fc8443175d204f77a611fdb3ef2ec42759bdc2f1167368de24a4a7e7f1"
+    },
+    "slang-windows-x86_64": {
+      "url": "https://github.com/shader-slang/slang/releases/download/v2026.20/slang-2026.20-windows-x86_64.zip",
+      "sha256": "e6dd32bbddf1720ebb4e679d55e9635ce792865a5bd84f3d2cd9af28647c0174"
+    },
+    "slang-windows-aarch64": {
+      "url": "https://github.com/shader-slang/slang/releases/download/v2026.20/slang-2026.20-windows-aarch64.zip",
+      "sha256": "4f18a7e76a59969bc9bf6ea596bd9e496a3c689af173990ae028b18f03e1ac1a"
+    },
+    "slang-macos-x86_64": {
+      "url": "https://github.com/shader-slang/slang/releases/download/v2026.20/slang-2026.20-macos-x86_64.tar.gz",
+      "sha256": "b4f01f615dc625f60c593d7d0a4bbd38e05dfa2a34bfd3973017c309d866feaa"
+    },
+    "slang-macos-aarch64": {
+      "url": "https://github.com/shader-slang/slang/releases/download/v2026.20/slang-2026.20-macos-aarch64.tar.gz",
+      "sha256": "07fa8833fdbb343c3674c84fdd885910f495f3daaaa0c732b32980151e8b58c4"
+    },
+    "slang-linux-x86_64": {
+      "url": "https://github.com/shader-slang/slang/releases/download/v2026.20/slang-2026.20-linux-x86_64.tar.gz",
+      "sha256": "e863e568c204810d6e8bc31852f056aef6763c55ea9925db2db7affa060347c9"
+    },
+    "slang-linux-aarch64": {
+      "url": "https://github.com/shader-slang/slang/releases/download/v2026.20/slang-2026.20-linux-aarch64.tar.gz",
+      "sha256": "b0345743e2153d8c2bd33f56fb5696bcef63fc03513f054a1ae1b8d3dd0152a9"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+[0m[32;1m[ 12%]:[0m [36;1m<OpenRHISmoke>[0m compiling.release Tests\BackendSmoke.cpp[0m
+[0m[32;1m[ 25%]:[0m [36;1m<OpenRHI>[0m compiling.release Source\Shared\Shared.cpp[0m
+[0m[32;1m[ 25%]:[0m [36;1m<OpenRHI>[0m compiling.release Source\Validation\ImplVal.cpp[0m
+[0m[32;1m[ 25%]:[0m [36;1m<OpenRHI>[0m compiling.release Source\NONE\ImplNONE.cpp[0m
+[0m[32;1m[ 25%]:[0m [36;1m<OpenRHI>[0m compiling.release Source\D3D12\ImplD3D12.cpp[0m
+[0m[32;1m[ 25%]:[0m [36;1m<OpenRHI>[0m compiling.release Resources\OpenRHI.rc[0m
+[0m[32;1m[ 25%]:[0m [36;1m<OpenRHI>[0m compiling.release Source\Creation\Creation.cpp[0m
+[0m[32;1m[ 63%]:[0m [36;1m<OpenRHI>[0m [36;1mlinking.release OpenRHI.dll[0m
+[0m[32;1m[ 69%]:[0m [36;1m<OpenRHISmoke>[0m [36;1mlinking.release OpenRHISmoke.exe[0m
+running tests ...
+[0m[32;1m[  0%]:[0m running.test OpenRHISmoke/D3D12[0m
+
+report of tests:
+[0m[31;1m[100%]:[0m OpenRHISmoke/D3D12  [31;1mfailed[0m [1m0.609s[0m
+[0m
+Detailed summary:[0m
+[0m[31;1mFailed tests:[0m[0m
+ - OpenRHISmoke/D3D12
+[0m
+[32;1m0%[0m tests passed, [31;1m1[0m test(s) failed out of [1m1[0m, spent [1m0.609s[0m
+[0m[1;31;1merror: [0m<no error object>[0m

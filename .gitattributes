@@ -5,3 +5,11 @@
 *.h text eol=crlf
 *.hpp text eol=crlf
 *.cpp text eol=crlf
+
+# Preserve compiler and runtime evidence verbatim.
+Logs/XmakeMigration/** -whitespace
+
+# SDK compiler helpers carry byte-level consumer qualification hashes.
+Scripts/Build/shader.py -text whitespace=cr-at-eol
+Xmake/openrhi_slang.lua -text whitespace=cr-at-eol
+Xmake/tasks.lua -text whitespace=cr-at-eol

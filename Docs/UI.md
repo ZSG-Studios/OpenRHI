@@ -47,16 +47,14 @@ if (bridge.GetStatus() == openrhi::Result::SUCCESS) {
 
 After either UI renderer, restore the host descriptor pool, pipeline layout/pipeline, descriptor bindings, vertex/index bindings, viewport and scissor needed for subsequent draws. For ImGui streaming, set both `constantBufferMemoryLocation` and `dynamicBufferMemoryLocation` to `HOST_UPLOAD` (or a supported `DEVICE_UPLOAD` choice), even when constant capacity is zero. Give the dynamic buffer `VERTEX | INDEX` usage, sufficient host-data capacity, and the correct queued-frame count. Copy ImGui data before rendering, draw it inside rendering, and call `EndStreamerFrame` after all recording that uses its transient data.
 
-Link the `OpenRHI` CMake target when composing the source checkout. With the Windows SDK, add `_OpenRHI_SDK/Include`, link `Lib/<configuration>/OpenRHI.lib`, and deploy the matching DLL, Agility SDK, and licensed optional runtimes as described in [MIRA integration](mira-integration.md). Link the application's ImGui core and `RmlUi::Core` separately; SDL and FreeType belong to that UI host. The SDK includes both public extension headers, the RmlUi bridge, this guide, and embedded native UI shader binaries in OpenRHI. Preserve each UI library's original license when deploying the application-owned cores.
+Link the `OpenRHI` Xmake target when composing the source checkout. With the Windows SDK, add `_OpenRHI_SDK/Include`, link `Lib/<configuration>/OpenRHI.lib`, and deploy the matching DLL, Agility SDK, and licensed optional runtimes as described in [MIRA integration](mira-integration.md). Link the application's ImGui core and `RmlUi::Core` separately; SDL and FreeType belong to that UI host. The SDK includes both public extension headers, the RmlUi bridge, this guide, and embedded native UI shader binaries in OpenRHI. Preserve each UI library's original license when deploying the application-owned cores.
 
 ## Build and qualification
 
 ```powershell
-cmake -S C:/OpenRHI -B C:/OpenRHI/_Build -DOPENRHI_ENABLE_IMGUI_EXTENSION=ON -DOPENRHI_ENABLE_RMLUI_EXTENSION=ON -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-cmake --build C:/OpenRHI/_Build --config Release --parallel 8
-cmake --build C:/OpenRHI/_Build --config Debug --parallel 8
-ctest --test-dir C:/OpenRHI/_Build -C Release --output-on-failure
-ctest --test-dir C:/OpenRHI/_Build -C Debug --output-on-failure
+xmake f -P . -m release --build_tests=y --none=y -y
+xmake build -P . -y OpenRHI
+xmake test -P . "*/cpu"
 & C:/OpenRHI/Scripts/Windows/3-PrepareSDK.bat
 ```
 

@@ -5,14 +5,19 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import os
+import sys
 import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 SDK = ROOT / "_OpenRHI_SDK"
-SLANG = ROOT / "_Build/_deps/openrhi_slang-src"
-DXC = ROOT / "_Build/_deps/openrhi_slang_dxil-src/bin/x64/dxc.exe"
+sys.path.insert(0, str(ROOT / "Scripts/Build"))
+from bootstrap import require_xmake
+from dependencies import require, slang_host
+SLANG = Path(os.environ.get("OPENRHI_SLANG_ROOT") or require("slang-" + slang_host()))
+DXC = Path(os.environ.get("OPENRHI_SLANG_DXIL_ROOT") or require("slang_dxil")) / "bin/x64/dxc.exe"
 SDK_HASHES = {
     "Release": "94c0326816c019792ed67df9dcf09db0b328498da62c215f43a03e16d75cd751",
     "Debug": "de945cb0317d63006947d477d6b110dda0a1eee0dfe79aff8ecae24f4d2ca34d",
@@ -24,7 +29,7 @@ def sha(path):
 
 
 def run(arguments, log):
-    result = subprocess.run([str(x) for x in arguments], capture_output=True, text=True, errors="replace")
+    result = subprocess.run([str(x) for x in arguments], capture_output=True, text=True, errors="replace", cwd=HERE)
     log.write_text(result.stdout + result.stderr, encoding="utf-8")
     if result.returncode:
         raise RuntimeError(f"exit {result.returncode}: {arguments[0]}; {log}\n{result.stdout}{result.stderr}")
@@ -68,7 +73,7 @@ def compiler_contract(build, out):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--build", type=Path, default=ROOT / "_Build/BindlessMaterial")
+    parser.add_argument("--build", type=Path, default=ROOT / "Build/BindlessMaterial")
     parser.add_argument("--out", type=Path, default=ROOT / ("_Tmp/BindlessMaterial/" + datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")))
     parser.add_argument("--native", action="store_true", help="execute native fixture during an allocated GPU window")
     parser.add_argument("--no-build", action="store_true", help="reuse already verified build during the GPU window")
@@ -93,11 +98,11 @@ def main():
                                   samplers=["linear-clamp-anisotropy16", "linear-repeat-anisotropy16"],
                                   operations=["fixed-view-mip-zero", "explicit-view-relative-LOD", "isotropic-gradients", "anisotropic-gradients-4x1-8x1-16x1"],
                                   reference_scope="scalar ideal/interval checks for fixed/LOD/isotropic and constant-field gradients; patterned anisotropic gradients use independent admitted-view value bounds, finite checks and native parity only")
-    sources = [HERE / x for x in ["Main.cpp", "Reference.h", "Material.slang", "CMakeLists.txt", "qualify.py", "README.md"]]
-    sources.append(ROOT / "Tests/CMakeLists.txt")
-    sources.append(ROOT / "Tests/SourceBoundary.cmake")
+    sources = [HERE / x for x in ["Main.cpp", "Reference.h", "Material.slang", "xmake.lua", "qualify.py", "README.md"]]
+    sources.append(ROOT / "Xmake/tests.lua")
+    sources.append(ROOT / "Scripts/Build/boundary.py")
     receipt["source_sha256"] = {str(p.relative_to(ROOT)): sha(p) for p in sources}
-    receipt["driver_sha256"] = sha(SDK / "CMake/OpenRHISlang.cmake")
+    receipt["driver_sha256"] = sha(SDK / "Xmake/openrhi_slang.lua")
     receipt["compiler_sha256"] = {str(p): sha(p) for p in [SLANG / "bin/slangc.exe", DXC, DXC.with_name("dxcompiler.dll")]}
     receipt["slang_runtime_sha256"] = {p.name: sha(p) for p in sorted((SLANG / "bin").glob("slang*.dll"))}
     try:
@@ -113,12 +118,11 @@ def main():
             assert baseline["compiler_sha256"] == receipt["compiler_sha256"] and baseline["driver_sha256"] == receipt["driver_sha256"]
         for config, expected in SDK_HASHES.items():
             assert sha(SDK / f"Lib/{config}/OpenRHI.dll") == expected, "qualified SDK changed"
-        if not args.no_build:
-            run(["cmake", "-S", HERE, "-B", build, "-G", "Visual Studio 18 2026", "-A", "x64",
-                 f"-DOPENRHI_SLANG_ROOT={SLANG}", f"-DOPENRHI_SLANG_DXIL_ROOT={DXC.parents[2]}"], out / "configure.log")
+        tool = require_xmake()
         for config, expected in SDK_HASHES.items():
             if not args.no_build:
-                run(["cmake", "--build", build, "--config", config, "--parallel", "4"], out / f"{config}-build.log")
+                run([tool, "f", "-P", HERE, "-m", config.lower(), "-y", f"--sdk_root={SDK}", f"--fixture_output={build}"], out / f"{config}-configure.log")
+                run([tool, "build", "-P", HERE, "-y", "OpenRHIBindlessMaterial"], out / f"{config}-build.log")
             exe = build / config / "OpenRHIBindlessMaterial.exe"
             local_dll = exe.with_name("OpenRHI.dll")
             assert sha(local_dll) == expected, "isolated SDK DLL mismatch"

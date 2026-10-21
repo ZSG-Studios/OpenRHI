@@ -58,7 +58,7 @@ hazard = (stored["annotations"]["StructuredBuffer:16"] == stored["annotations"][
 receipt = {"result": "PASS", "scope": "CPU DXIL compiler contract; neither diagnostic shader is dispatched",
            "slang_version": slang_version, "slang_sha256": sha(args.slang),
            "slang_runtime_sha256": {path.name: sha(path) for path in sorted(args.slang.parent.glob("slang*.dll"))},
-           "source_sha256": sha(args.source), "cmake_driver_sha256": sha(args.driver),
+           "source_sha256": sha(args.source), "xmake_driver_sha256": sha(args.driver),
            "target": "DXIL sm_6_6", "optimization": "O3",
            "dxc_sha256": sha(args.dxc), "dxcompiler_sha256": sha(args.dxc.with_name("dxcompiler.dll")),
            "stored_result_alias_observed": hazard, "stored": stored, "direct": direct}

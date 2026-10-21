@@ -2,6 +2,22 @@
 
 Qualification records belong to an exact device, OS, driver, backend, toolchain, commit, workload, and power configuration. Windows and Linux records remain separate for the same GPU.
 
+## Lighting delivery priority and gates
+
+Working UVRT lighting has priority above other work. OpenRHI's immediate work supports lighting correctness, setup speed and live resource/lifetime qualification through its existing public SDK. Defer unrelated feature expansion. MIRA owns the integrated plan and native GPU window; UVRT owns lighting algorithms and phase exits. Use multiple agents for independent source/API investigation and review, with one implementation owner per change.
+
+| Goal | Owning work and exit evidence |
+| --- | --- |
+| Identify a concrete blocker | Trace the actual MIRA/UVRT call through public API, capability admission, Validation, backend commands and retirement; record exact source/SDK/shader identities and distinguish defects from unmeasured behavior |
+| Reduce lighting setup cost | MIRA separates factory/binding, shader loading, layout/PSO creation and first-completion timings; reuse compatible same-device pipeline/layout bundles and qualify exact device/driver/shader/layout persistent-cache restore across output directories through public SDK capabilities. Require a qualified lit first displayed scene and predeclared launch-to-first-lit deadline; retain actual lit raster/camera/UI/presented-source progress while replacement preparation runs, caller Begin/Collect/cache-export costs and activation/reset timing separately from counted lighting frames |
+| Preserve live lighting correctness | Match raster/material/pose/AS/lighting revisions at use; retain native validation, actual scene-color/reference results and source-to-presented generation evidence through wind, update and resize |
+| Prove resource lifetime | Retain pipelines/layouts and all recorded/published resource versions through completion; qualify rebinding, replacement, reset, pressure and teardown with final descriptor/storage restoration |
+| Change SDK only when required | Keep the current qualified SDK while its public path satisfies the workload; for a demonstrated blocker, qualify the smallest owning backend/Validation/public-contract change and its consuming integration before promotion |
+
+Native measurements require MIRA's explicit serialized GPU window. Source inspection and CPU-only compiler/contract work may proceed independently. Preserve failed receipts and predeclared limits. Setup speed and warmed frame throughput have separate measurements; retain transition frames and measure actual setup/activation deadlines. Passing a bounded helper fixture contributes its scope to the production ledger; completion continues to require the owning UVRT/MIRA phase gates below.
+
+CPU review on 20 October 2026 at source `0353e1787f03f559f9d440ebc1e605fc06e63a6a` found no demonstrated backend/compiler blocker in MIRA's current single-BLAS D3D12 lighting call path. Native setup timing, cache restore/reuse, current-generation color/reference results and live lifetime regressions remain consuming-owner gates. A separate batch-BLAS correction is deferred from this current-path work: `Source/D3D12/CommandBufferD3D12.hpp:2739` indexes `desc.geometries[i]` inside the inner `j` loop. Two descriptors containing one geometry each can read outside the second geometry array. The correction is `desc.geometries[j]`, paired with a two-descriptor regression before enabling that batch path. MIRA's reviewed `TriangleScene.cpp` calls pass one descriptor; this finding establishes neither the cause nor the cost of its current lighting setup. Review evidence here is source-only.
+
 ## Gates
 
 1. Platform: C/C++ builds, source audit, platform-specific native exports, dependency audit, and SDK packaging
@@ -13,7 +29,13 @@ Qualification records belong to an exact device, OS, driver, backend, toolchain,
 
 ## Production live-update contract
 
-Authority is UVRT `C:/UVRT/plan.md` version 1.6, sections 1 and 21, with case IDs and production status in `C:/UVRT/docs/dynamic-coverage.md`. MIRA's `Docs/plan.md` coordinates application phase exits. OpenRHI supplies native component evidence and public handoff requirements; the application/modules own the live simulation, lighting state and presented-generation ledger.
+Authority is UVRT `C:/UVRT/plan.md` version 1.7, sections 1 and 21, including runtime-content admission `202ae8e7f6b0292fc97e0400504773f46815097e` and universal live readiness `618fe7db0c15483401aa9d44ce79a6d03f962999`, with case IDs and production status in `C:/UVRT/docs/dynamic-coverage.md`. MIRA's `Docs/plan.md` coordinates application phase exits. OpenRHI supplies native component evidence and public handoff requirements; the application/modules own the live simulation, lighting state and presented-generation ledger.
+
+Treat every supported entity as eligible to change on the next simulation tick, including stationary players, equipment, attachments, objects, lights and cameras. Admit translation, rotation, supported scale, attachment/reparenting, enabled/visibility changes and the owning boundary's deformation, topology and resource changes. Register each production feature and supported content class against the complete responsibility matrix and D01-D14 cases before adoption. Revalidate unchanged-content optimizations at consumption and automatically leave them on relevant changes; qualify moving content with a stationary camera/player and during traversal.
+
+Profile admission covers the simultaneous working set of player/physics/animation, moving receivers/casters, changing lights/materials, streaming, AS/metadata maintenance, transport, reconstruction and presentation. Predeclare CPU/GPU deadlines, memory/queue limits and maximum change-to-presented-response ages for that combined workload. Require each affected direct, shadow, diffuse and specular signal's appearance and removal to satisfy its correctness and temporal limits, with current-scene fallback and bounded recovery under pressure. OpenRHI's contribution is native capability/resource/AS ordering and completion evidence; MIRA and UVRT qualify live propagation and presented lighting.
+
+Each production profile publishes one numeric operating envelope shared across every enabled system. Declare resolution/quality, simultaneous player/object/light/deformation counts, supported motion rates and streaming/content-churn rates alongside response age, image error, CPU/GPU frame deadlines and queue/memory capacities. Qualify the combined supported boundary, pressure and recovery; retain current-generation AS/geometry/material/resource identities through coherent publication, bounded preparation and last-use fence retirement. Per-component timings and capacities contribute to this common envelope. The 100% dynamic requirement covers every applicable required cell within that declared envelope; the initial 154 cells remain open with zero passing cells at this checkpoint.
 
 Before adopting a production feature or public integration boundary, record this contract for its supported profile:
 
@@ -27,10 +49,19 @@ Before adopting a production feature or public integration boundary, record this
 | Continuous changes | Numeric refresh/service-age bounds while inputs keep changing or newer events supersede pending work; stationary-camera world motion and stop/restart/reversal controls |
 | Supported motion | Declared motion-rate/displacement ranges, boundary cases, discontinuities and bounded recovery; moving player/world and independently moving receivers/casters |
 | Interactive deadlines | Separate first-usable-frame, activation/empty-cache, reset/resize/resource replacement, recovery and steady-state deadlines; allowed total/consecutive misses and recovery limits |
-| Cost and memory | CPU frame/submission/host time, GPU component/pass/AS time, end-to-end presented-frame distributions, working-set/peak/resident memory and live measurement duration |
+| Live preparation and readiness | Immutable shader/PSO/asset/replacement inputs; actual authoritative simulation, animation, rendered/presented source and generation progress, preparation duration and first usable lighting through activation/recovery; a qualified current-scene baseline and per-signal before/changed/recovered observations |
+| Cost and memory | CPU frame/submission/host time, GPU component/pass/AS time, end-to-end presented-frame distributions and full simultaneous working-set/peak/resident memory, including active, staged and retiring allocations/publications and queue/retirement pressure, plus live measurement duration |
 | Exact evidence | Application/module/provider/SDK/compiler/shader/source identities, settings, declared CPU decode/transfer/filter reference policy, native validation and lifetime results, predeclared limits/hash preceding the run, references, transition frames and receipt paths/hashes |
 
 Limits are numeric and declared before measurement. An every-frame deadline profile permits zero misses across its declared interactive interval. Retain every transition frame separately from warmed distributions; report median/p95/p99/maximum times, deadline misses, queue/service age, image error and memory together. Production telemetry advances with input/simulation/animation and reports asynchronously; diagnostic readback/reference captures retain their own cost scope.
+
+Startup qualification requires the first displayed scene to carry valid lighting and records launch-to-first-lit-present against a predeclared numeric deadline. Responsiveness receipts join authoritative simulation/rendered generations to actual presentation times and retain p95/p99/maximum presented-frame intervals, total/consecutive stalls and activation/reset frames. Window-message response and progressing preparation counters contribute their own scope; acceptance requires valid lit output and measured presentation deadlines together. Preserve a qualified lit current-scene baseline through replacement preparation and cache recovery. Persistent-cache qualification covers exact device/driver/shader/layout identity, independent output directories, compatible caller imports, intentional mismatches and cold/corrupt recovery through the same combined gate.
+
+### Production profile readiness
+
+Before enabling every production feature/profile, its owner records an executable live update contract with the fields above and combined-pipeline regression receipts for its applicable D01-D14 cells. Include automatic discovery/invalidation/refresh events and full identities, affected player/equipment/receiver/caster/offscreen signal dependencies, continuous changes, cold/reset caches, pressure and recovery. Qualify response/service age, fallback error/duration, frame deadlines and the complete working-set memory/queue bounds together with live before/changed/recovered direct, shadow, diffuse and specular signals.
+
+MIRA collects immutable preparation into its continuing simulation/render/presentation loop and publishes replacements when all dependencies are ready. Link window response and frame counters to authoritative simulation advancement and the actual scene/presented generation. Accept measured physical correctness, every-frame validity, bounded convergence and transition timing for each affected signal together. OpenRHI contributes native capability/resource/queue/completion receipts; application and lighting owners establish the combined live readiness result.
 
 MIRA defines one authoritative render interpolation sample and simulation tick/time. Raster geometry, ray geometry/AS, attachments, receivers and motion consume that sample. Previous-state motion refers to the corresponding previous rendered/presented sample, with an explicit reset at discontinuities. Retain those identities with source revisions and the presented frame so mixed-sample errors can be detected independently.
 
@@ -53,14 +84,14 @@ Record the consuming owner's declared contract and receipts alongside existing p
 
 Every phase exit and subsystem integration regresses prior passing dynamic cases with the combined pipeline enabled. Exercise overlapping player/object/deformation/light/material/streaming changes, stationary-camera world motion, offscreen contributors, supported motion-rate boundaries, pressure/recovery and stale-state controls. First changed frames must consume compatible current data or the declared valid current-scene fallback while bounded refresh converges; sustained changes must continue to receive service.
 
-Accept each applicable system/case cell only when correctness, update latency/service age, deadlines and memory pass together for that declared profile. Retain passing/applicable counts and owner-reviewed applicability reasons; required unfinished systems remain open in the denominator. At this v1.6 alignment checkpoint the owning 11-system by 14-case ledger has **154 open production cells**. Keep bounded native fixtures and application checkpoints at their measured scope while the owning ledger accumulates complete production receipts.
+Accept each applicable system/case cell only when correctness, update latency/service age, deadlines and memory pass together for that declared profile. Retain passing/applicable counts and owner-reviewed applicability reasons; required unfinished systems remain open in the denominator. At this v1.7 alignment checkpoint the owning 11-system by 14-case ledger has **154 open production cells and zero passing production cells**. The completion target remains 100% of applicable required systems and supported content through the combined production pipeline; new features retain their required coverage and phase regressions. Bounded native fixtures and application checkpoints close zero production cells on their own and retain their measured scope while the owning ledger accumulates complete production receipts.
 
 ## Running checks
 
 ```sh
-cmake -S . -B _Build -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-cmake --build _Build --config Release --parallel
-ctest --test-dir _Build -C Release --output-on-failure
+xmake f -P . -m release --build_tests=y --none=y -y
+xmake build -P . -y OpenRHI
+xmake test -P . "*/cpu"
 ```
 
 Native GPU tests require suitable hardware and drivers. SDK/compiler availability controls shader-backed tests. Cross-compilation establishes build coverage; device receipts establish runtime coverage.

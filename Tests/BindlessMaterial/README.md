@@ -18,7 +18,7 @@ After an allocated GPU window:
 python Tests/BindlessMaterial/qualify.py --no-build --native --out _Tmp/BindlessMaterial/Native-Checkpoint
 ```
 
-The native command verifies the frozen build, runs Debug and Release with OpenRHI and native D3D12 validation, and records the actual loaded DLL path and hash. Raw compressed mip bytes, input case records, independent references, both native outputs, adapter/driver/UID, per-profile errors and retired-owner counts are retained. Repeated direct CTest execution chooses a fresh nested artifact directory. Failure retains its logs and any completed profiles; it never becomes a successful admission receipt.
+The native command verifies the frozen build, runs Debug and Release with OpenRHI and native D3D12 validation, and records the actual loaded DLL path and hash. Raw compressed mip bytes, input case records, independent references, both native outputs, adapter/driver/UID, per-profile errors and retired-owner counts are retained. Repeated native Xmake test execution chooses a fresh nested artifact directory. Failure retains its logs and any completed profiles; it never becomes a successful admission receipt.
 
 ## Predeclared operation profile
 

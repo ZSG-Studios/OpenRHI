@@ -10,7 +10,7 @@ Rebuild consumers against the OpenRHI headers and binaries. Third-party notices 
 | C facade | `OpenRhiDevice`, `OpenRhiStruct`, and the `OpenRhi*` type macros |
 | API and build macros | `OPENRHI_*` |
 | Validation | `enableOpenRHIValidation` |
-| CMake target and library | `OpenRHI` |
+| Xmake target and library | `OpenRHI` |
 | Shader source and include | `.slang` and `OpenRHI.slang` |
 | SDK folder | `_OpenRHI_SDK` |
 
@@ -38,4 +38,4 @@ The added field changes the descriptor layout within API revision 1. Rebuild C/C
 
 ## Slang shader integration
 
-Use `.slang` sources and `OpenRHI.slang`, compile through `CMake/OpenRHISlang.cmake`, and consume its native binary and reflection-derived `ShaderDesc`. Rebuild shader binaries and pipeline caches for this API revision. Native Metal pipeline layouts use the root data and typed resource-table ABI in [SHADERS.md](SHADERS.md). The Metal wrapper exposes resource and fence wrapping; shader compilation is explicit in the application build.
+Use `.slang` sources and `OpenRHI.slang`, compile through `Xmake/openrhi_slang.lua`, and consume its native binary and reflection-derived `ShaderDesc`. Rebuild shader binaries and pipeline caches for this API revision. Native Metal pipeline layouts use the root data and typed resource-table ABI in [SHADERS.md](SHADERS.md). The Metal wrapper exposes resource and fence wrapping; shader compilation is explicit in the application build.

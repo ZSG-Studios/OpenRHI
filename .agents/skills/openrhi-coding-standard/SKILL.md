@@ -1,11 +1,11 @@
 ---
 name: openrhi-coding-standard
-description: Implement or modify OpenRHI C/C++ using its source layout, validation boundary, backend patterns, low-overhead rules, CMake conventions, and verification requirements.
+description: Implement or modify OpenRHI C/C++ using its source layout, validation boundary, backend patterns, low-overhead rules, Xmake conventions, and verification requirements.
 ---
 
 # OpenRHI Coding Standard
 
-Apply these rules to changes under `Include`, `Source`, CMake, and build scripts. Explicit user instructions take precedence.
+Apply these rules to changes under `Include`, `Source`, `Xmake`, and build scripts. Explicit user instructions take precedence.
 
 ## General
 
@@ -71,10 +71,12 @@ Apply these rules to changes under `Include`, `Source`, CMake, and build scripts
 - Do not invent fallback D3D12 constants, enums, structures, or magic values for unsupported SDKs.
 - Keep `ID3D12DeviceBest`, interface queries, and version-gated calls consistent with `DeviceD3D12`.
 
-## CMake and Verification
+## Xmake and Verification
 
-- Preserve option names, dependency gates, warnings-as-errors, explicit source lists, `target_sources`, `source_group`, and generator-expression style.
+- Preserve option names, dependency gates, warnings-as-errors, explicit native Xmake source lists, target dependencies and per-platform rules.
 - Add new files to every applicable explicit source list.
 - Prefer targeted builds first. CI baselines are `.\Scripts\Windows\1-Deploy.bat`, `.\Scripts\Windows\2-Build.bat`, and `.\Scripts\Windows\3-PrepareSDK.bat` on Windows, with corresponding shell scripts in `Scripts/Linux/` and `Scripts/MacOS/`. Scripts resolve paths relative to the OpenRHI repository root.
 - Keep noisy logs under `_Tmp` when requested and report the first unique error plus the summary.
 - Run `.clang-format` on touched C/C++ when available, inspect the diff, run `git diff --check`, and verify CRLF.
+
+- First-party native libraries, providers, shaders, fixtures, tests and SDK packaging use Xmake3.1.2. Preserve vendor inputs and build their exposed sources through native Xmake targets. Execute Xmake with explicit `-P` and the owning project as its process working directory.

@@ -10,21 +10,26 @@ OpenRHI's first-party code and documentation use the [MIT license](LICENSE.txt).
 | Linux x64/ARM64 | Vulkan | Vulkan 1.3 minimum; 1.4 preferred |
 | Android ARM64, API 33+ | Vulkan | Vulkan 1.3 minimum; 1.4 preferred |
 | macOS/iOS/iPadOS 26+ | Metal 4 | Apple GPU family 9+ |
-| Explicit automated-test configuration | NONE | `OPENRHI_ENABLE_NONE_SUPPORT=ON` |
+| Explicit automated-test configuration | NONE | `--none=y` |
 
 Vulkan requires dynamic rendering, synchronization2, maintenance4, buffer device addresses, timeline semaphores, runtime descriptor arrays, partially bound descriptors, and sampled-image nonuniform indexing. Creation verifies the feature bits and returns structured diagnostics for missing requirements.
 
 ## Build
 
-Use CMake 3.30+ and a C++17 toolchain. Windows builds use the Windows SDK and Agility SDK; Apple builds use Xcode 26+ with the Metal toolchain. Dependencies are fetched at pinned revisions through their public interfaces.
+Use Xmake3.1.2 and a C++17 toolchain. Windows builds use the Windows SDK and Agility SDK; Apple builds use Xcode26+ with the Metal toolchain. Xmake compiles the owned library, public third-party source targets, shaders, fixtures and tests, and owns SDK packaging. Pinned source/compiler acquisition retains original archives and licenses.
 
 ```sh
-cmake -S . -B _Build -DOPENRHI_BUILD_TESTS=ON -DOPENRHI_ENABLE_NONE_SUPPORT=ON
-cmake --build _Build --config Release --parallel
-ctest --test-dir _Build -C Release --output-on-failure
+python Scripts/Build/bootstrap.py
+xmake f -P . -m release --build_tests=y --none=y -y
+xmake build -P . -y OpenRHI
+xmake test -P . "*/cpu"
+xmake test -P . OpenRHISmoke/NONE
+xmake sdk -P .
 ```
 
-Production builds enable their platform backend by default. Link the `OpenRHI` CMake target and include `OpenRHI.h`. Native wrapper entrypoints follow the supported platform. The platform scripts deploy, build, and package the SDK into `_OpenRHI_SDK`.
+Run from this checkout and use the executable printed by bootstrap when Xmake3.1.2 is not on PATH. Explicit `-P` selects this nested module and the owning process working directory isolates its configuration cache. Native GPU test targets retain their separate device and scheduling gates.
+
+Production configurations enable the platform backend by default. Consumers link `OpenRHI` and include `OpenRHI.h`. The platform scripts invoke this same Xmake graph for configure, Debug/Release builds and SDK packaging. See [Xmake configuration and feature options](Docs/XMAKE.md).
 
 [Adreno Neural Fusion SR](Docs/ANF.md) covers the optional Android Vulkan upscaler, native requirements, resource setup, runtime packaging and device qualification.
 
@@ -34,7 +39,7 @@ Zig bindings are maintained in `C:/Zig Engine/Bindings/Zig`. Rust bindings are m
 
 ## Shaders
 
-Author shaders in Slang 2026.20 and compile them with `CMake/OpenRHISlang.cmake`. The build produces native DXIL, SPIR-V, or metallib plus reflection and matching pipeline metadata. ImGui, NIS, and Metal helper kernels use this same chain. [Shader integration and ABI](Docs/SHADERS.md) describes application setup and migration.
+Author shaders in Slang 2026.20 and compile them with `Xmake/openrhi_slang.lua`. The build produces native DXIL, SPIR-V, or metallib plus reflection and matching pipeline metadata. ImGui, NIS, and Metal helper kernels use this same chain. [Shader integration and ABI](Docs/SHADERS.md) describes application setup and migration.
 
 ## Devices and qualification
 
@@ -62,12 +67,12 @@ Neural lighting and latency adapters target RTX 50-series and Radeon RX 9000-ser
 | `Include/` | Public C/C++ API and extensions |
 | `Source/` | Native backends, validation and shared implementation |
 | `Shaders/` | Slang shader sources |
-| `CMake/`, `Scripts/` | Build, packaging and qualification tools |
+| `Xmake/`, `Scripts/` | Build, packaging and qualification tools |
 | `Tests/` | Maintained contract, platform and native integration tests |
 | `Profiles/` | Device targets and policy data |
 | `Docs/` | Integration, shaders, vendor features and qualification guides |
 | `Resources/` | Project resources |
 
-Builds generate `_Build/` and `_Bin/`; local logs, caches and qualification runs belong under `_Tmp/`. SDK packaging produces `_OpenRHI_SDK/`.
+Builds generate `Build/` and `Bin/`; local logs, caches and qualification runs belong under `_Tmp/`. SDK packaging produces `_OpenRHI_SDK/`.
 
 [MIRA — Modular Integrated Rendering Architecture](https://github.com/ZSG-Studios/MIRA) composes this repository as its `Modules/OpenRHI` Git submodule with [FACET](https://github.com/ZSG-Studios/FACET) and [UVRT](https://github.com/ZSG-Studios/UVRT). See [MIRA integration](Docs/mira-integration.md) for the public SDK and ownership boundary.
